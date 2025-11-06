@@ -8,9 +8,9 @@
     },
     {
       "id": "testimonial-avatar-1",
-      "description": "Portrait of a smiling middle-aged woman from Colombia.",
-      "imageUrl": "https://images.unsplash.com/photo-1618938700817-fe48bd93f20b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzbWlsaW5nJTIwd29tYW58ZW58MHx8fHwxNzYyMzMxNzI5fDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "smiling woman"
+      "description": "Portrait of a smiling man.",
+      "imageUrl": "https://images.unsplash.com/photo-1564564321837-a57b7070ac4f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMG1hbnxlbnwwfHx8fDE3NjI0MDM4NjJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "portrait man"
     },
     {
       "id": "testimonial-avatar-2",
