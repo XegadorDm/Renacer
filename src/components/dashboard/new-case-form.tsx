@@ -1,0 +1,170 @@
+'use client';
+
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { Checkbox } from '../ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
+
+const formSchema = z.object({
+  fullName: z.string().min(3, 'Nombres y apellidos son requeridos.'),
+  documentId: z.string().min(5, 'Documento de identidad es requerido.'),
+  internalId: z.string().optional(),
+  ethnicGroup: z.string().min(1, 'Grupo étnico es requerido.'),
+  maritalStatus: z.string().min(1, 'Estado civil es requerido.'),
+  gender: z.string().min(1, 'Sexo es requerido.'),
+  dob: z.date({ required_error: 'Fecha de nacimiento es requerida.'}),
+  address: z.string().min(1, 'Dirección es requerida.'),
+  department: z.string().min(1, 'Departamento es requerido.'),
+  phone1: z.string().min(7, 'Celular 1 es requerido.'),
+  phone2: z.string().optional(),
+  displacementType: z.string().min(1, 'Tipo de desplazamiento es requerido.'),
+  disability: z.string().min(1, 'Discapacidad es requerida.'),
+  age: z.coerce.number().min(0, 'Edad es requerida.'),
+  isElderly: z.boolean().default(false),
+  householdMembers: z.coerce.number().min(1, 'Cantidad es requerida.'),
+  testimony: z.string().min(10, 'El testimonio es requerido (mínimo 10 caracteres).'),
+});
+
+export function NewCaseForm() {
+  const router = useRouter();
+  const { toast } = useToast();
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      fullName: '',
+      documentId: '',
+      internalId: `INT-${Math.floor(1000 + Math.random() * 9000)}`,
+      department: 'Cauca',
+      isElderly: false,
+    },
+  });
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    console.log(values);
+    toast({
+        title: "Caso Guardado Exitosamente",
+        description: `El caso para ${values.fullName} ha sido creado.`,
+    });
+    router.push('/dashboard/cases');
+  }
+
+  const formFields = [
+    { name: 'fullName', label: 'Nombres y Apellidos', component: Input, placeholder: 'Nombres y apellidos completos' },
+    { name: 'documentId', label: 'Documento de identidad', component: Input, placeholder: 'Número de documento' },
+    { name: 'internalId', label: 'ID Interno', component: Input, props: { disabled: true } },
+    { name: 'ethnicGroup', label: 'Grupo étnico', component: Select, options: ['Indígena', 'Afrocolombiano', 'Raizal', 'Palenquero', 'Gitano', 'Mestizo', 'Ninguno'] },
+    { name: 'maritalStatus', label: 'Estado civil', component: Select, options: ['Soltero/a', 'Casado/a', 'Unión libre', 'Viudo/a', 'Separado/a'] },
+    { name: 'gender', label: 'Sexo', component: Select, options: ['Masculino', 'Femenino', 'Otro'] },
+    { name: 'dob', label: 'Fecha de nacimiento', component: 'datepicker' },
+    { name: 'address', label: 'Dirección / Vereda / Corregimiento', component: Input, placeholder: 'Ej: Vereda La Esperanza' },
+    { name: 'department', label: 'Departamento', component: Input, props: { disabled: true } },
+    { name: 'phone1', label: 'Celular 1', component: Input, type: 'tel' },
+    { name: 'phone2', label: 'Celular 2 (Opcional)', component: Input, type: 'tel' },
+    { name: 'displacementType', label: 'Tipo de desplazamiento', component: Select, options: ['Individual', 'Familiar', 'Masivo'] },
+    { name: 'disability', label: 'Discapacidad', component: Select, options: ['Física', 'Visual', 'Auditiva', 'Intelectual', 'Psicosocial', 'Múltiple', 'Ninguna'] },
+    { name: 'age', label: 'Edad', component: Input, type: 'number' },
+    { name: 'isElderly', label: 'Adulto mayor', component: 'checkbox', description: 'Marcar si la persona es adulto mayor.' },
+    { name: 'householdMembers', label: 'Cantidad de personas en la caracterización', component: Input, type: 'number' },
+  ]
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {formFields.map((fieldConfig) => (
+            <FormField
+              key={fieldConfig.name}
+              control={form.control}
+              name={fieldConfig.name as any}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{fieldConfig.label}</FormLabel>
+                  <FormControl>
+                    {fieldConfig.component === 'datepicker' ? (
+                       <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {field.value ? format(field.value, "PPP", { locale: require('date-fns/locale/es') }) : <span>Selecciona una fecha</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                            captionLayout="dropdown-buttons"
+                            fromYear={1930}
+                            toYear={new Date().getFullYear()}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    ) : fieldConfig.component === Select ? (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectContent>
+                          {fieldConfig.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    ) : fieldConfig.component === 'checkbox' ? (
+                        <div className="flex items-center space-x-2 h-10">
+                            <Checkbox id={fieldConfig.name} checked={field.value} onCheckedChange={field.onChange} />
+                            <label htmlFor={fieldConfig.name} className="text-sm font-medium leading-none text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                {fieldConfig.description}
+                            </label>
+                        </div>
+                    ) : (
+                      <Input
+                        type={fieldConfig.type || 'text'}
+                        placeholder={fieldConfig.placeholder || ''}
+                        {...fieldConfig.props}
+                        {...field}
+                      />
+                    )}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ))}
+          <FormField
+            control={form.control}
+            name="testimony"
+            render={({ field }) => (
+              <FormItem className="lg:col-span-3">
+                <FormLabel>Testimonio</FormLabel>
+                <FormControl>
+                  <Textarea placeholder="Describe brevemente la situación..." {...field} rows={6} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="flex justify-end gap-4">
+            <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
+            <Button type="submit" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>Guardar Caso</Button>
+        </div>
+      </form>
+    </Form>
+  );
+}

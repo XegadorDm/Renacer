@@ -1,3 +1,34 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-image",
+      "description": "A beautiful landscape of Cauca, Colombia, with mountains and a river at sunrise.",
+      "imageUrl": "https://images.unsplash.com/photo-1604251886769-f4daa2b486ae?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxjb2xvbWJpYSUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3NjI0MDM4NjJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "colombia landscape"
+    },
+    {
+      "id": "testimonial-avatar-1",
+      "description": "Portrait of a smiling middle-aged woman from Colombia.",
+      "imageUrl": "https://images.unsplash.com/photo-1618938700817-fe48bd93f20b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzbWlsaW5nJTIwd29tYW58ZW58MHx8fHwxNzYyMzMxNzI5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "smiling woman"
+    },
+    {
+      "id": "testimonial-avatar-2",
+      "description": "Portrait of a smiling young man from Colombia.",
+      "imageUrl": "https://images.unsplash.com/photo-1522556189639-b150ed9c4330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzbWlsaW5nJTIwbWFufGVufDB8fHx8MTc2MjI4NTYzMXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "smiling man"
+    },
+    {
+      "id": "testimonial-avatar-3",
+      "description": "Portrait of a smiling elderly man from Colombia.",
+      "imageUrl": "https://images.unsplash.com/photo-1669769922262-dd271625a385?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjb2xvbWJpYW4lMjBtYW58ZW58MHx8fHwxNzYyNDAzODYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "colombian man"
+    },
+    {
+      "id": "map-image",
+      "description": "Stylized map of Colombia highlighting the Cauca region.",
+      "imageUrl": "https://images.unsplash.com/photo-1705370401172-083571283df6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxjb2xvbWJpYSUyMG1hcHxlbnwwfHx8fDE3NjIzOTQxMDl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "colombia map"
+    }
+  ]
 }
