@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { Logo } from '../icons/logo';
 
 export function Hero() {
   const heroImage = PlaceHolderImages.find(img => img.id === 'hero-image');
@@ -20,6 +21,7 @@ export function Hero() {
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
       <div className="relative h-full flex flex-col items-center justify-center text-center text-white p-4">
+        <Logo className="h-20 w-20 md:h-24 md:w-24 mb-4" />
         <h1 className="text-4xl md:text-6xl font-bold font-headline tracking-tight">
           Bienvenidos a Renacer
         </h1>
