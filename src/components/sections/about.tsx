@@ -23,7 +23,7 @@ export function About() {
     <section id="about" className="py-16 md:py-24 bg-card">
       <div className="container mx-auto px-4 md:px-6">
         <div className="text-center max-w-3xl mx-auto">
-          <h2 className="text-3xl md:text-4xl font-bold font-headline">Acerca de Renacer Digital</h2>
+          <h2 className="text-3xl md:text-4xl font-bold font-headline">Acerca de Renacer</h2>
           <p className="mt-4 text-lg text-muted-foreground">
             Somos un puente de esperanza y organización, conectando necesidades con soluciones a través de la tecnología.
           </p>

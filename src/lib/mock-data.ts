@@ -9,7 +9,7 @@ export const testimonials = [
     name: "María Rodriguez",
     role: "Líder comunitaria",
     avatar: imageMap.get('testimonial-avatar-1'),
-    testimonial: "Renacer Digital ha sido una herramienta fundamental para organizar y agilizar la ayuda a nuestra gente. Por fin sentimos que avanzamos."
+    testimonial: "Renacer ha sido una herramienta fundamental para organizar y agilizar la ayuda a nuestra gente. Por fin sentimos que avanzamos."
   },
   {
     id: 2,

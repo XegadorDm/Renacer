@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'Renacer Digital',
+  title: 'Renacer',
   description:
     'Plataforma de apoyo para gestión de casos sociales y trámites gubernamentales para comunidades vulnerables del Cauca, Colombia.',
 };

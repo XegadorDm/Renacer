@@ -15,7 +15,7 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2" prefetch={false}>
           <Logo className="h-8 w-8 text-primary" />
           <span className="text-xl font-bold font-headline text-foreground">
-            Renacer Digital
+            Renacer
           </span>
         </Link>
         <nav className="hidden md:flex items-center gap-6">

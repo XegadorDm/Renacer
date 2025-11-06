@@ -9,7 +9,7 @@ export function Footer() {
           <Link href="/" className="flex items-center gap-2" prefetch={false}>
             <Logo className="h-8 w-8 text-primary" />
             <span className="text-xl font-bold font-headline text-foreground">
-              Renacer Digital
+              Renacer
             </span>
           </Link>
           <p className="text-sm text-muted-foreground">
@@ -34,7 +34,7 @@ export function Footer() {
           </div>
         </div>
         <div className="flex items-center justify-center md:justify-end text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Renacer Digital. Todos los derechos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Renacer. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

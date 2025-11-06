@@ -10,7 +10,7 @@ export function Testimonials() {
         <div className="text-center max-w-3xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold font-headline">Voces de Nuestra Comunidad</h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Historias reales de personas que han encontrado apoyo a través de Renacer Digital.
+            Historias reales de personas que han encontrado apoyo a través de Renacer.
           </p>
         </div>
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
