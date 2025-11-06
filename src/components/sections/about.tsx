@@ -25,7 +25,7 @@ export function About() {
         <div className="text-center max-w-3xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold font-headline">Acerca de Renacer</h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Somos un puente de esperanza y organización, conectando necesidades con soluciones a través de la tecnología.
+            Es una aplicación web desarrollada para digitalizar y optimizar la gestión de datos de víctimas del conflicto armado en el norte del Cauca, Colombia. Nuestro propósito es reemplazar los sistemas manuales de registro y seguimiento de casos sociales, garantizando trazabilidad, seguridad y atención ágil a comunidades vulnerables mediante el uso de tecnología accesible y moderna.
           </p>
         </div>
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
