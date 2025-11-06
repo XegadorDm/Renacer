@@ -35,7 +35,7 @@ export function Header() {
             <Link href="/register">Solicitar Registro</Link>
           </Button>
           <Button asChild style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-            <Link href="/login">Login</Link>
+            <Link href="/login">Ingresar</Link>
           </Button>
         </div>
       </div>
