@@ -14,15 +14,18 @@ export function Logo(props: SVGProps<SVGSVGElement>) {
       strokeLinejoin="round"
       {...props}
     >
-      <path d="M4 18c2-2.5 4-3 7-3s5 0.5 7 3" fill="#a3b18a" stroke="none" />
-      <path d="M5 16c1.5-2 3-2.5 6-2.5s4.5 0.5 6 2.5" fill="#588157" stroke="none" />
-      <path d="M12 13.5c-1.5 0-3-0.5-4-1.5" stroke="#dda15e" strokeWidth="1" />
-      <path d="M11 11c1-1 2.5-1 4-0.5" stroke="#dda15e" strokeWidth="1" />
-      <path d="M15 10.5c1.5-0.5 3-0.5 4 0.5" stroke="#dda15e" strokeWidth="1" />
-      <path d="M4 18c2-2.5 4-3 7-3s5 0.5 7 3" stroke="#3a5a40" />
-      <path d="M5 16c1.5-2 3-2.5 6-2.5s4.5 0.5 6 2.5" stroke="#3a5a40" />
-      <path d="M19 8l-1 2-2-1.5-1 2" fill="hsl(var(--primary))" stroke="none" />
-      <path d="M18.5 7l-1.5-2.5L16 6.5l1.5-2.5" fill="hsl(var(--primary))" stroke="none" />
+      {/* Sun */}
+      <circle cx="12" cy="8" r="3" fill="hsl(var(--accent))" stroke="none" />
+
+      {/* Back Mountain */}
+      <path d="M3 18 L8 10 L13 18 Z" fill="hsl(var(--primary))" opacity="0.7" stroke="none" />
+      
+      {/* Front Mountain */}
+      <path d="M11 18 L16 12 L21 18 Z" fill="hsl(var(--primary))" stroke="none" />
+
+      {/* Strokes for definition */}
+      <path d="M3 18 L8 10 L13 18" stroke="hsl(var(--primary-foreground))" strokeWidth="0.5" />
+      <path d="M11 18 L16 12 L21 18" stroke="hsl(var(--primary-foreground))" strokeWidth="0.5" />
     </svg>
   );
 }
