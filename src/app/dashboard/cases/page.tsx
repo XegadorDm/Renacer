@@ -1,21 +1,31 @@
+'use client';
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Search } from "lucide-react";
+import { PlusCircle, Search, ArrowLeft } from "lucide-react";
 import { CasesTable } from "@/components/dashboard/cases-table";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function CasesPage({ searchParams }: { searchParams: { query?: string, location?: string } }) {
-  const query = searchParams?.query || '';
-  const location = searchParams?.location || '';
+export default function CasesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const query = searchParams.get('query') || '';
+  const location = searchParams.get('location') || '';
 
   return (
     <div className="flex justify-center w-full">
         <Card className="w-full max-w-4xl">
-            <CardHeader>
-                <CardTitle>Gestión de Casos {location && `- ${location}`}</CardTitle>
-                <CardDescription>Busca, visualiza y gestiona los casos de la comunidad.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle>Gestión de Casos {location && `- ${location}`}</CardTitle>
+                    <CardDescription>Busca, visualiza y gestiona los casos de la comunidad.</CardDescription>
+                </div>
+                <Button variant="outline" onClick={() => router.back()}>
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Volver
+                </Button>
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
