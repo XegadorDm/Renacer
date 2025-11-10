@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'El nombre es requerido.'),
@@ -19,10 +23,15 @@ const formSchema = z.object({
   gender: z.string({ required_error: 'Selecciona un género.' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
   socialSecurityCode: z.string().min(1, 'El código es requerido.'),
+  role: z.string().default('case-worker'),
 });
 
 export function RegisterForm() {
   const router = useRouter();
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -32,13 +41,42 @@ export function RegisterForm() {
       email: '',
       password: '',
       socialSecurityCode: '',
+      role: 'case-worker',
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    // Mock registration logic
-    router.push('/login');
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!auth || !firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Servicios de Firebase no disponibles.',
+      });
+      return;
+    }
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      const user = userCredential.user;
+
+      const { password, ...userData } = values;
+      const userDocRef = doc(firestore, 'users', user.uid);
+      
+      setDocumentNonBlocking(userDocRef, { ...userData, id: user.uid }, { merge: true });
+
+      toast({
+        title: '¡Registro Exitoso!',
+        description: 'Tu cuenta ha sido creada. Ahora puedes iniciar sesión.',
+      });
+      router.push('/login');
+    } catch (error: any) {
+      console.error('Error during registration:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error en el registro',
+        description: error.message || 'No se pudo crear la cuenta. Por favor, inténtalo de nuevo.',
+      });
+    }
   }
 
   return (
