@@ -60,9 +60,14 @@ export function RegisterForm() {
       const user = userCredential.user;
 
       const { password, ...userData } = values;
-      const userDocRef = doc(firestore, 'users', user.uid);
       
+      // Save user profile
+      const userDocRef = doc(firestore, 'users', user.uid);
       setDocumentNonBlocking(userDocRef, { ...userData, id: user.uid }, { merge: true });
+
+      // Grant admin role
+      const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
+      setDocumentNonBlocking(adminRoleRef, { role: 'admin' }, { merge: true });
 
       toast({
         title: '¡Registro Exitoso!',
