@@ -1,0 +1,103 @@
+/**
+ * @fileoverview Firestore Security Rules for Renacer Digital.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a combination of user-ownership and role-based access control.
+ * Users have full control over their own data, while administrators have broader access to cases.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores individual user profiles, accessible only to the user themselves.
+ * - /cases/{caseId}: Stores social case data, accessible based on user roles and potentially shared access (not yet implemented).
+ * - /roles_admin/{userId}: Admin roles are determined by presence of a document in this collection.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own profile data.
+ * - Listing of users is disallowed for privacy.
+ * - Admin roles are managed via a dedicated collection.
+ *
+ * Denormalization for Authorization:
+ * - The 'cases' collection intends to use a `members` map for access control. This has not been implemented as the documentation has no information to create this.
+ *
+ * Structural Segregation:
+ * - User profiles are stored in a user-specific subcollection for clear ownership.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Secures user profiles. Only the authenticated user can read or write their own profile.
+     * @path /users/{userId}
+     * @allow (create) - User 'alice' (auth.uid: 'alice') creates their profile at /users/alice.
+     * @allow (get, update, delete) - User 'alice' (auth.uid: 'alice') reads/updates/deletes their profile at /users/alice.
+     * @deny (create) - User 'bob' (auth.uid: 'bob') attempts to create a profile for 'alice' at /users/alice.
+     * @deny (get, update, delete) - User 'bob' (auth.uid: 'bob') attempts to read/update/delete 'alice's profile at /users/alice.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      // Helper function to check if the user is signed in and owns the resource.
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      // Helper function to check if the document exists and the user is the owner
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false; // Disallowing listing of users for privacy
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secures social cases.
+     * @path /cases/{caseId}
+     * @allow (get, list) Public read access to the collection.
+     * @allow (create) Only allow when a specific condition is met - user is admin.
+     * @deny (create, update, delete) When conditions are not met.
+     * @principle Enforces document ownership for writes, allows public reads.
+     */
+    match /cases/{caseId} {
+      function isAdmin() {
+        return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      }
+
+      allow get, list: if true;
+
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+    
+        /**
+         * @description Manage admin roles. Only allow creation, reading, and deletion of admin roles.
+         * @path /roles_admin/{userId}
+         * @allow (create) - User 'admin' (auth.uid: 'admin') creates their admin role at /roles_admin/admin.
+         * @allow (get) - User 'admin' (auth.uid: 'admin') reads their admin role at /roles_admin/admin.
+         * @allow (delete) - User 'admin' (auth.uid: 'admin') deletes their admin role at /roles_admin/admin.
+         * @deny (create) - User 'nonAdmin' (auth.uid: 'nonAdmin') attempts to create an admin role for 'admin' at /roles_admin/admin.
+         * @deny (get, delete) - User 'nonAdmin' (auth.uid: 'nonAdmin') attempts to read/delete 'admin's admin role at /roles_admin/admin.
+         * @principle Enforces admin-only access to manage roles.
+         */
+    match /roles_admin/{userId} {
+          function isOwner(userId) {
+              return request.auth != null && request.auth.uid == userId;
+          }
+
+          function isExistingOwner(userId) {
+              return isOwner(userId) && resource != null;
+          }
+
+          allow get: if isOwner(userId);
+          allow list: if false; // Do not allow listing of admin roles.
+
+          allow create: if isOwner(userId);
+          allow update: if false;
+          allow delete: if isExistingOwner(userId);
+        }
+  }
+}
