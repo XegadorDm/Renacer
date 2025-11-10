@@ -58,31 +58,29 @@ export function RegisterForm() {
     }
 
     try {
-      // Step 1: Create the user in Firebase Auth
+      // Step 1: Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Step 2: Now that the user is created and we have the UID, save user profile and grant role.
+      // Step 2: User is now created and signed in. Proceed to create Firestore documents.
       const { password, ...userData } = values;
-      
+
+      // Create user profile document
       const userDocRef = doc(firestore, 'users', user.uid);
-      await setDoc(userDocRef, { ...userData, id: user.uid }, { merge: true });
+      await setDoc(userDocRef, { ...userData, id: user.uid });
 
+      // Create admin role document
       const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
-      await setDoc(adminRoleRef, { role: 'admin' }, { merge: true });
-
-      // Sign the user out to force a clean login
-      await auth.signOut();
+      await setDoc(adminRoleRef, { role: 'admin' });
 
       toast({
         title: '¡Registro Exitoso!',
-        description: 'Tu cuenta ha sido creada. Ahora puedes iniciar sesión.',
+        description: 'Tu cuenta ha sido creada y ahora estás conectado.',
         duration: 5000,
       });
 
-      // Instead of redirecting, let the user click to go to login.
-      // This gives auth state time to propagate properly on next login.
-      router.push('/login');
+      // Redirect directly to the dashboard
+      router.push('/dashboard');
 
     } catch (error: any) {
       console.error('Error during registration:', error);
