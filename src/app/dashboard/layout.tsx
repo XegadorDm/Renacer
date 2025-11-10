@@ -41,7 +41,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={true} tooltip="Casos">
+                <SidebarMenuButton asChild tooltip="Casos">
                     <Link href="/dashboard/cases"><Users/><span>Casos</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -82,7 +82,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
-          <main className="p-4 sm:px-6 sm:py-0">{children}</main>
+          <main className="p-4 sm:px-6 sm:py-0">
+            <div className="max-w-7xl mx-auto">
+              {children}
+            </div>
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>

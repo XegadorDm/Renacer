@@ -15,8 +15,8 @@ export default function CasesPage() {
   const location = searchParams.get('location') || '';
 
   return (
-    <div className="flex justify-center w-full">
-        <Card className="w-full max-w-4xl">
+    <div className="flex justify-center w-full py-4">
+        <Card className="w-full">
             <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                     <CardTitle>Gestión de Casos {location && `- ${location}`}</CardTitle>
