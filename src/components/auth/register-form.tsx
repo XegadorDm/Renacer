@@ -118,7 +118,7 @@ export function RegisterForm() {
               )}
             />
             <FormField control={form.control} name="documentNumber" render={({ field }) => (
-                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="Tu número" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="Tu número" {...field} /></FormControl><FormMessage /></Form-Item>
               )}
             />
         </div>
