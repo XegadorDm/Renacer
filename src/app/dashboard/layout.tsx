@@ -9,27 +9,29 @@ import {
   SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  SidebarFooter
+  SidebarFooter,
+  SidebarRail,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, Settings, Users } from "lucide-react";
+import { Home, LogOut, Settings, Users, PanelLeft } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <div className="min-h-screen">
-        <Sidebar>
-          <SidebarHeader>
+        <Sidebar collapsible="icon">
+          <SidebarHeader className="flex items-center justify-between">
              <Link href="/dashboard" className="flex items-center gap-2" prefetch={false}>
                 <Logo className="h-8 w-8 text-primary" />
                 <span className="text-xl font-bold font-headline text-foreground group-data-[collapsible=icon]:hidden">
                     Renacer
                 </span>
             </Link>
+            <SidebarTrigger className="hidden sm:flex" />
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
