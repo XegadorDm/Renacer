@@ -8,6 +8,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useAuth } from '@/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   email: z.string().email('Por favor ingresa un correo válido.'),
@@ -16,6 +19,9 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const router = useRouter();
+  const auth = useAuth();
+  const { toast } = useToast();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -24,10 +30,26 @@ export function LoginForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
-    // Mock login logic
-    router.push('/dashboard');
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!auth) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Servicio de autenticación no disponible.',
+        });
+        return;
+    }
+    try {
+        await signInWithEmailAndPassword(auth, values.email, values.password);
+        router.push('/dashboard');
+    } catch (error: any) {
+        console.error("Login failed:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Error al ingresar',
+            description: 'Las credenciales son incorrectas. Por favor, verifica y vuelve a intentarlo.',
+        });
+    }
   }
 
   return (

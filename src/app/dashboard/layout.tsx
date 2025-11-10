@@ -1,4 +1,7 @@
+'use client';
 import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth, useUser } from "@/firebase";
 import {
   SidebarProvider,
   Sidebar,
@@ -10,7 +13,6 @@ import {
   SidebarInset,
   SidebarTrigger,
   SidebarFooter,
-  SidebarRail,
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,8 +20,41 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Home, LogOut, Settings, Users, PanelLeft } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  if (isUserLoading) {
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <div className="p-8 bg-background rounded-lg shadow-xl">
+                <p>Cargando...</p>
+            </div>
+        </div>
+    )
+  }
+
+  if (!user) {
+    router.replace('/login');
+    return null;
+  }
+  
+  const handleLogout = async () => {
+    if(auth) {
+        await auth.signOut();
+        router.push('/');
+    }
+  }
+
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return 'JD';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  }
+
+
   return (
     <SidebarProvider>
       <div className="min-h-screen">
@@ -65,19 +100,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
                   <Avatar>
-                    <AvatarImage src="https://picsum.photos/seed/user-avatar/40/40" alt="Avatar" />
-                    <AvatarFallback>JD</AvatarFallback>
+                    <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40/40`} alt="Avatar" />
+                    <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                <DropdownMenuLabel>{user.displayName || 'Mi Cuenta'}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Configuración</DropdownMenuItem>
                 <DropdownMenuItem>Soporte</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/"><LogOut className="mr-2 h-4 w-4" /> Cerrar Sesión</Link>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" /> Cerrar Sesión
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
