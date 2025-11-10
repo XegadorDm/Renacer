@@ -1,17 +1,47 @@
+'use client';
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cases } from "@/lib/mock-data";
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "../ui/button";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query as firestoreQuery, where } from "firebase/firestore";
+import { Skeleton } from "../ui/skeleton";
+import type { Case } from "@/lib/case-schema";
 
 export function CasesTable({ query, location }: { query: string; location: string }) {
-  const filteredCases = cases.filter(c => {
-    const matchesLocation = location ? c.location === location : true;
-    const matchesQuery = query ? 
-      c.name.toLowerCase().includes(query.toLowerCase()) || 
-      c.id.toLowerCase().includes(query.toLowerCase()) : true;
-    return matchesLocation && matchesQuery;
+  const firestore = useFirestore();
+
+  const casesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    
+    const baseCollection = collection(firestore, 'cases');
+
+    if (location) {
+      return firestoreQuery(baseCollection, where("municipality", "==", location));
+    }
+    
+    return baseCollection;
+
+  }, [firestore, location]);
+
+  const { data: cases, isLoading } = useCollection<Case>(casesQuery);
+  
+  const filteredCases = cases?.filter(c => {
+    return query ? 
+      (c.firstName.toLowerCase() + " " + c.lastName.toLowerCase()).includes(query.toLowerCase()) || 
+      c.caseNumber.toLowerCase().includes(query.toLowerCase()) : true;
   });
+
+  if (isLoading) {
+    return (
+        <div className="border rounded-lg p-4 space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+        </div>
+    )
+  }
 
   return (
     <div className="border rounded-lg">
@@ -21,18 +51,18 @@ export function CasesTable({ query, location }: { query: string; location: strin
             <TableHead>N° Caso</TableHead>
             <TableHead>Nombre</TableHead>
             <TableHead>Documento</TableHead>
-            <TableHead>Ubicación</TableHead>
+            <TableHead>Municipio</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead><span className="sr-only">Acciones</span></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredCases.length > 0 ? (
+          {filteredCases && filteredCases.length > 0 ? (
             filteredCases.map((c) => (
               <TableRow key={c.id}>
-                <TableCell className="font-medium">{c.id}</TableCell>
-                <TableCell>{c.name}</TableCell>
-                <TableCell>{c.document}</TableCell>
+                <TableCell className="font-medium">{c.caseNumber}</TableCell>
+                <TableCell>{c.firstName} {c.lastName}</TableCell>
+                <TableCell>{c.documentId}</TableCell>
                 <TableCell>{c.municipality}</TableCell>
                 <TableCell>
                   <CaseStatusIndicator status={c.status} />

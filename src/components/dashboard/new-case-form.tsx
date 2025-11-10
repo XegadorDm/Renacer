@@ -17,9 +17,12 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 const formSchema = z.object({
-  fullName: z.string().min(3, 'Nombres y apellidos son requeridos.'),
+  firstName: z.string().min(1, 'El nombre es requerido.'),
+  lastName: z.string().min(1, 'El apellido es requerido.'),
   documentId: z.string().min(5, 'Documento de identidad es requerido.'),
   internalId: z.string().optional(),
   ethnicGroup: z.string().min(1, 'Grupo étnico es requerido.'),
@@ -27,6 +30,7 @@ const formSchema = z.object({
   gender: z.string().min(1, 'Sexo es requerido.'),
   dob: z.date({ required_error: 'Fecha de nacimiento es requerida.'}),
   address: z.string().min(1, 'Dirección es requerida.'),
+  municipality: z.string().min(1, 'El municipio es requerido.'),
   department: z.string().min(1, 'Departamento es requerido.'),
   phone1: z.string().min(7, 'Celular 1 es requerido.'),
   phone2: z.string().optional(),
@@ -40,17 +44,20 @@ const formSchema = z.object({
 
 export function NewCaseForm() {
   const router = useRouter();
+  const firestore = useFirestore();
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      fullName: '',
+      firstName: '',
+      lastName: '',
       documentId: '',
       internalId: `INT-${Math.floor(1000 + Math.random() * 9000)}`,
       ethnicGroup: '',
       maritalStatus: '',
       gender: '',
       address: '',
+      municipality: '',
       department: 'Cauca',
       phone1: '',
       phone2: '',
@@ -63,17 +70,30 @@ export function NewCaseForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values);
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!firestore) return;
+    
+    const casesCollection = collection(firestore, 'cases');
+    const caseData = {
+        ...values,
+        id: '', // Firestore will generate this
+        caseNumber: `CAS-${Date.now()}`,
+        status: "Sin novedad",
+        birthDate: values.dob.toISOString(),
+    };
+
+    addDocumentNonBlocking(casesCollection, caseData);
+
     toast({
         title: "Caso Guardado Exitosamente",
-        description: `El caso para ${values.fullName} ha sido creado.`,
+        description: `El caso para ${values.firstName} ${values.lastName} ha sido creado.`,
     });
-    router.push('/dashboard/cases');
+    router.push(`/dashboard/cases?location=${values.municipality}`);
   }
 
   const formFields = [
-    { name: 'fullName', label: 'Nombres y Apellidos', component: Input, placeholder: 'Nombres y apellidos completos' },
+    { name: 'firstName', label: 'Nombres', component: Input, placeholder: 'Nombres completos' },
+    { name: 'lastName', label: 'Apellidos', component: Input, placeholder: 'Apellidos completos' },
     { name: 'documentId', label: 'Documento de identidad', component: Input, placeholder: 'Número de documento' },
     { name: 'internalId', label: 'ID Interno', component: Input, props: { disabled: true } },
     { name: 'ethnicGroup', label: 'Grupo étnico', component: Select, options: ['Indígena', 'Afrocolombiano', 'Raizal', 'Palenquero', 'Gitano', 'Mestizo', 'Ninguno'] },
@@ -81,6 +101,7 @@ export function NewCaseForm() {
     { name: 'gender', label: 'Sexo', component: Select, options: ['Masculino', 'Femenino', 'Otro'] },
     { name: 'dob', label: 'Fecha de nacimiento', component: 'datepicker' },
     { name: 'address', label: 'Dirección / Vereda / Corregimiento', component: Input, placeholder: 'Ej: Vereda La Esperanza' },
+    { name: 'municipality', label: 'Municipio', component: Select, options: ['Suárez', 'Piendamó', 'Morales'] },
     { name: 'department', label: 'Departamento', component: Input, props: { disabled: true } },
     { name: 'phone1', label: 'Celular 1', component: Input, type: 'tel' },
     { name: 'phone2', label: 'Celular 2 (Opcional)', component: Input, type: 'tel' },
