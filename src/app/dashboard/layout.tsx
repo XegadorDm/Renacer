@@ -1,5 +1,6 @@
 'use client';
 import type { ReactNode } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser } from "@/firebase";
 import {
@@ -27,7 +28,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const router = useRouter();
 
-  if (isUserLoading) {
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.replace('/login');
+    }
+  }, [isUserLoading, user, router]);
+
+
+  if (isUserLoading || !user) {
     return (
         <div className="flex items-center justify-center min-h-screen">
             <div className="p-8 bg-background rounded-lg shadow-xl">
@@ -35,11 +43,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </div>
         </div>
     )
-  }
-
-  if (!user) {
-    router.replace('/login');
-    return null;
   }
   
   const handleLogout = async () => {
