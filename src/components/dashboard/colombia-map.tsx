@@ -13,19 +13,6 @@ export function ColombiaMap() {
     { id: 'morales', name: 'Morales', path: 'M220 170 L250 170 L230 200 L200 200 Z', textPos: { x: 215, y: 185 } },
   ];
 
-  const getRhombusPath = (textX: number, textY: number, width: number, height: number) => {
-    const centerX = textX + width / 2;
-    const centerY = textY - height / 2;
-    return `
-      M ${centerX} ${centerY - height / 2}
-      L ${centerX + width / 2} ${centerY}
-      L ${centerX} ${centerY + height / 2}
-      L ${centerX - width / 2} ${centerY}
-      Z
-    `;
-  };
-
-
   return (
     <div className="relative w-full aspect-square max-w-lg mx-auto">
       <svg viewBox="0 0 400 400" className="w-full h-full">
@@ -51,17 +38,10 @@ export function ColombiaMap() {
           </Link>
         ))}
         
-        {/* Rhombus backgrounds */}
-        <g className="fill-primary/50 stroke-none pointer-events-none">
-           <path d={getRhombusPath(175, 125, 70, 20)} />
-           <path d={getRhombusPath(170, 168, 70, 20)} />
-           <path d={getRhombusPath(200, 185, 70, 20)} />
-        </g>
-        
         {/* Region names */}
         <g className="fill-primary-foreground stroke-none pointer-events-none">
           {regions.map(region => (
-             <text key={`text-${region.id}`} x={region.textPos.x} y={region.textPos.y} className="text-xs font-bold font-sans">
+             <text key={`text-${region.id}`} x={region.textPos.x} y={region.textPos.y} className="text-xs font-bold font-sans fill-primary">
                 {region.name.toUpperCase()}
             </text>
           ))}
