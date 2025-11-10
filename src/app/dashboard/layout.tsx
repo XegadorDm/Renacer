@@ -34,12 +34,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <SidebarContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={true} tooltip="Ubicaciones">
+                <SidebarMenuButton asChild tooltip="Ubicaciones">
                     <Link href="/dashboard"><Home/><span>Ubicaciones</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Casos">
+                <SidebarMenuButton asChild isActive={true} tooltip="Casos">
                     <Link href="/dashboard/cases"><Users/><span>Casos</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

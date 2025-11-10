@@ -18,7 +18,7 @@ export default function CasesPage({ searchParams }: { searchParams: { query?: st
       </CardHeader>
       <CardContent>
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-          <div className="relative w-full md:w-1/2">
+          <div className="relative w-full md:w-1/2 lg:w-1/3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Buscar por nombre o N° de caso..." className="pl-9" />
           </div>
