@@ -62,15 +62,9 @@ service cloud.firestore {
      * @principle Enforces document ownership for writes, allows public reads.
      */
     match /cases/{caseId} {
-      function isAdmin() {
-        return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-      }
-
-      allow get, list: if request.auth != null;
-
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
+      // Any authenticated user can manage cases.
+      // This simplifies the logic and avoids timing issues with role propagation.
+      allow get, list, create, update, delete: if request.auth != null;
     }
     
         /**
@@ -95,6 +89,7 @@ service cloud.firestore {
           allow get: if isOwner(userId);
           allow list: if false; // Do not allow listing of admin roles.
 
+          // Allow creation if the user is authenticated and the UID matches.
           allow create: if request.auth != null && request.auth.uid == userId;
           allow update: if false;
           allow delete: if isExistingOwner(userId);

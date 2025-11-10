@@ -37,10 +37,8 @@ export function RegisterForm() {
     defaultValues: {
       firstName: '',
       lastName: '',
-      documentType: '',
       documentNumber: '',
       email: '',
-      gender: '',
       password: '',
       socialSecurityCode: '',
       role: 'case-worker',
@@ -62,17 +60,13 @@ export function RegisterForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Step 2: User is now created and signed in. Proceed to create Firestore documents.
+      // Step 2: User is now created and signed in. Proceed to create Firestore document for the user profile.
       const { password, ...userData } = values;
 
       // Create user profile document
       const userDocRef = doc(firestore, 'users', user.uid);
       await setDoc(userDocRef, { ...userData, id: user.uid });
-
-      // Create admin role document
-      const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
-      await setDoc(adminRoleRef, { role: 'admin' });
-
+      
       toast({
         title: '¡Registro Exitoso!',
         description: 'Tu cuenta ha sido creada y ahora estás conectado.',
