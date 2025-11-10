@@ -8,8 +8,9 @@ export function ColombiaMap() {
   const [hovered, setHovered] = useState<string | null>(null);
 
   const regions = [
-    { id: 'norte', name: 'Norte Cauca', path: 'M180 120 L220 100 L250 130 L210 150 Z', link: '/dashboard/cases?location=Norte%20Cauca' },
-    { id: 'sur', name: 'Sur Cauca', path: 'M180 160 L210 150 L250 170 L200 200 Z', link: '/dashboard/cases?location=Sur%20Cauca' },
+    { id: 'suarez', name: 'Suárez', path: 'M180 120 L220 100 L250 130 L210 150 Z', link: '/dashboard/cases?location=Suárez' },
+    { id: 'piendamo', name: 'Piendamó', path: 'M180 160 L210 150 L220 170 L190 180 Z', link: '/dashboard/cases?location=Piendamó' },
+    { id: 'morales', name: 'Morales', path: 'M220 170 L250 170 L230 200 L200 200 Z', link: '/dashboard/cases?location=Morales' },
   ];
 
   return (
@@ -20,7 +21,7 @@ export function ColombiaMap() {
           className="fill-muted stroke-border"
         />
         <text x="250" y="300" className="text-sm fill-muted-foreground font-sans">Valle del Cauca</text>
-        <text x="100" y="80" className="text-sm fill-muted-foreground font-sans">Océano Pacífico</text>
+        <text x="100" y="80" className="text-sm fill-muted-foreground font-sans">CAUCA</text>
         
         {regions.map(region => (
           <Link href={region.link} key={region.id}>
@@ -37,13 +38,14 @@ export function ColombiaMap() {
         ))}
         
         <g className="fill-primary-foreground stroke-none pointer-events-none">
-          <text x="195" y="130" className="text-xs font-bold font-sans">Norte</text>
-          <text x="200" y="175" className="text-xs font-bold font-sans">Sur</text>
+          <text x="190" y="125" className="text-xs font-bold font-sans">SUÁREZ</text>
+          <text x="183" y="168" className="text-xs font-bold font-sans">PIENDAMÓ</text>
+          <text x="215" y="185" className="text-xs font-bold font-sans">MORALES</text>
         </g>
       </svg>
       <div className="absolute bottom-2 right-2 p-2 bg-background/70 rounded-md text-sm text-foreground">
-        <p className="font-bold">Región Seleccionada:</p>
-        <p>{hovered ? regions.find(r => r.id === hovered)?.name : 'Ninguna'}</p>
+        <p className="font-bold">Municipio Seleccionado:</p>
+        <p>{hovered ? regions.find(r => r.id === hovered)?.name : 'Ninguno'}</p>
       </div>
     </div>
   );
