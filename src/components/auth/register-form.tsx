@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
@@ -37,8 +37,10 @@ export function RegisterForm() {
     defaultValues: {
       firstName: '',
       lastName: '',
+      documentType: '',
       documentNumber: '',
       email: '',
+      gender: '',
       password: '',
       socialSecurityCode: '',
       role: 'case-worker',
@@ -56,18 +58,20 @@ export function RegisterForm() {
     }
 
     try {
+      // Step 1: Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
+      // Now that the user is created and authenticated, proceed with Firestore writes.
       const { password, ...userData } = values;
       
-      // Save user profile
+      // Step 2: Save user profile
       const userDocRef = doc(firestore, 'users', user.uid);
-      setDocumentNonBlocking(userDocRef, { ...userData, id: user.uid }, { merge: true });
+      await setDoc(userDocRef, { ...userData, id: user.uid }, { merge: true });
 
-      // Grant admin role
+      // Step 3: Grant admin role
       const adminRoleRef = doc(firestore, 'roles_admin', user.uid);
-      setDocumentNonBlocking(adminRoleRef, { role: 'admin' }, { merge: true });
+      await setDoc(adminRoleRef, { role: 'admin' }, { merge: true });
 
       toast({
         title: '¡Registro Exitoso!',
