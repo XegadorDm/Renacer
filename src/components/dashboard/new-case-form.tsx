@@ -46,8 +46,19 @@ export function NewCaseForm() {
       fullName: '',
       documentId: '',
       internalId: `INT-${Math.floor(1000 + Math.random() * 9000)}`,
+      ethnicGroup: '',
+      maritalStatus: '',
+      gender: '',
+      address: '',
       department: 'Cauca',
+      phone1: '',
+      phone2: '',
+      displacementType: '',
+      disability: '',
+      age: 0,
       isElderly: false,
+      householdMembers: 1,
+      testimony: '',
     },
   });
 
@@ -119,7 +130,7 @@ export function NewCaseForm() {
                         </PopoverContent>
                       </Popover>
                     ) : fieldConfig.component === Select ? (
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                         <SelectContent>
                           {fieldConfig.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
