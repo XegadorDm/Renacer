@@ -14,6 +14,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale/es';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 
@@ -114,7 +115,7 @@ export function NewCaseForm() {
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {field.value ? format(field.value, "PPP", { locale: require('date-fns/locale/es') }) : <span>Selecciona una fecha</span>}
+                            {field.value ? format(field.value, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0">
