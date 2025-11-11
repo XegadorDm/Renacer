@@ -17,7 +17,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, useAuth } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 const formSchema = z.object({
@@ -45,6 +45,7 @@ const formSchema = z.object({
 export function NewCaseForm() {
   const router = useRouter();
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -71,7 +72,14 @@ export function NewCaseForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!firestore) return;
+    if (!firestore || !auth.currentUser) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "No estás autenticado o el servicio no está disponible.",
+        });
+        return;
+    };
     
     const casesCollection = collection(firestore, 'cases');
     const caseData = {
@@ -80,6 +88,7 @@ export function NewCaseForm() {
         caseNumber: `CAS-${Date.now()}`,
         status: "Sin novedad",
         birthDate: values.dob.toISOString(),
+        createdBy: auth.currentUser.uid, // Track who created the case
     };
 
     addDocumentNonBlocking(casesCollection, caseData);

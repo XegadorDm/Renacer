@@ -23,7 +23,6 @@ const formSchema = z.object({
   gender: z.string({ required_error: 'Selecciona un género.' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
   socialSecurityCode: z.string().min(1, 'El código es requerido.'),
-  role: z.string().default('case-worker'),
 });
 
 export function RegisterForm() {
@@ -41,7 +40,6 @@ export function RegisterForm() {
       email: '',
       password: '',
       socialSecurityCode: '',
-      role: 'case-worker',
     },
   });
 
@@ -62,11 +60,15 @@ export function RegisterForm() {
 
       // Step 2: User is now created and signed in. Proceed to create Firestore document for the user profile.
       const { password, ...userData } = values;
-
-      // Create user profile document
-      const userDocRef = doc(firestore, 'users', user.uid);
-      await setDoc(userDocRef, { ...userData, id: user.uid });
       
+      const userDocRef = doc(firestore, 'users', user.uid);
+      
+      await setDoc(userDocRef, { 
+        ...userData, 
+        id: user.uid,
+        role: 'case-worker' // Assign default role
+      });
+
       toast({
         title: '¡Registro Exitoso!',
         description: 'Tu cuenta ha sido creada y ahora estás conectado.',
