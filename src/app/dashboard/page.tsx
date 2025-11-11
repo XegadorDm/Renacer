@@ -10,8 +10,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      <div className="lg:col-span-2">
+    <div className="grid grid-cols-1 gap-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -23,14 +22,11 @@ export default function DashboardPage() {
               Volver
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex justify-center">
             <ColombiaMap />
           </CardContent>
         </Card>
-      </div>
-      <div className="lg:col-span-1">
-        <UserPanel />
-      </div>
+      <UserPanel />
     </div>
   );
 }
