@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -28,9 +29,12 @@ export function CasesTable({ query, location }: { query: string; location: strin
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
   const filteredCases = cases?.filter(c => {
+    const searchTerm = query.toLowerCase();
     return query ? 
-      (c.firstName.toLowerCase() + " " + c.lastName.toLowerCase()).includes(query.toLowerCase()) || 
-      c.caseNumber.toLowerCase().includes(query.toLowerCase()) : true;
+      (c.firstName.toLowerCase() + " " + c.lastName.toLowerCase()).includes(searchTerm) || 
+      c.caseNumber.toLowerCase().includes(searchTerm) ||
+      c.documentId.toLowerCase().includes(searchTerm)
+      : true;
   });
 
   if (isLoading) {
