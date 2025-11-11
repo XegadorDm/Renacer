@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -21,6 +22,7 @@ const formSchema = z.object({
   documentNumber: z.string().min(5, 'El número de documento es requerido.'),
   email: z.string().email('Por favor ingresa un correo válido.'),
   gender: z.string({ required_error: 'Selecciona un género.' }),
+  role: z.string({ required_error: 'Selecciona un rol.' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
   socialSecurityCode: z.string().min(1, 'El código es requerido.'),
 });
@@ -66,7 +68,6 @@ export function RegisterForm() {
       await setDoc(userDocRef, { 
         ...userData, 
         id: user.uid,
-        role: 'case-worker' // Assign default role
       });
 
       toast({
@@ -120,15 +121,26 @@ export function RegisterForm() {
             <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="tu@correo.com" {...field} /></FormControl><FormMessage /></FormItem>
           )}
         />
-        <FormField control={form.control} name="gender" render={({ field }) => (
-            <FormItem><FormLabel>Género</FormLabel>
-               <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl><SelectTrigger><SelectValue placeholder="Selecciona tu género" /></SelectTrigger></FormControl>
-                <SelectContent><SelectItem value="male">Masculino</SelectItem><SelectItem value="female">Femenino</SelectItem><SelectItem value="other">Otro</SelectItem></SelectContent>
-              </Select>
-            <FormMessage /></FormItem>
-          )}
-        />
+        <div className="grid grid-cols-2 gap-4">
+            <FormField control={form.control} name="gender" render={({ field }) => (
+                <FormItem><FormLabel>Género</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona tu género" /></SelectTrigger></FormControl>
+                    <SelectContent><SelectItem value="male">Masculino</SelectItem><SelectItem value="female">Femenino</SelectItem><SelectItem value="other">Otro</SelectItem></SelectContent>
+                  </Select>
+                <FormMessage /></FormItem>
+              )}
+            />
+            <FormField control={form.control} name="role" render={({ field }) => (
+                <FormItem><FormLabel>Rol</FormLabel>
+                   <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un rol" /></SelectTrigger></FormControl>
+                    <SelectContent><SelectItem value="case-worker">Trabajador Social</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent>
+                  </Select>
+                <FormMessage /></FormItem>
+              )}
+            />
+        </div>
         <FormField control={form.control} name="password" render={({ field }) => (
             <FormItem><FormLabel>Contraseña</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
           )}

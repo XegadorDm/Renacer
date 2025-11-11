@@ -1,3 +1,4 @@
+
 /**
  * @fileoverview Firestore Security Rules for Renacer Digital.
  *
@@ -29,8 +30,8 @@ service cloud.firestore {
     }
 
     // Helper function to check if a user is an administrator.
-    function isAdmin(userId) {
-      return getUserRole(userId) == 'admin';
+    function isAdmin() {
+      return isSignedIn() && getUserRole(request.auth.uid) == 'admin';
     }
 
     /**
@@ -56,14 +57,14 @@ service cloud.firestore {
      */
     match /cases/{caseId} {
       function isCaseOwner() {
-        return request.auth.uid == resource.data.createdBy;
+        return isSignedIn() && request.auth.uid == resource.data.createdBy;
       }
       
       // CREATE: Any signed-in user can create a case. We ensure their UID is stamped on the doc.
       allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid;
 
       // READ (GET): Admins can get any case. Case-workers can only get cases they created.
-      allow get: if isSignedIn() && (isAdmin(request.auth.uid) || isCaseOwner());
+      allow get: if isAdmin() || isCaseOwner();
       
       // READ (LIST): Admins can list all cases. Case-workers can only list their own.
       // Note: This requires a client-side query with a 'where' clause on 'createdBy'.
@@ -71,11 +72,11 @@ service cloud.firestore {
 
       // UPDATE: Admins can update any case. Case-workers can only update their own.
       // We also protect the createdBy field from being changed.
-      allow update: if isSignedIn() && (isAdmin(request.auth.uid) || isCaseOwner())
+      allow update: if (isAdmin() || isCaseOwner())
                       && request.resource.data.createdBy == resource.data.createdBy;
 
       // DELETE: Only admins can delete cases.
-      allow delete: if isSignedIn() && isAdmin(request.auth.uid);
+      allow delete: if isAdmin();
     }
   }
 }
