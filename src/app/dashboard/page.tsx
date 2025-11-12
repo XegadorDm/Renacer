@@ -1,3 +1,4 @@
+
 'use client';
 import { ColombiaMap } from "@/components/dashboard/colombia-map";
 import { UserPanel } from "@/components/dashboard/user-panel";
@@ -38,7 +39,10 @@ export default function DashboardPage() {
                     <Skeleton className="w-full aspect-square" />
                 </CardContent>
             </Card>
-            <UserPanel />
+            <div className="space-y-4">
+                <Skeleton className="h-48 w-full" />
+                <Skeleton className="h-32 w-full" />
+            </div>
           </div>
       )
   }
@@ -60,7 +64,9 @@ export default function DashboardPage() {
             <ColombiaMap userRole={userProfile?.role} />
           </CardContent>
         </Card>
-      <UserPanel />
+        <div className="lg:col-span-1">
+            <UserPanel />
+        </div>
     </div>
   );
 }
