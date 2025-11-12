@@ -29,7 +29,7 @@ export default function DashboardPage() {
 
   if (isProfileLoading) {
       return (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl">
             <Card className="lg:col-span-2">
                 <CardHeader>
                     <Skeleton className="h-6 w-1/2" />
@@ -48,7 +48,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full max-w-6xl">
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
@@ -64,7 +64,7 @@ export default function DashboardPage() {
             <ColombiaMap userRole={userProfile?.role} />
           </CardContent>
         </Card>
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 flex flex-col">
             <UserPanel />
         </div>
     </div>
