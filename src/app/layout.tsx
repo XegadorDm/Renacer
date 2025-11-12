@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   description:
     'Plataforma de apoyo para gestión de casos sociales y trámites gubernamentales para comunidades vulnerables del Cauca, Colombia.',
   manifest: '/manifest.json',
+  themeColor: '#ffffff',
 };
 
 export default function RootLayout({
