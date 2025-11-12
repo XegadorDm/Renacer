@@ -20,7 +20,7 @@ function DetailItem({ label, value }: { label: string, value: React.ReactNode })
     return (
         <div>
             <p className="text-sm font-medium text-muted-foreground">{label}</p>
-            <p className="text-base text-foreground">{value}</p>
+            <p className="text-base text-foreground">{String(value)}</p>
         </div>
     );
 }
