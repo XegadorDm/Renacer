@@ -18,7 +18,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useAuth } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Case } from '@/lib/case-schema';
 import { useEffect } from 'react';
@@ -102,6 +102,8 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         });
         return;
     };
+
+    const currentUser = auth.currentUser;
     
     if (isEditMode && caseData) {
         // Update existing document
@@ -109,6 +111,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         const updatedData = {
             ...values,
             birthDate: values.dob.toISOString(),
+            members: caseData.members // Preserve existing members map
         };
         setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
         toast({
@@ -124,9 +127,11 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             ...values,
             id: '', // Firestore will generate this
             caseNumber: `CAS-${Date.now()}`,
-            status: "Sin novedad",
+            status: "Sin novedad" as const,
             birthDate: values.dob.toISOString(),
-            createdBy: auth.currentUser.uid, // Track who created the case
+            members: { // Set the creator as the owner
+                [currentUser.uid]: 'owner'
+            }
         };
         addDocumentNonBlocking(casesCollection, newCaseData);
         toast({

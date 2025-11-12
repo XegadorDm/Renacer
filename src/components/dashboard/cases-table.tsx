@@ -1,14 +1,14 @@
 
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
+import { collection, query as firestoreQuery, where, doc, or } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
 import { 
@@ -31,44 +31,53 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 
+type WithId<T> = T & { id: string };
 
 export function CasesTable({ query, location }: { query: string; location: string }) {
   const firestore = useFirestore();
-  const { user } = useUser(); // We'll get the user role from a profile doc later
+  const { user } = useUser();
   const { toast } = useToast();
 
-  // State for alert dialog
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
 
-  // We assume there's a user profile collection where roles are stored
-  // For now, let's hardcode a role for demonstration, but this should be fetched.
-  // A proper implementation would fetch the user's profile and get the role.
-  const userRole = 'admin'; // Replace with actual role fetching logic
-
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     
-    const baseCollection = collection(firestore, 'cases');
+    let q = collection(firestore, 'cases');
 
+    const filters = [];
     if (location) {
-      return firestoreQuery(baseCollection, where("municipality", "==", location));
+        filters.push(where("municipality", "==", location));
     }
     
-    return baseCollection;
+    // All users can only see cases where they are a member
+    filters.push(where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
 
-  }, [firestore, location]);
+    if (query) {
+        const searchTerm = query.toLowerCase();
+        // This is a client-side filter approximation.
+        // For a full-text search solution, a dedicated service like Algolia or Elasticsearch would be better.
+        // We're filtering client-side after the initial fetch based on location and membership.
+    }
+    
+    return firestoreQuery(collection(firestore, 'cases'), ...filters);
+
+  }, [firestore, user, location]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
-  const filteredCases = cases?.filter(c => {
+  const filteredCases = useMemo(() => {
+    if (!cases) return [];
+    if (!query) return cases;
+
     const searchTerm = query.toLowerCase();
-    return query ? 
-      (c.firstName.toLowerCase() + " " + c.lastName.toLowerCase()).includes(searchTerm) || 
+    return cases.filter(c => 
+      `${c.firstName.toLowerCase()} ${c.lastName.toLowerCase()}`.includes(searchTerm) || 
       c.caseNumber.toLowerCase().includes(searchTerm) ||
       c.documentId.toLowerCase().includes(searchTerm)
-      : true;
-  });
+    );
+  }, [cases, query]);
 
   const handleDeleteClick = (caseItem: WithId<Case>) => {
     setCaseToDelete(caseItem);
@@ -90,6 +99,11 @@ export function CasesTable({ query, location }: { query: string; location: strin
     setCaseToDelete(null);
   };
 
+  const canDelete = (caseItem: WithId<Case>) => {
+      if (!user) return false;
+      return caseItem.members?.[user.uid] === 'owner';
+  }
+
   if (isLoading) {
     return (
         <div className="border rounded-lg p-4 space-y-2">
@@ -99,8 +113,6 @@ export function CasesTable({ query, location }: { query: string; location: strin
         </div>
     )
   }
-
-  type WithId<T> = T & { id: string };
 
   return (
     <>
@@ -144,7 +156,7 @@ export function CasesTable({ query, location }: { query: string; location: strin
                         <DropdownMenuItem asChild>
                           <Link href={`/dashboard/cases/${c.id}/edit`}>Editar</Link>
                         </DropdownMenuItem>
-                         {userRole === 'admin' && (
+                         {canDelete(c) && (
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
                             onClick={() => handleDeleteClick(c)}
@@ -160,7 +172,7 @@ export function CasesTable({ query, location }: { query: string; location: strin
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24">
-                  No se encontraron casos.
+                  No se encontraron casos que coincidan con tu búsqueda.
                 </TableCell>
               </TableRow>
             )}

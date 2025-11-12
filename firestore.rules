@@ -46,13 +46,13 @@ service cloud.firestore {
      */
     match /cases/{caseId} {
       // Read Rules
-      allow get: if isSignedIn() && hasRole(resource.data.members, 'viewer');
+      allow get: if isSignedIn() && hasAccess(getRole());
       allow list: if false;
 
       // Write Rules
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && isExistingCaseEditor(resource.data.members);
-      allow delete: if isSignedIn() && isExistingCaseOwner(resource.data.members);
+      allow create: if isSignedIn() && isNewCaseOwner();
+      allow update: if isSignedIn() && canUpdate(getRole());
+      allow delete: if isSignedIn() && getRole() == 'owner';
     }
 
     // ------ Helper Functions ------
@@ -66,35 +66,50 @@ service cloud.firestore {
     }
 
     /**
-     * @description Checks if the user has the specified role in the members map.
-     * @param {map} members - The members map of the document.
-     * @param {string} role - The role to check for (e.g., 'owner', 'editor', 'viewer').
-     * @returns {boolean} True if the user has the specified role or a higher role, false otherwise.
+     * @description Gets the user's role from the document's members map.
+     * @returns {string | null} The user's role ('owner', 'editor', 'viewer') or null if not a member.
      */
-    function hasRole(members, role) {
-      return isSignedIn() && (
-        members[request.auth.uid] == 'owner' ||
-        (role == 'viewer' && (members[request.auth.uid] == 'viewer' || members[request.auth.uid] == 'editor')) ||
-        (role == 'editor' && (members[request.auth.uid] == 'editor'))
-      );
+    function getRole() {
+      return resource.data.members[request.auth.uid];
+    }
+    
+    /**
+     * @description Gets the user's future role from the incoming request data.
+     * @returns {string | null} The user's role from the request.
+     */
+    function getFutureRole() {
+        return request.resource.data.members[request.auth.uid];
     }
 
-   /**
-     * @description Checks if the user has 'owner' role in the existing document.
-     * @param {map} members - The members map of the document.
-     * @returns {boolean} True if the user is the owner, and the document exists.
+    /**
+     * @description Checks if the user has a specific level of access or higher.
+     * @param {string} role - The user's current role.
+     * @returns {boolean} True if the user has 'viewer' access or higher.
      */
-    function isExistingCaseOwner(members) {
-        return hasRole(members, 'owner');
+    function hasAccess(role) {
+      return role == 'owner' || role == 'editor' || role == 'viewer';
+    }
+    
+    /**
+     * @description Checks if the user can perform an update operation.
+     * @param {string} role - The user's current role.
+     * @returns {boolean} True if user is owner/editor and not changing their own role.
+     */
+    function canUpdate(role) {
+      let isOwnerOrEditor = role == 'owner' || role == 'editor';
+      let isRoleUnchanged = getRole() == getFutureRole();
+
+      return isOwnerOrEditor && isRoleUnchanged;
     }
 
-   /**
-     * @description Checks if the user has 'editor' role in the existing document.
-     * @param {map} members - The members map of the document.
-     * @returns {boolean} True if the user is an editor, and the document exists.
+    /**
+     * @description Verifies that the user creating a new case is assigning themselves as the owner.
+     * @returns {boolean} True if the creator's UID is the only member and is set to 'owner'.
      */
-      function isExistingCaseEditor(members) {
-        return hasRole(members, 'editor');
+    function isNewCaseOwner() {
+      let user = request.auth.uid;
+      let members = request.resource.data.members;
+      return members.size() == 1 && members[user] == 'owner';
     }
   }
 }

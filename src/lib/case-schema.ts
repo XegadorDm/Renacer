@@ -23,4 +23,5 @@ export interface Case {
     householdMembers: number;
     testimony: string;
     status: CaseStatus;
+    members: { [uid: string]: 'owner' | 'editor' | 'viewer' };
 }
