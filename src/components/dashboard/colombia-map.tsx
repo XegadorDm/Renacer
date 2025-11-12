@@ -29,14 +29,14 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
         <svg viewBox="80 0 300 400" className="w-full h-full">
           <g>
             <path
-              d="M210,10 C230,20 250,50 260,80 C270,110 260,140 240,160 C220,180 200,200 180,220 C160,240 140,260 130,290 C120,320 110,350 100,380 C90,350 80,320 90,290 C100,260 110,230 130,210 C150,190 170,170 190,150 C210,130 220,110 220,80 C220,50 210,30 210,10 Z"
+              d="M210,10 C250,20 280,50 290,80 C300,110 290,140 260,160 C230,180 200,200 180,220 C160,240 130,260 120,290 C110,320 100,350 90,380 C80,350 70,320 80,290 C90,260 100,230 120,210 C140,190 160,170 190,150 C220,130 230,110 230,80 C230,50 220,30 210,10 Z"
               fill="hsl(var(--muted))"
               stroke="hsl(var(--border))"
               strokeWidth="1.5"
             />
           </g>
           {/* Labels */}
-          <text x="235" y="35" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Valle del Cauca</text>
+          <text x="255" y="35" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Valle del Cauca</text>
           <text x="110" y="370" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Cauca</text>
 
           {/* Interactive region paths */}
