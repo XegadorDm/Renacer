@@ -8,7 +8,7 @@ import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query as firestoreQuery, where, doc, or } from "firebase/firestore";
+import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
 import { 
@@ -44,11 +44,8 @@ export function CasesTable({ query, location }: { query: string; location: strin
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     
-    // Base query: only fetch cases where the current user is a member.
-    // This is the primary security filter.
     let q = firestoreQuery(collection(firestore, 'cases'), where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
 
-    // Add location filter if it exists.
     if (location) {
         q = firestoreQuery(q, where("municipality", "==", location));
     }
@@ -63,8 +60,6 @@ export function CasesTable({ query, location }: { query: string; location: strin
     if (!cases) return [];
     if (!query) return cases;
 
-    // The 'cases' array is already secured by the Firestore query.
-    // This client-side filter just refines the visible results from the secure dataset.
     const searchTerm = query.toLowerCase();
     return cases.filter(c => 
       c && (
@@ -161,7 +156,7 @@ export function CasesTable({ query, location }: { query: string; location: strin
                                 <Link href={`/dashboard/cases/${c.id}/edit`}>Editar</Link>
                             </DropdownMenuItem>
                         )}
-                         {canPerformAction(c, 'owner') && (
+                        {canPerformAction(c, 'owner') && (
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
                             onClick={() => handleDeleteClick(c)}
