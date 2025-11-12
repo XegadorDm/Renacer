@@ -1,8 +1,8 @@
 'use client';
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import {
   SidebarProvider,
   Sidebar,
@@ -22,17 +22,39 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Home, LogOut, Settings, Users, PanelLeft } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { Skeleton } from "@/components/ui/skeleton";
+import { doc } from "firebase/firestore";
+
+
+interface UserProfile {
+    role: string;
+}
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
+  const firestore = useFirestore();
+
+    const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.replace('/login');
     }
   }, [isUserLoading, user, router]);
+
+  const casesLinkHref = useMemo(() => {
+    let href = "/dashboard/cases";
+    if (userProfile?.role) {
+      href += `?role=${userProfile.role}`;
+    }
+    return href;
+  }, [userProfile?.role]);
 
 
   if (isUserLoading || !user) {
@@ -80,7 +102,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Casos">
-                    <Link href="/dashboard/cases"><Users/><span>Casos</span></Link>
+                    <Link href={casesLinkHref}><Users/><span>Casos</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -120,7 +142,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
-          <main className="flex justify-center p-4 sm:px-6 sm:py-0">
+          <main className="p-4 sm:px-6 sm:py-0">
             {children}
           </main>
         </SidebarInset>
