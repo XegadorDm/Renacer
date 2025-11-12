@@ -23,21 +23,24 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
     return href;
   }
 
+  // Vertices for a 12-sided polygon (dodecagon)
+  const dodecagonPath = "M260 50 L310 100 L320 175 L295 245 L235 300 L165 310 L100 285 L60 225 L50 150 L75 80 L130 45 L200 40 Z";
+
   return (
     <div className="flex flex-col md:flex-row items-center gap-8 w-full">
       <div className="relative w-full md:w-2/3 aspect-square max-w-lg mx-auto">
-        <svg viewBox="80 0 300 400" className="w-full h-full">
+        <svg viewBox="0 0 380 380" className="w-full h-full">
           <g>
             <path
-              d="M190 20 L 330 200 L 190 380 L 50 200 Z"
+              d={dodecagonPath}
               fill="hsl(var(--muted))"
               stroke="hsl(var(--border))"
               strokeWidth="1.5"
             />
           </g>
           {/* Labels */}
-          <text x="255" y="35" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Valle del Cauca</text>
-          <text x="110" y="370" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Cauca</text>
+          <text x="270" y="60" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Valle del Cauca</text>
+          <text x="110" y="320" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Cauca</text>
 
           {/* Interactive region paths */}
           {regions.map(region => (
