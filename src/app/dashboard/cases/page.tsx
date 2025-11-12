@@ -24,8 +24,9 @@ export default function CasesPage() {
     } else {
       params.delete('query');
     }
-    // Preserve role parameter
-    if(userRole) params.set('role', userRole);
+    // Preserve role and location parameters
+    if (userRole) params.set('role', userRole);
+    if (location) params.set('location', location);
 
     router.replace(`/dashboard/cases?${params.toString()}`);
   }, 300);

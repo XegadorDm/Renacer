@@ -8,7 +8,7 @@ import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
+import { collection, query as firestoreQuery, where, doc, or } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
 import { 
@@ -55,21 +55,22 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     
-    let casesCollection = collection(firestore, 'cases');
-    let q;
+    const casesCollection = collection(firestore, 'cases');
+    let queryConstraints = [];
 
-    if (isAdmin) {
-      // Admin can see all cases, optionally filtered by location
-      q = location ? firestoreQuery(casesCollection, where("municipality", "==", location)) : casesCollection;
-    } else {
-      // Non-admins only see cases they are members of
-      q = firestoreQuery(casesCollection, where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
-      if (location) {
-        q = firestoreQuery(q, where("municipality", "==", location));
-      }
+    // Location filter is always applied if present
+    if (location) {
+      queryConstraints.push(where("municipality", "==", location));
     }
-    
-    return q;
+
+    // Role-based filter
+    if (!isAdmin) {
+      // Non-admins only see cases they are members of
+      queryConstraints.push(where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
+    } 
+    // Admins see all cases, so no additional `where` clause is needed for roles.
+
+    return queryConstraints.length > 0 ? firestoreQuery(casesCollection, ...queryConstraints) : casesCollection;
 
   }, [firestore, user, location, isAdmin]);
 
@@ -80,9 +81,10 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
     if (!query) return cases;
 
     const searchTerm = query.toLowerCase();
+    // More robust filtering to avoid errors on nullish values
     return cases.filter(c => 
       c && (
-        `${c.firstName?.toLowerCase() || ''} ${c.lastName?.toLowerCase() || ''}`.includes(searchTerm) || 
+        `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().includes(searchTerm) || 
         c.caseNumber?.toLowerCase().includes(searchTerm) ||
         c.documentId?.toLowerCase().includes(searchTerm)
       )
@@ -114,13 +116,14 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
       // Admin can do anything
       if (isAdmin) return true;
 
+      // For other users, check the members map
       if (!caseItem.members) return false;
-      const userRole = caseItem.members[user.uid];
+      const userRoleInCase = caseItem.members[user.uid];
       if (action === 'edit') {
-          return userRole === 'owner' || userRole === 'editor';
+          return userRoleInCase === 'owner' || userRoleInCase === 'editor';
       }
       if (action === 'delete') {
-          return userRole === 'owner';
+          return userRoleInCase === 'owner';
       }
       return false;
   }
@@ -133,9 +136,9 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
   if (isLoading) {
     return (
         <div className="border rounded-lg p-4 space-y-2">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
+            {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+            ))}
         </div>
     )
   }
