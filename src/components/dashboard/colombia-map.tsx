@@ -30,8 +30,8 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
           <g>
             <path
               d="M210,10 C230,20 250,50 260,80 C270,110 260,140 240,160 C220,180 200,200 180,220 C160,240 140,260 130,290 C120,320 110,350 100,380 C90,350 80,320 90,290 C100,260 110,230 130,210 C150,190 170,170 190,150 C210,130 220,110 220,80 C220,50 210,30 210,10 Z"
-              fill="hsl(var(--primary) / 0.1)"
-              stroke="hsl(var(--primary))"
+              fill="hsl(var(--muted))"
+              stroke="hsl(var(--border))"
               strokeWidth="1.5"
             />
           </g>
