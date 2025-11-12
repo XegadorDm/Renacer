@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useMemoFirebase } from "@/firebase/provider";
+import { useRouter } from "next/navigation";
 
 type WithId<T> = T & { id: string };
 
@@ -38,6 +39,7 @@ export function CasesTable({ query, location }: { query: string; location: strin
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
@@ -102,6 +104,11 @@ export function CasesTable({ query, location }: { query: string; location: strin
       }
       return false;
   }
+  
+  const handleViewDetails = (caseItem: WithId<Case>) => {
+    const caseDataString = encodeURIComponent(JSON.stringify(caseItem));
+    router.push(`/dashboard/cases/${caseItem.id}?data=${caseDataString}`);
+  }
 
   if (isLoading) {
     return (
@@ -149,8 +156,8 @@ export function CasesTable({ query, location }: { query: string; location: strin
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                           <Link href={`/dashboard/cases/${c.id}`}>Ver Detalles</Link>
+                        <DropdownMenuItem onClick={() => handleViewDetails(c)}>
+                           Ver Detalles
                         </DropdownMenuItem>
                         {canPerformAction(c, 'edit') && (
                             <DropdownMenuItem asChild>
@@ -185,8 +192,7 @@ export function CasesTable({ query, location }: { query: string; location: strin
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará permanentemente el caso
-               de <span className="font-bold">{caseToDelete?.firstName} {caseToDelete?.lastName}</span> (N° {caseToDelete?.caseNumber}).
+              Esta acción no se puede deshacer. Se eliminará permanentemente el caso de <span className="font-bold">{caseToDelete?.firstName} {caseToDelete?.lastName}</span> (N° {caseToDelete?.caseNumber}).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

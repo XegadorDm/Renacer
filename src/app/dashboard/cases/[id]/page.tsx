@@ -1,10 +1,8 @@
 
 'use client';
 
-import { useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useDoc } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useMemo, Suspense } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import type { Case } from '@/lib/case-schema';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,52 +23,29 @@ function DetailItem({ label, value }: { label: string, value: React.ReactNode })
     );
 }
 
-export default function CaseDetailPage() {
+function CaseDetailContent() {
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
     const id = params.id as string;
-    const firestore = useFirestore();
 
-    const caseDocRef = useMemo(() => {
-        if (!firestore || !id) return null;
-        return doc(firestore, 'cases', id);
-    }, [firestore, id]);
-
-    const { data: caseData, isLoading } = useDoc<Case>(caseDocRef);
-
-    if (isLoading) {
-        return (
-            <Card className="w-full max-w-4xl mx-auto">
-                <CardHeader>
-                    <Skeleton className="h-8 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {Array.from({ length: 15 }).map((_, i) => (
-                        <div key={i} className="space-y-2">
-                            <Skeleton className="h-4 w-1/3" />
-                            <Skeleton className="h-5 w-2/3" />
-                        </div>
-                    ))}
-                    <div className="lg:col-span-3 space-y-2">
-                        <Skeleton className="h-4 w-1/3" />
-                        <Skeleton className="h-20 w-full" />
-                    </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                    <Skeleton className="h-10 w-24" />
-                    <Skeleton className="h-10 w-24" />
-                </CardFooter>
-            </Card>
-        )
-    }
+    const caseData = useMemo(() => {
+        const dataString = searchParams.get('data');
+        if (!dataString) return null;
+        try {
+            return JSON.parse(decodeURIComponent(dataString)) as Case & { id: string };
+        } catch (error) {
+            console.error("Failed to parse case data from URL", error);
+            return null;
+        }
+    }, [searchParams]);
 
     if (!caseData) {
         return (
             <Card className="w-full max-w-4xl mx-auto text-center">
                 <CardHeader>
-                    <CardTitle>Caso no encontrado</CardTitle>
-                    <CardDescription>El caso que estás buscando no existe, fue eliminado o no tienes permiso para verlo.</CardDescription>
+                    <CardTitle>Caso no encontrado o datos inválidos</CardTitle>
+                    <CardDescription>El caso que estás buscando no existe, fue eliminado o los datos no se pudieron cargar.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Button onClick={() => router.back()}>
@@ -143,4 +118,39 @@ export default function CaseDetailPage() {
             </CardFooter>
         </Card>
     )
+}
+
+function CaseDetailSkeleton() {
+    return (
+        <Card className="w-full max-w-4xl mx-auto">
+            <CardHeader>
+                <Skeleton className="h-8 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 15 }).map((_, i) => (
+                    <div key={i} className="space-y-2">
+                        <Skeleton className="h-4 w-1/3" />
+                        <Skeleton className="h-5 w-2/3" />
+                    </div>
+                ))}
+                <div className="lg:col-span-3 space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-20 w-full" />
+                </div>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+                <Skeleton className="h-10 w-24" />
+                <Skeleton className="h-10 w-24" />
+            </CardFooter>
+        </Card>
+    );
+}
+
+export default function CaseDetailPage() {
+    return (
+        <Suspense fallback={<CaseDetailSkeleton />}>
+            <CaseDetailContent />
+        </Suspense>
+    );
 }
