@@ -7,19 +7,24 @@ service cloud.firestore {
      * @description Controls access to individual case documents.
      */
     match /cases/{caseId} {
-      allow get: if isSignedIn() && hasAccess();
-      allow list: if isSignedIn(); // Further filtering is done on the client via query constraints
+      // User can read a case if they are authenticated and their UID is in the case's `members` map.
+      allow get: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/cases/$(caseId)).data.members;
+      
+      // User can list cases they are a member of. Client-side queries enforce this.
+      allow list: if isSignedIn();
 
+      // A signed-in user can create a case if they are the sole owner in the new document.
       allow create: if isSignedIn() && isNewCaseOwner();
 
-      // Owner can update all fields, but cannot remove themselves as owner.
+      // An owner can update all fields, but cannot remove themselves as owner.
       allow update: if isSignedIn() && isOwner(caseId) 
                     && request.resource.data.members[request.auth.uid] == 'owner';
       
-      // Editor can update data fields, but cannot change members.
+      // An editor can update data fields, but cannot change the members map.
       allow update: if isSignedIn() && isEditor(caseId) 
                     && request.resource.data.diff(resource.data).affectedKeys().toSet().intersection(['members']).size() == 0;
 
+      // Only the owner can delete a case.
       allow delete: if isSignedIn() && isOwner(caseId);
     }
     
@@ -34,14 +39,8 @@ service cloud.firestore {
     }
 
     function getRole(caseId) {
-      // Safely access data, returns null if document or field doesn't exist.
+      // Safely access data using a get() call. Returns null if document or field doesn't exist.
       return get(/databases/$(database)/documents/cases/$(caseId)).data.members[request.auth.uid];
-    }
-
-    function hasAccess() {
-      // 'resource' is the document that is being requested.
-      // This ensures the user is a member of the specific case document they are trying to read.
-      return request.auth.uid in resource.data.members;
     }
 
     function isOwner(caseId) {
@@ -52,6 +51,7 @@ service cloud.firestore {
       return getRole(caseId) == 'editor';
     }
     
+    // Checks that the user creating the document is making themselves the owner, and only themselves.
     function isNewCaseOwner() {
       let user = request.auth.uid;
       let members = request.resource.data.members;
