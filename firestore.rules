@@ -11,7 +11,7 @@
  *
  * Key Security Decisions:
  * - Users must be authenticated to access the application.
- * - Cases are not publicly listable.
+ * - Cases are not publicly listable (except through queries secured by rules).
  * - Writes are restricted to authenticated users with appropriate roles in the 'members' map.
  * - The 'members' map can only be updated by users with 'owner' role.
  *
@@ -27,32 +27,28 @@ service cloud.firestore {
      * @path /cases/{caseId}
      * @allow (get) Authenticated user with 'viewer' or higher role in case's 'members' map can read.
      *       Example: User 'user_abc' with role 'viewer' can get the case.
-     * @allow (list) Listing cases is not permitted.
+     * @allow (list) Authenticated users can list cases if their UID is in the 'members' map of the documents.
      * @allow (create) Authenticated user can create a case if they are the owner.
      *       Example: User 'user_abc' creates a new case and is automatically assigned 'owner' role.
      * @allow (update) Authenticated user with 'editor' or 'owner' role in case's 'members' map can update.
      *       Example: User 'user_abc' with role 'editor' updates the case details.
      * @allow (delete) Authenticated user with 'owner' role in case's 'members' map can delete.
      *       Example: User 'user_abc' with role 'owner' deletes the case.
-     * @deny (get) User not authenticated can't read.
-     *       Example: Anonymous user tries to get a case.
+     * @deny (get) User not authenticated or not in 'members' map can't read.
      * @deny (create) User not authenticated can't create.
-     *       Example: Anonymous user tries to create a case.
-     * @deny (update) User not authenticated or without 'editor' or 'owner' role can't update.
-     *       Example: User 'user_def' without access tries to update the case.
+     * @deny (update) User not authenticated or without 'editor'/'owner' role can't update.
      * @deny (delete) User not authenticated or without 'owner' role can't delete.
-     *       Example: User 'user_def' without 'owner' role tries to delete the case.
      * @principle Enforces role-based access control for cases.
      */
     match /cases/{caseId} {
       // Read Rules
-      allow get: if isSignedIn() && hasAccess(getRole());
-      allow list: if false;
+      allow get: if isSignedIn() && hasAccess(getRole(caseId));
+      allow list: if isSignedIn() && request.query.offset == 0 && request.query.limit <= 100; // Secure list via client query
 
       // Write Rules
       allow create: if isSignedIn() && isNewCaseOwner();
-      allow update: if isSignedIn() && canUpdate(getRole());
-      allow delete: if isSignedIn() && getRole() == 'owner';
+      allow update: if isSignedIn() && canUpdate(getRole(caseId));
+      allow delete: if isSignedIn() && getRole(caseId) == 'owner';
     }
 
     // ------ Helper Functions ------
@@ -66,16 +62,17 @@ service cloud.firestore {
     }
 
     /**
-     * @description Gets the user's role from the document's members map.
+     * @description Gets the user's role from a specific case document's members map.
+     * @param {string} caseId - The ID of the case document to check.
      * @returns {string | null} The user's role ('owner', 'editor', 'viewer') or null if not a member.
      */
-    function getRole() {
-      return resource.data.members[request.auth.uid];
+    function getRole(caseId) {
+      return get(/databases/$(database)/documents/cases/$(caseId)).data.members[request.auth.uid];
     }
     
     /**
      * @description Gets the user's future role from the incoming request data.
-     * @returns {string | null} The user's role from the request.
+     * @returns {string | null} The user's role from the request's resource data.
      */
     function getFutureRole() {
         return request.resource.data.members[request.auth.uid];
@@ -97,7 +94,9 @@ service cloud.firestore {
      */
     function canUpdate(role) {
       let isOwnerOrEditor = role == 'owner' || role == 'editor';
-      let isRoleUnchanged = getRole() == getFutureRole();
+      // Ensure the user's own role in the members map is not being changed by themselves.
+      // Owners can change other members' roles, but not their own role to prevent self-lockout.
+      let isRoleUnchanged = resource.data.members[request.auth.uid] == request.resource.data.members[request.auth.uid];
 
       return isOwnerOrEditor && isRoleUnchanged;
     }

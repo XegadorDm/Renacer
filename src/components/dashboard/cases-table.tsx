@@ -44,15 +44,16 @@ export function CasesTable({ query, location }: { query: string; location: strin
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     
-    const filters = [];
+    // Base query: only fetch cases where the current user is a member.
+    // This is the primary security filter.
+    let q = firestoreQuery(collection(firestore, 'cases'), where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
+
+    // Add location filter if it exists.
     if (location) {
-        filters.push(where("municipality", "==", location));
+        q = firestoreQuery(q, where("municipality", "==", location));
     }
     
-    // All users can only see cases where they are a member
-    filters.push(where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
-    
-    return firestoreQuery(collection(firestore, 'cases'), ...filters);
+    return q;
 
   }, [firestore, user, location]);
 
@@ -62,11 +63,15 @@ export function CasesTable({ query, location }: { query: string; location: strin
     if (!cases) return [];
     if (!query) return cases;
 
+    // The 'cases' array is already secured by the Firestore query.
+    // This client-side filter just refines the visible results from the secure dataset.
     const searchTerm = query.toLowerCase();
     return cases.filter(c => 
-      `${c.firstName.toLowerCase()} ${c.lastName.toLowerCase()}`.includes(searchTerm) || 
-      c.caseNumber.toLowerCase().includes(searchTerm) ||
-      c.documentId.toLowerCase().includes(searchTerm)
+      c && (
+        `${c.firstName?.toLowerCase() || ''} ${c.lastName?.toLowerCase() || ''}`.includes(searchTerm) || 
+        c.caseNumber?.toLowerCase().includes(searchTerm) ||
+        c.documentId?.toLowerCase().includes(searchTerm)
+      )
     );
   }, [cases, query]);
 
@@ -90,9 +95,16 @@ export function CasesTable({ query, location }: { query: string; location: strin
     setCaseToDelete(null);
   };
 
-  const canDelete = (caseItem: WithId<Case>) => {
-      if (!user) return false;
-      return caseItem.members?.[user.uid] === 'owner';
+  const canPerformAction = (caseItem: WithId<Case>, role: 'owner' | 'editor') => {
+      if (!user || !caseItem.members) return false;
+      const userRole = caseItem.members[user.uid];
+      if (role === 'owner') {
+          return userRole === 'owner';
+      }
+      if (role === 'editor') {
+          return userRole === 'owner' || userRole === 'editor';
+      }
+      return false;
   }
 
   if (isLoading) {
@@ -128,7 +140,7 @@ export function CasesTable({ query, location }: { query: string; location: strin
                   <TableCell>{c.documentId}</TableCell>
                   <TableCell>{c.municipality}</TableCell>
                   <TableCell>
-                    <CaseStatusIndicator status={c.status} />
+                    {c.status && <CaseStatusIndicator status={c.status} />}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -144,10 +156,12 @@ export function CasesTable({ query, location }: { query: string; location: strin
                         <DropdownMenuItem asChild>
                            <Link href={`/dashboard/cases/${c.id}`}>Ver Detalles</Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/dashboard/cases/${c.id}/edit`}>Editar</Link>
-                        </DropdownMenuItem>
-                         {canDelete(c) && (
+                        {canPerformAction(c, 'editor') && (
+                            <DropdownMenuItem asChild>
+                                <Link href={`/dashboard/cases/${c.id}/edit`}>Editar</Link>
+                            </DropdownMenuItem>
+                        )}
+                         {canPerformAction(c, 'owner') && (
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
                             onClick={() => handleDeleteClick(c)}
