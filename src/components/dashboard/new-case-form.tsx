@@ -31,7 +31,7 @@ const formSchema = z.object({
   ethnicGroup: z.string().min(1, 'Grupo étnico es requerido.'),
   maritalStatus: z.string().min(1, 'Estado civil es requerido.'),
   gender: z.string().min(1, 'Sexo es requerido.'),
-  dob: z.date({ required_error: 'Fecha de nacimiento es requerida.'}),
+  birthDate: z.date({ required_error: 'Fecha de nacimiento es requerida.'}),
   address: z.string().min(1, 'Dirección es requerida.'),
   municipality: z.string().min(1, 'El municipio es requerido.'),
   department: z.string().min(1, 'Departamento es requerido.'),
@@ -85,7 +85,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     if (caseData) {
       form.reset({
         ...caseData,
-        dob: new Date(caseData.birthDate),
+        birthDate: new Date(caseData.birthDate),
         phone1: caseData.phone1 || '',
         phone2: caseData.phone2 || '',
       });
@@ -106,10 +106,9 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     if (isEditMode && caseData) {
         // Update existing document
         const caseDocRef = doc(firestore, 'cases', caseData.id);
-        const { dob, ...otherValues } = values;
         const updatedData = {
-            ...otherValues,
-            birthDate: dob.toISOString(),
+            ...values,
+            birthDate: values.birthDate.toISOString(),
             members: caseData.members // Preserve existing members map
         };
         setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
@@ -122,13 +121,12 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     } else {
         // Create new document
         const casesCollection = collection(firestore, 'cases');
-        const { dob, ...otherValues } = values;
         const newCaseData = {
-            ...otherValues,
+            ...values,
+            birthDate: values.birthDate.toISOString(),
             id: '', // Firestore will generate this
             caseNumber: `CAS-${Date.now()}`,
             status: "Sin novedad" as const,
-            birthDate: dob.toISOString(),
             members: { // Set the creator as the owner
                 [user.uid]: 'owner'
             }
@@ -150,7 +148,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     { name: 'ethnicGroup', label: 'Grupo étnico', component: Select, options: ['Indígena', 'Afrocolombiano', 'Raizal', 'Palenquero', 'Gitano', 'Mestizo', 'Ninguno'] },
     { name: 'maritalStatus', label: 'Estado civil', component: Select, options: ['Soltero/a', 'Casado/a', 'Unión libre', 'Viudo/a', 'Separado/a'] },
     { name: 'gender', label: 'Sexo', component: Select, options: ['Masculino', 'Femenino', 'Otro'] },
-    { name: 'dob', label: 'Fecha de nacimiento', component: 'datepicker' },
+    { name: 'birthDate', label: 'Fecha de nacimiento', component: 'datepicker' },
     { name: 'address', label: 'Dirección / Vereda / Corregimiento', component: Input, placeholder: 'Ej: Vereda La Esperanza' },
     { name: 'municipality', label: 'Municipio', component: Select, options: ['Suárez', 'Piendamó', 'Morales'] },
     { name: 'department', label: 'Departamento', component: Input, props: { disabled: true } },
