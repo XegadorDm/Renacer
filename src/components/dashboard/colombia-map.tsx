@@ -29,7 +29,7 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
         <svg viewBox="80 0 300 400" className="w-full h-full">
           <g>
             <path
-              d="M210,10 C250,20 280,50 290,80 C300,110 290,140 260,160 C230,180 200,200 180,220 C160,240 130,260 120,290 C110,320 100,350 90,380 C80,350 70,320 80,290 C90,260 100,230 120,210 C140,190 160,170 190,150 C220,130 230,110 230,80 C230,50 220,30 210,10 Z"
+              d="M190 20 L 330 200 L 190 380 L 50 200 Z"
               fill="hsl(var(--muted))"
               stroke="hsl(var(--border))"
               strokeWidth="1.5"
