@@ -35,6 +35,10 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
               strokeWidth="1.5"
             />
           </g>
+          {/* Labels */}
+          <text x="235" y="35" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Valle del Cauca</text>
+          <text x="110" y="370" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Cauca</text>
+
           {/* Interactive region paths */}
           {regions.map(region => (
             <Link href={createHref(region.name)} key={region.id}>
