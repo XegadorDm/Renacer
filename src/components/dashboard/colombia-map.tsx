@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button';
 export function ColombiaMap({ userRole }: { userRole?: string }) {
   const [hovered, setHovered] = useState<string | null>(null);
 
+  // Approximate coordinates for municipalities within the Cauca department on the new map
   const regions = [
-    { id: 'suarez', name: 'Suárez', path: 'M165 245 l20 -10 l15 15 l-20 10z' },
-    { id: 'piendamo', name: 'Piendamó', path: 'M190 250 l20 -5 l10 15 l-20 5z' },
-    { id: 'morales', name: 'Morales', path: 'M185 270 l25 -5 l10 15 l-25 5z' },
+    { id: 'suarez', name: 'Suárez', path: 'M 105 332 L 115 328 L 118 338 L 108 342 Z' },
+    { id: 'piendamo', name: 'Piendamó', path: 'M 125 330 L 135 326 L 138 336 L 128 340 Z' },
+    { id: 'morales', name: 'Morales', path: 'M 120 345 L 130 341 L 133 351 L 123 355 Z' },
   ];
 
   const createHref = (regionName: string) => {
@@ -23,26 +24,34 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
     return href;
   }
 
-  // Vertices for a 12-sided polygon (dodecagon)
-  const dodecagonPath = "M260 50 L310 100 L320 175 L295 245 L235 300 L165 310 L100 285 L60 225 L50 150 L75 80 L130 45 L200 40 Z";
-
   return (
     <div className="flex flex-col md:flex-row items-center gap-8 w-full">
       <div className="relative w-full md:w-2/3 aspect-square max-w-lg mx-auto">
-        <svg viewBox="0 0 380 380" className="w-full h-full">
+        <svg viewBox="80 0 340 550" className="w-full h-full">
           <g>
+            {/* Colombia Outline */}
             <path
-              d={dodecagonPath}
+              d="M251 10C244 20 231 25 225 33C216 46 220 60 216 73C212 87 205 97 197 109C189 120 180 133 178 146C176 160 182 173 184 186C186 200 181 213 175 225C168 238 159 249 152 261C145 273 135 284 133 297C131 310 137 323 138 336C139 349 135 362 128 373C121 384 112 393 104 402C96 411 90 422 90 434C90 446 95 457 103 465C111 473 121 478 133 480C145 482 157 480 168 475C179 470 189 462 198 454C207 446 215 437 225 432C235 427 246 427 257 430C268 433 279 439 289 446C299 453 308 461 318 465C328 469 339 469 349 465C359 461 368 453 376 444C384 435 391 425 394 414C397 403 396 391 392 380C388 369 381 359 373 351C365 343 356 337 348 329C340 321 333 311 330 300C327 289 328 277 332 266C336 255 343 245 351 237C359 229 368 223 375 215C382 207 388 197 390 186C392 175 390 163 385 152C380 141 372 131 363 123C354 115 344 109 335 102C326 95 318 87 312 78C306 69 302 59 301 48C300 37 302 25 299 14C296 3 283 1 273 2C263 3 255 6 251 10Z"
               fill="hsl(var(--muted))"
               stroke="hsl(var(--border))"
               strokeWidth="1.5"
             />
-          </g>
-          {/* Labels */}
-          <text x="270" y="60" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Valle del Cauca</text>
-          <text x="110" y="320" fontFamily="sans-serif" fontSize="12" fill="hsl(var(--muted-foreground))" textAnchor="middle">Cauca</text>
+            
+            {/* Department boundaries */}
+            <path d="M184,186 L250,180 L260,240 L175,225Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
+            <text x="210" y="210" fontSize="8" fill="hsl(var(--muted-foreground))">Antioquia</text>
 
-          {/* Interactive region paths */}
+            <path d="M225,270 L280,260 L290,320 L230,330Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
+            <text x="250" y="295" fontSize="8" fill="hsl(var(--muted-foreground))">Cundinamarca</text>
+
+            <path d="M138,336 L190,320 L200,380 L140,390Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
+            <text x="165" y="360" fontSize="8" fill="hsl(var(--muted-foreground))">Valle del Cauca</text>
+
+            <path d="M104,402 L170,380 L175,440 L110,450Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
+            <text x="135" y="420" fontSize="8" fill="hsl(var(--muted-foreground))">Cauca</text>
+          </g>
+
+          {/* Interactive region paths for Cauca municipalities */}
           {regions.map(region => (
             <Link href={createHref(region.name)} key={region.id}>
               <path
