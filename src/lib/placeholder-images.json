@@ -8,21 +8,21 @@
     },
     {
       "id": "testimonial-avatar-1",
-      "description": "Portrait of a smiling man.",
+      "description": "Portrait of a smiling community leader.",
       "imageUrl": "https://images.unsplash.com/photo-1564564321837-a57b7070ac4f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwb3J0cmFpdCUyMG1hbnxlbnwwfHx8fDE3NjI0MDM4NjJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "portrait man"
     },
     {
       "id": "testimonial-avatar-2",
-      "description": "Portrait of a smiling young man from Colombia.",
+      "description": "Portrait of a smiling young beneficiary from Colombia.",
       "imageUrl": "https://images.unsplash.com/photo-1522556189639-b150ed9c4330?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxzbWlsaW5nJTIwbWFufGVufDB8fHx8MTc2MjI4NTYzMXww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "smiling man"
     },
     {
       "id": "testimonial-avatar-3",
-      "description": "Portrait of a smiling elderly man from Colombia.",
-      "imageUrl": "https://images.unsplash.com/photo-1669769922262-dd271625a385?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjb2xvbWJpYW4lMjBtYW58ZW58MHx8fHwxNzYyNDAzODYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "colombian man"
+      "description": "Portrait of a dedicated social worker.",
+      "imageUrl": "https://images.unsplash.com/photo-1556157382-97eda2d62296?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxzb2NpYWwlMjB3b3JrZXJ8ZW58MHx8fHwxNzYzNzIyMjIyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "social worker"
     },
     {
       "id": "map-image",

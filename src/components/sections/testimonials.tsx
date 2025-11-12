@@ -22,7 +22,7 @@ export function Testimonials() {
               <CardHeader>
                 <div className="flex items-center gap-4">
                   <Avatar>
-                    {testimonial.avatar && (
+                    {testimonial.avatar?.imageUrl && (
                       <AvatarImage 
                         src={testimonial.avatar.imageUrl} 
                         alt={testimonial.name}
