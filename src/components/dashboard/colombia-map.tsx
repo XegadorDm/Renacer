@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
 
 export function ColombiaMap({ userRole }: { userRole?: string }) {
   const [hovered, setHovered] = useState<string | null>(null);
@@ -27,13 +26,15 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
   return (
     <div className="flex flex-col md:flex-row items-center gap-8 w-full">
       <div className="relative w-full md:w-2/3 aspect-square max-w-lg mx-auto">
-        <Image 
-          src="https://storage.googleapis.com/aai-web-samples/map.png"
-          alt="Mapa de Colombia"
-          layout="fill"
-          objectFit="contain"
-        />
-        <svg viewBox="80 0 300 400" className="absolute top-0 left-0 w-full h-full">
+        <svg viewBox="80 0 300 400" className="w-full h-full">
+          <g>
+            <path
+              d="M210,10 C230,20 250,50 260,80 C270,110 260,140 240,160 C220,180 200,200 180,220 C160,240 140,260 130,290 C120,320 110,350 100,380 C90,350 80,320 90,290 C100,260 110,230 130,210 C150,190 170,170 190,150 C210,130 220,110 220,80 C220,50 210,30 210,10 Z"
+              fill="hsl(var(--primary) / 0.1)"
+              stroke="hsl(var(--primary))"
+              strokeWidth="1.5"
+            />
+          </g>
           {/* Interactive region paths */}
           {regions.map(region => (
             <Link href={createHref(region.name)} key={region.id}>
