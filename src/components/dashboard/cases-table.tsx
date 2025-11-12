@@ -44,8 +44,6 @@ export function CasesTable({ query, location }: { query: string; location: strin
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     
-    let q = collection(firestore, 'cases');
-
     const filters = [];
     if (location) {
         filters.push(where("municipality", "==", location));
@@ -53,13 +51,6 @@ export function CasesTable({ query, location }: { query: string; location: strin
     
     // All users can only see cases where they are a member
     filters.push(where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
-
-    if (query) {
-        const searchTerm = query.toLowerCase();
-        // This is a client-side filter approximation.
-        // For a full-text search solution, a dedicated service like Algolia or Elasticsearch would be better.
-        // We're filtering client-side after the initial fetch based on location and membership.
-    }
     
     return firestoreQuery(collection(firestore, 'cases'), ...filters);
 
@@ -172,7 +163,7 @@ export function CasesTable({ query, location }: { query: string; location: strin
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24">
-                  No se encontraron casos que coincidan con tu búsqueda.
+                  No se encontraron casos que coincidan con tu búsqueda o no tienes permisos para verlos.
                 </TableCell>
               </TableRow>
             )}

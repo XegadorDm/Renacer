@@ -16,7 +16,7 @@ import { es } from 'date-fns/locale';
 import { CaseStatusIndicator } from '@/components/dashboard/case-status-indicator';
 
 function DetailItem({ label, value }: { label: string, value: React.ReactNode }) {
-    if (!value) return null;
+    if (value === undefined || value === null || value === '') return null;
     return (
         <div>
             <p className="text-sm font-medium text-muted-foreground">{label}</p>
@@ -70,7 +70,7 @@ export default function CaseDetailPage() {
             <Card className="w-full max-w-4xl mx-auto text-center">
                 <CardHeader>
                     <CardTitle>Caso no encontrado</CardTitle>
-                    <CardDescription>El caso que estás buscando no existe o fue eliminado.</CardDescription>
+                    <CardDescription>El caso que estás buscando no existe, fue eliminado o no tienes permiso para verlo.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Button onClick={() => router.back()}>

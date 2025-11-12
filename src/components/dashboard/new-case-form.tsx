@@ -18,7 +18,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useFirebase } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Case } from '@/lib/case-schema';
 import { useEffect } from 'react';
@@ -52,7 +52,7 @@ type NewCaseFormProps = {
 export function NewCaseForm({ caseData }: NewCaseFormProps) {
   const router = useRouter();
   const firestore = useFirestore();
-  const { auth } = useFirebase();
+  const { user } = useUser();
   const { toast } = useToast();
   
   const isEditMode = !!caseData;
@@ -94,7 +94,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!firestore || !auth?.currentUser) {
+    if (!firestore || !user) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -102,15 +102,14 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         });
         return;
     };
-
-    const currentUser = auth.currentUser;
     
     if (isEditMode && caseData) {
         // Update existing document
         const caseDocRef = doc(firestore, 'cases', caseData.id);
+        const { dob, ...otherValues } = values;
         const updatedData = {
-            ...values,
-            birthDate: values.dob.toISOString(),
+            ...otherValues,
+            birthDate: dob.toISOString(),
             members: caseData.members // Preserve existing members map
         };
         setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
@@ -123,14 +122,15 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     } else {
         // Create new document
         const casesCollection = collection(firestore, 'cases');
+        const { dob, ...otherValues } = values;
         const newCaseData = {
-            ...values,
+            ...otherValues,
             id: '', // Firestore will generate this
             caseNumber: `CAS-${Date.now()}`,
             status: "Sin novedad" as const,
-            birthDate: values.dob.toISOString(),
+            birthDate: dob.toISOString(),
             members: { // Set the creator as the owner
-                [currentUser.uid]: 'owner'
+                [user.uid]: 'owner'
             }
         };
         addDocumentNonBlocking(casesCollection, newCaseData);
