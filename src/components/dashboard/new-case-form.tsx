@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -17,8 +18,10 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale/es';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, addDocumentNonBlocking, useAuth } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useAuth } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import type { Case } from '@/lib/case-schema';
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'El nombre es requerido.'),
@@ -42,11 +45,18 @@ const formSchema = z.object({
   testimony: z.string().min(10, 'El testimonio es requerido (mínimo 10 caracteres).'),
 });
 
-export function NewCaseForm() {
+type NewCaseFormProps = {
+  caseData?: Case & { id: string };
+};
+
+export function NewCaseForm({ caseData }: NewCaseFormProps) {
   const router = useRouter();
   const firestore = useFirestore();
-  const auth = useAuth();
+  const { auth } = useFirebase();
   const { toast } = useToast();
+  
+  const isEditMode = !!caseData;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -71,8 +81,20 @@ export function NewCaseForm() {
     },
   });
 
+  useEffect(() => {
+    if (caseData) {
+      form.reset({
+        ...caseData,
+        dob: new Date(caseData.birthDate),
+        phone1: caseData.phone1 || '',
+        phone2: caseData.phone2 || '',
+      });
+    }
+  }, [caseData, form]);
+
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!firestore || !auth.currentUser) {
+    if (!firestore || !auth?.currentUser) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -81,23 +103,38 @@ export function NewCaseForm() {
         return;
     };
     
-    const casesCollection = collection(firestore, 'cases');
-    const caseData = {
-        ...values,
-        id: '', // Firestore will generate this
-        caseNumber: `CAS-${Date.now()}`,
-        status: "Sin novedad",
-        birthDate: values.dob.toISOString(),
-        createdBy: auth.currentUser.uid, // Track who created the case
-    };
+    if (isEditMode && caseData) {
+        // Update existing document
+        const caseDocRef = doc(firestore, 'cases', caseData.id);
+        const updatedData = {
+            ...values,
+            birthDate: values.dob.toISOString(),
+        };
+        setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
+        toast({
+            title: "Caso Actualizado",
+            description: `El caso para ${values.firstName} ${values.lastName} ha sido actualizado.`,
+        });
+        router.push(`/dashboard/cases/${caseData.id}`);
 
-    addDocumentNonBlocking(casesCollection, caseData);
-
-    toast({
-        title: "Caso Guardado Exitosamente",
-        description: `El caso para ${values.firstName} ${values.lastName} ha sido creado.`,
-    });
-    router.push(`/dashboard/cases?location=${values.municipality}`);
+    } else {
+        // Create new document
+        const casesCollection = collection(firestore, 'cases');
+        const newCaseData = {
+            ...values,
+            id: '', // Firestore will generate this
+            caseNumber: `CAS-${Date.now()}`,
+            status: "Sin novedad",
+            birthDate: values.dob.toISOString(),
+            createdBy: auth.currentUser.uid, // Track who created the case
+        };
+        addDocumentNonBlocking(casesCollection, newCaseData);
+        toast({
+            title: "Caso Guardado Exitosamente",
+            description: `El caso para ${values.firstName} ${values.lastName} ha sido creado.`,
+        });
+        router.push(`/dashboard/cases?location=${values.municipality}`);
+    }
   }
 
   const formFields = [
@@ -204,7 +241,9 @@ export function NewCaseForm() {
         </div>
         <div className="flex justify-end gap-4">
             <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
-            <Button type="submit" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>Guardar Caso</Button>
+            <Button type="submit" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+              {isEditMode ? 'Guardar Cambios' : 'Guardar Caso'}
+            </Button>
         </div>
       </form>
     </Form>
