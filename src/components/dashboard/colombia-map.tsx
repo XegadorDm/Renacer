@@ -11,9 +11,9 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
 
   // Approximate coordinates for municipalities within the Cauca department on the new map
   const regions = [
-    { id: 'suarez', name: 'Suárez', path: 'M 105 332 L 115 328 L 118 338 L 108 342 Z' },
-    { id: 'piendamo', name: 'Piendamó', path: 'M 125 330 L 135 326 L 138 336 L 128 340 Z' },
-    { id: 'morales', name: 'Morales', path: 'M 120 345 L 130 341 L 133 351 L 123 355 Z' },
+    { id: 'suarez', name: 'Suárez', path: 'M 130 405 L 140 401 L 143 411 L 133 415 Z' },
+    { id: 'piendamo', name: 'Piendamó', path: 'M 145 410 L 155 406 L 158 416 L 148 420 Z' },
+    { id: 'morales', name: 'Morales', path: 'M 138 420 L 148 416 L 151 426 L 141 430 Z' },
   ];
 
   const createHref = (regionName: string) => {
