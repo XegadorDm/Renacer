@@ -84,14 +84,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     <SidebarProvider>
       <div className="min-h-screen">
         <Sidebar collapsible="icon">
-          <SidebarHeader className="flex items-center justify-between">
+          <SidebarHeader>
              <Link href="/dashboard" className="flex items-center gap-2" prefetch={false}>
                 <Logo className="h-8 w-8 text-primary" />
                 <span className="text-xl font-bold font-headline text-foreground group-data-[collapsible=icon]:hidden">
                     Renacer
                 </span>
             </Link>
-            <SidebarTrigger className="hidden sm:flex" />
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
@@ -105,16 +104,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     <Link href={casesLinkHref}><Users/><span>Casos</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Configuración">
+                    <Link href="#"><Settings/><span>Configuración</span></Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Configuración">
-                        <Link href="#"><Settings/><span>Configuración</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
+            <SidebarTrigger className="hidden sm:flex w-full justify-start" />
           </SidebarFooter>
         </Sidebar>
         <SidebarInset>
