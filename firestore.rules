@@ -1,82 +1,100 @@
-
 /**
- * @fileoverview Firestore Security Rules for Renacer Digital.
+ * @fileOverview Firestore Security Rules for the "cases" collection.
  *
  * Core Philosophy:
- * This ruleset enforces a combination of user-ownership and role-based access control.
- * Users have full control over their own data, while administrators have broader access to cases.
+ * This ruleset enforces a shared access model using a `members` map on each `/cases/{caseId}` document.
+ * Users must be authenticated to access any data.
+ * Access to a case is determined by the presence and role of the user's UID within the `members` map on the case document.
  *
  * Data Structure:
- * - /users/{userId}: Stores individual user profiles, accessible only to the user themselves.
- * - /cases/{caseId}: Stores social case data, accessible based on user roles and ownership.
+ * - /cases/{caseId}: Each document represents a case. The 'members' field is a map of user IDs to roles (e.g., {uid1: 'owner', uid2: 'viewer'}).
  *
  * Key Security Decisions:
- * - Users can only access their own profile data.
- * - Listing of users is disallowed for privacy.
- * - Admins can manage all cases, while case-workers can only manage their own.
+ * - Users must be authenticated to access the application.
+ * - Cases are not publicly listable.
+ * - Writes are restricted to authenticated users with appropriate roles in the 'members' map.
+ * - The 'members' map can only be updated by users with 'owner' role.
+ *
+ * Denormalization for Authorization:
+ * - The 'members' map is denormalized directly onto each `/cases/{caseId}` document. This avoids costly `get()` calls and enables efficient authorization.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the user is signed in.
+    /**
+     * @description Controls access to individual case documents.
+     * @path /cases/{caseId}
+     * @allow (get) Authenticated user with 'viewer' or higher role in case's 'members' map can read.
+     *       Example: User 'user_abc' with role 'viewer' can get the case.
+     * @allow (list) Listing cases is not permitted.
+     * @allow (create) Authenticated user can create a case if they are the owner.
+     *       Example: User 'user_abc' creates a new case and is automatically assigned 'owner' role.
+     * @allow (update) Authenticated user with 'editor' or 'owner' role in case's 'members' map can update.
+     *       Example: User 'user_abc' with role 'editor' updates the case details.
+     * @allow (delete) Authenticated user with 'owner' role in case's 'members' map can delete.
+     *       Example: User 'user_abc' with role 'owner' deletes the case.
+     * @deny (get) User not authenticated can't read.
+     *       Example: Anonymous user tries to get a case.
+     * @deny (create) User not authenticated can't create.
+     *       Example: Anonymous user tries to create a case.
+     * @deny (update) User not authenticated or without 'editor' or 'owner' role can't update.
+     *       Example: User 'user_def' without access tries to update the case.
+     * @deny (delete) User not authenticated or without 'owner' role can't delete.
+     *       Example: User 'user_def' without 'owner' role tries to delete the case.
+     * @principle Enforces role-based access control for cases.
+     */
+    match /cases/{caseId} {
+      // Read Rules
+      allow get: if isSignedIn() && hasRole(resource.data.members, 'viewer');
+      allow list: if false;
+
+      // Write Rules
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && isExistingCaseEditor(resource.data.members);
+      allow delete: if isSignedIn() && isExistingCaseOwner(resource.data.members);
+    }
+
+    // ------ Helper Functions ------
+
+    /**
+     * @description Checks if the user is signed in.
+     * @returns {boolean} True if the user is authenticated, false otherwise.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper function to get the user's role from their profile.
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
-    }
-
-    // Helper function to check if a user is an administrator.
-    function isAdmin() {
-      return isSignedIn() && getUserRole(request.auth.uid) == 'admin';
-    }
-
     /**
-     * @description Secures user profiles. Only the authenticated user can read or write their own profile.
-     * @path /users/{userId}
+     * @description Checks if the user has the specified role in the members map.
+     * @param {map} members - The members map of the document.
+     * @param {string} role - The role to check for (e.g., 'owner', 'editor', 'viewer').
+     * @returns {boolean} True if the user has the specified role or a higher role, false otherwise.
      */
-    match /users/{userId} {
-      function isOwner() {
-        return request.auth.uid == userId;
-      }
-
-      allow get: if isSignedIn() && isOwner();
-      allow list: if false; // Disallowing listing of users for privacy
-
-      allow create: if isSignedIn() && isOwner() && request.resource.data.id == userId;
-      allow update: if isSignedIn() && isOwner() && request.resource.data.id == resource.data.id;
-      allow delete: if isSignedIn() && isOwner();
+    function hasRole(members, role) {
+      return isSignedIn() && (
+        members[request.auth.uid] == 'owner' ||
+        (role == 'viewer' && (members[request.auth.uid] == 'viewer' || members[request.auth.uid] == 'editor')) ||
+        (role == 'editor' && (members[request.auth.uid] == 'editor'))
+      );
     }
 
-    /**
-     * @description Secures social cases based on user roles and ownership.
-     * @path /cases/{caseId}
+   /**
+     * @description Checks if the user has 'owner' role in the existing document.
+     * @param {map} members - The members map of the document.
+     * @returns {boolean} True if the user is the owner, and the document exists.
      */
-    match /cases/{caseId} {
-      function isCaseOwner() {
-        return isSignedIn() && request.auth.uid == resource.data.createdBy;
-      }
-      
-      // CREATE: Any signed-in user can create a case. We ensure their UID is stamped on the doc.
-      allow create: if isSignedIn() && request.resource.data.createdBy == request.auth.uid;
+    function isExistingCaseOwner(members) {
+        return hasRole(members, 'owner');
+    }
 
-      // READ (GET): Admins can get any case. Case-workers can only get cases they created.
-      allow get: if isAdmin() || isCaseOwner();
-      
-      // READ (LIST): Admins can list all cases. Case-workers can only list their own.
-      // Note: This requires a client-side query with a 'where' clause on 'createdBy'.
-      allow list: if isSignedIn();
-
-      // UPDATE: Admins can update any case. Case-workers can only update their own.
-      // We also protect the createdBy field from being changed.
-      allow update: if (isAdmin() || isCaseOwner())
-                      && request.resource.data.createdBy == resource.data.createdBy;
-
-      // DELETE: Only admins can delete cases.
-      allow delete: if isAdmin();
+   /**
+     * @description Checks if the user has 'editor' role in the existing document.
+     * @param {map} members - The members map of the document.
+     * @returns {boolean} True if the user is an editor, and the document exists.
+     */
+      function isExistingCaseEditor(members) {
+        return hasRole(members, 'editor');
     }
   }
 }

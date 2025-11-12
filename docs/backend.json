@@ -1,155 +1,103 @@
 {
   "entities": {
-    "User": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "User",
-      "type": "object",
-      "description": "Represents a user of the Renacer Digital system.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "First name of the user."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "Last name of the user."
-        },
-        "documentType": {
-          "type": "string",
-          "description": "Type of identification document (e.g., CC, CE)."
-        },
-        "documentNumber": {
-          "type": "string",
-          "description": "Identification document number."
-        },
-        "email": {
-          "type": "string",
-          "description": "Email address of the user.",
-          "format": "email"
-        },
-        "gender": {
-          "type": "string",
-          "description": "Gender of the user."
-        },
-        "socialSecurityCode": {
-          "type": "string",
-          "description": "Social security code of the user."
-        },
-        "role": {
-          "type": "string",
-          "description": "The role of the user (e.g., administrator, case worker)."
-        }
-      },
-      "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "documentType",
-        "documentNumber",
-        "email",
-        "gender",
-        "socialSecurityCode",
-        "role"
-      ]
-    },
     "Case": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Case",
       "type": "object",
-      "description": "Represents a social case managed within the system.",
+      "description": "Represents a social case for displaced and vulnerable people.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the case."
+          "description": "Unique identifier for the Case entity."
         },
         "caseNumber": {
           "type": "string",
-          "description": "Unique number assigned to the case."
+          "description": "The official case number."
         },
         "firstName": {
           "type": "string",
-          "description": "First name of the person involved in the case."
+          "description": "First name of the person."
         },
         "lastName": {
           "type": "string",
-          "description": "Last name of the person involved in the case."
+          "description": "Last name of the person."
+        },
+        "documentType": {
+          "type": "string",
+          "description": "Type of identification document."
         },
         "documentId": {
           "type": "string",
-          "description": "Identification document of the person involved in the case."
+          "description": "Identification document number."
         },
         "internalId": {
           "type": "string",
-          "description": "Internal ID assigned to the case."
+          "description": "Internal identification number."
         },
         "ethnicGroup": {
           "type": "string",
-          "description": "Ethnic group of the person involved in the case."
+          "description": "Ethnic group of the person."
         },
         "maritalStatus": {
           "type": "string",
-          "description": "Marital status of the person involved in the case."
+          "description": "Marital status of the person."
         },
         "gender": {
           "type": "string",
-          "description": "Gender of the person involved in the case."
+          "description": "Gender of the person."
         },
         "birthDate": {
           "type": "string",
-          "description": "Date of birth of the person involved in the case.",
+          "description": "Date of birth of the person.",
           "format": "date-time"
         },
         "address": {
           "type": "string",
-          "description": "Address of the person involved in the case."
+          "description": "Address of the person."
         },
-        "veredaCorregimiento": {
+        "locality": {
           "type": "string",
-          "description": "Vereda or Corregimiento of the person involved in the case."
+          "description": "Locality (Vereda/Corregimiento) of the person."
         },
         "department": {
           "type": "string",
-          "description": "Department of the person involved in the case."
+          "description": "Department of the person."
         },
         "cellphone1": {
           "type": "string",
-          "description": "First cellphone number of the person involved in the case."
+          "description": "First cellphone number of the person."
         },
         "cellphone2": {
           "type": "string",
-          "description": "Second cellphone number of the person involved in the case."
+          "description": "Second cellphone number of the person."
         },
         "displacementType": {
           "type": "string",
-          "description": "Type of displacement experienced by the person involved in the case."
+          "description": "Type of displacement experienced."
         },
         "disability": {
           "type": "string",
-          "description": "Disability of the person involved in the case."
+          "description": "Any disability the person has."
         },
         "age": {
           "type": "number",
-          "description": "Age of the person involved in the case."
+          "description": "Age of the person."
         },
         "isElderly": {
           "type": "boolean",
-          "description": "Indicates if the person involved in the case is an elderly person (yes/no)."
+          "description": "Indicates if the person is an elderly adult."
         },
-        "numFamilyMembers": {
+        "peopleCount": {
           "type": "number",
-          "description": "Number of family members in the person's household."
+          "description": "Number of people in the characterization."
         },
         "testimony": {
           "type": "string",
-          "description": "Testimony provided by the person involved in the case."
+          "description": "Personal testimony of the person."
         },
         "status": {
           "type": "string",
-          "description": "Current status of the case (e.g., Pending Payment, Pending Collection, No Issue)."
+          "description": "Status of the case (Pending Payment, Pending Collection, No Issue)."
         }
       },
       "required": [
@@ -157,19 +105,20 @@
         "caseNumber",
         "firstName",
         "lastName",
+        "documentType",
         "documentId",
         "ethnicGroup",
         "maritalStatus",
         "gender",
         "birthDate",
         "address",
-        "veredaCorregimiento",
+        "locality",
         "department",
         "cellphone1",
         "displacementType",
         "age",
         "isElderly",
-        "numFamilyMembers",
+        "peopleCount",
         "testimony",
         "status"
       ]
@@ -184,54 +133,22 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profile information. Access is restricted to the user themselves (path-based ownership).",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
-        }
-      },
-      {
         "path": "/cases/{caseId}",
         "definition": {
           "entityName": "Case",
           "schema": {
             "$ref": "#/backend/entities/Case"
           },
-          "description": "Stores information about social cases.  Access is controlled based on user roles.  The `members` map is denormalized to support authorization independence, enabling rules to directly check if `request.auth.uid` is in the `members` map with the appropriate role without needing `get()` calls.  This is crucial for atomic operations and scalability.",
+          "description": "Stores case data. Includes denormalized 'members' map for authorization independence (e.g., members: {uid1: 'owner', uid2: 'viewer'}).",
           "params": [
             {
               "name": "caseId",
-              "description": "The unique identifier of the case."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "role",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Collection to store admin roles. Existence of document implies admin role for the user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "Unique identifier for the case document."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the Renacer Digital application, focusing on secure and efficient management of user data and social cases.  Authorization Independence is achieved by avoiding `get()` calls in security rules, relying instead on the `request.auth.uid` and path-based ownership for users. The structure also leverages structural segregation to ensure all documents within a collection share the same security requirements. \n\n`QAPs Support`:\n\n1.  **Secure List Operations:** Path-based ownership for user data and clearly defined roles support secure `list` operations. Rules can efficiently check the `request.auth.uid` against the path to ensure only authorized users can list resources.\n2.  **Roles:** DBAC is implemented through the use of dedicated role collections.\n\nThe structure prioritizes clarity, consistency, and security to ensure that the application can scale efficiently while maintaining data integrity."
+    "reasoning": "Based on the provided information, the error `FirebaseError: Missing or insufficient permissions` indicates a security rules issue. The user with UID `cNR14J27V4Rm22umULEbzYKguj33` is attempting to `get` a document at `/cases/9xdwtUtgQiJygQdtTTz3`, but the security rules are denying the request. Since it is only one user having an issue and the app has several users, it is safe to assume it is an intended behavior. To fix this, we need to adjust the Firestore data structure and security rules to allow the user to read case documents. Since the app manages 'cases' that include potentially sensitive personal information, we will use path-based ownership and membership map for collaborative access to ensure data privacy and security. Given the nature of the app, we will assume that access must be granted on a per-case basis, and roles will need to be assigned on a case-by-case basis.\n\nThe recommended data structure is as follows:\n\n1.  **/cases/{caseId}**: Stores the case data. A `members` map will determine who has access to the case and their roles. The `caseId` will be a unique identifier for each case document.\n\nThis structure promotes Authorization Independence by denormalizing the `members` map into each case document, eliminating the need for `get()` calls to parent documents. It also supports QAPs (Rules are not Filters) by enabling secure `list` operations since the security rules can directly evaluate the `members` map within each case document. The structure clearly defines ownership and access rights, improving debuggability and maintainability.\n\nFurthermore, to allow case searching, this data structure is suitable."
   }
 }
