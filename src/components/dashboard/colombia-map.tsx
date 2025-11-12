@@ -39,16 +39,16 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
             
             {/* Department boundaries */}
             <path d="M184,186 L250,180 L260,240 L175,225Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x="210" y="210" fontSize="8" fill="hsl(var(--muted-foreground))">Antioquia</text>
+            <text x="210" y="210" fontSize="12" fill="hsl(var(--muted-foreground))">Antioquia</text>
 
             <path d="M225,270 L280,260 L290,320 L230,330Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x="250" y="295" fontSize="8" fill="hsl(var(--muted-foreground))">Cundinamarca</text>
+            <text x="245" y="295" fontSize="12" fill="hsl(var(--muted-foreground))">Cundinamarca</text>
 
             <path d="M138,336 L190,320 L200,380 L140,390Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x="165" y="360" fontSize="8" fill="hsl(var(--muted-foreground))">Valle del Cauca</text>
+            <text x="150" y="360" fontSize="12" fill="hsl(var(--muted-foreground))">Valle del Cauca</text>
 
             <path d="M104,402 L170,380 L175,440 L110,450Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x="135" y="420" fontSize="8" fill="hsl(var(--muted-foreground))">Cauca</text>
+            <text x="135" y="420" fontSize="12" fill="hsl(var(--muted-foreground))">Cauca</text>
           </g>
 
           {/* Interactive region paths for Cauca municipalities */}
