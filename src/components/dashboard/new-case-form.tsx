@@ -239,11 +239,12 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
               )}
             />
           ))}
-          <FormField
+        </div>
+        <FormField
             control={form.control}
             name="testimony"
             render={({ field }) => (
-              <FormItem className="lg:col-span-3">
+              <FormItem>
                 <FormLabel>Testimonio</FormLabel>
                 <FormControl>
                   <Textarea placeholder="Describe brevemente la situación..." {...field} rows={6} />
@@ -252,7 +253,6 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
               </FormItem>
             )}
           />
-        </div>
         <div className="flex justify-end gap-4">
             <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
             <Button type="submit" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
