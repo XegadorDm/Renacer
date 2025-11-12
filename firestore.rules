@@ -1,110 +1,57 @@
-/**
- * @fileOverview Firestore Security Rules for the "cases" collection.
- *
- * Core Philosophy:
- * This ruleset enforces a shared access model using a `members` map on each `/cases/{caseId}` document.
- * Users must be authenticated to access any data.
- * Access to a case is determined by the presence and role of the user's UID within the `members` map on the case document.
- *
- * Data Structure:
- * - /cases/{caseId}: Each document represents a case. The 'members' field is a map of user IDs to roles (e.g., {uid1: 'owner', uid2: 'viewer'}).
- *
- * Key Security Decisions:
- * - Users must be authenticated to access the application.
- * - Cases are not publicly listable (except through queries secured by rules).
- * - Writes are restricted to authenticated users with appropriate roles in the 'members' map.
- * - The 'members' map can only be updated by users with 'owner' role.
- *
- * Denormalization for Authorization:
- * - The 'members' map is denormalized directly onto each `/cases/{caseId}` document. This avoids costly `get()` calls and enables efficient authorization.
- */
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
      * @description Controls access to individual case documents.
-     * @path /cases/{caseId}
-     * @allow (get) Authenticated user with 'viewer' or higher role in case's 'members' map can read.
-     *       Example: User 'user_abc' with role 'viewer' can get the case.
-     * @allow (list) Authenticated users can list cases if their UID is in the 'members' map of the documents.
-     * @allow (create) Authenticated user can create a case if they are the owner.
-     *       Example: User 'user_abc' creates a new case and is automatically assigned 'owner' role.
-     * @allow (update) Authenticated user with 'editor' or 'owner' role in case's 'members' map can update.
-     *       Example: User 'user_abc' with role 'editor' updates the case details.
-     * @allow (delete) Authenticated user with 'owner' role in case's 'members' map can delete.
-     *       Example: User 'user_abc' with role 'owner' deletes the case.
-     * @deny (get) User not authenticated or not in 'members' map can't read.
-     * @deny (create) User not authenticated can't create.
-     * @deny (update) User not authenticated or without 'editor'/'owner' role can't update.
-     * @deny (delete) User not authenticated or without 'owner' role can't delete.
-     * @principle Enforces role-based access control for cases.
      */
     match /cases/{caseId} {
-      // Read Rules
-      allow get: if isSignedIn() && hasAccess(getRole(caseId));
-      allow list: if isSignedIn() && request.query.offset == 0 && request.query.limit <= 100; // Secure list via client query
+      allow get: if isSignedIn() && hasAccess();
+      allow list: if isSignedIn(); // Further filtering is done on the client via query constraints
 
-      // Write Rules
       allow create: if isSignedIn() && isNewCaseOwner();
-      allow update: if isSignedIn() && canUpdate(getRole(caseId));
-      allow delete: if isSignedIn() && getRole(caseId) == 'owner';
+
+      // Owner can update all fields, but cannot remove themselves as owner.
+      allow update: if isSignedIn() && isOwner(caseId) 
+                    && request.resource.data.members[request.auth.uid] == 'owner';
+      
+      // Editor can update data fields, but cannot change members.
+      allow update: if isSignedIn() && isEditor(caseId) 
+                    && request.resource.data.diff(resource.data).affectedKeys().toSet().intersection(['members']).size() == 0;
+
+      allow delete: if isSignedIn() && isOwner(caseId);
+    }
+    
+    match /users/{userId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
     }
 
     // ------ Helper Functions ------
 
-    /**
-     * @description Checks if the user is signed in.
-     * @returns {boolean} True if the user is authenticated, false otherwise.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Gets the user's role from a specific case document's members map.
-     * @param {string} caseId - The ID of the case document to check.
-     * @returns {string | null} The user's role ('owner', 'editor', 'viewer') or null if not a member.
-     */
     function getRole(caseId) {
+      // Safely access data, returns null if document or field doesn't exist.
       return get(/databases/$(database)/documents/cases/$(caseId)).data.members[request.auth.uid];
     }
-    
-    /**
-     * @description Gets the user's future role from the incoming request data.
-     * @returns {string | null} The user's role from the request's resource data.
-     */
-    function getFutureRole() {
-        return request.resource.data.members[request.auth.uid];
+
+    function hasAccess() {
+      // 'resource' is the document that is being requested.
+      // This ensures the user is a member of the specific case document they are trying to read.
+      return request.auth.uid in resource.data.members;
     }
 
-    /**
-     * @description Checks if the user has a specific level of access or higher.
-     * @param {string} role - The user's current role.
-     * @returns {boolean} True if the user has 'viewer' access or higher.
-     */
-    function hasAccess(role) {
-      return role == 'owner' || role == 'editor' || role == 'viewer';
+    function isOwner(caseId) {
+      return getRole(caseId) == 'owner';
+    }
+
+    function isEditor(caseId) {
+      return getRole(caseId) == 'editor';
     }
     
-    /**
-     * @description Checks if the user can perform an update operation.
-     * @param {string} role - The user's current role.
-     * @returns {boolean} True if user is owner/editor and not changing their own role.
-     */
-    function canUpdate(role) {
-      let isOwnerOrEditor = role == 'owner' || role == 'editor';
-      // Ensure the user's own role in the members map is not being changed by themselves.
-      // Owners can change other members' roles, but not their own role to prevent self-lockout.
-      let isRoleUnchanged = resource.data.members[request.auth.uid] == request.resource.data.members[request.auth.uid];
-
-      return isOwnerOrEditor && isRoleUnchanged;
-    }
-
-    /**
-     * @description Verifies that the user creating a new case is assigning themselves as the owner.
-     * @returns {boolean} True if the creator's UID is the only member and is set to 'owner'.
-     */
     function isNewCaseOwner() {
       let user = request.auth.uid;
       let members = request.resource.data.members;

@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
@@ -30,6 +30,7 @@ import {
   DropdownMenuSeparator 
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useMemoFirebase } from "@/firebase/provider";
 
 type WithId<T> = T & { id: string };
 
@@ -89,15 +90,15 @@ export function CasesTable({ query, location }: { query: string; location: strin
     setIsAlertOpen(false);
     setCaseToDelete(null);
   };
-
-  const canPerformAction = (caseItem: WithId<Case>, role: 'owner' | 'editor') => {
+  
+  const canPerformAction = (caseItem: WithId<Case>, action: 'edit' | 'delete') => {
       if (!user || !caseItem.members) return false;
       const userRole = caseItem.members[user.uid];
-      if (role === 'owner') {
-          return userRole === 'owner';
-      }
-      if (role === 'editor') {
+      if (action === 'edit') {
           return userRole === 'owner' || userRole === 'editor';
+      }
+      if (action === 'delete') {
+          return userRole === 'owner';
       }
       return false;
   }
@@ -135,7 +136,7 @@ export function CasesTable({ query, location }: { query: string; location: strin
                   <TableCell>{c.documentId}</TableCell>
                   <TableCell>{c.municipality}</TableCell>
                   <TableCell>
-                    {c.status && <CaseStatusIndicator status={c.status} />}
+                    {c.status && <CaseStatusIndicator status={c.status as any} />}
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -151,12 +152,12 @@ export function CasesTable({ query, location }: { query: string; location: strin
                         <DropdownMenuItem asChild>
                            <Link href={`/dashboard/cases/${c.id}`}>Ver Detalles</Link>
                         </DropdownMenuItem>
-                        {canPerformAction(c, 'editor') && (
+                        {canPerformAction(c, 'edit') && (
                             <DropdownMenuItem asChild>
                                 <Link href={`/dashboard/cases/${c.id}/edit`}>Editar</Link>
                             </DropdownMenuItem>
                         )}
-                        {canPerformAction(c, 'owner') && (
+                        {canPerformAction(c, 'delete') && (
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
                             onClick={() => handleDeleteClick(c)}
