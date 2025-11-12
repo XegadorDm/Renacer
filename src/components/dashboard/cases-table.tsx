@@ -35,7 +35,13 @@ import { useRouter } from "next/navigation";
 
 type WithId<T> = T & { id: string };
 
-export function CasesTable({ query, location }: { query: string; location: string }) {
+interface CasesTableProps {
+  query: string;
+  location: string;
+  userRole?: string;
+}
+
+export function CasesTable({ query, location, userRole }: CasesTableProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
@@ -43,19 +49,29 @@ export function CasesTable({ query, location }: { query: string; location: strin
 
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
+  
+  const isAdmin = userRole === 'admin';
 
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     
-    let q = firestoreQuery(collection(firestore, 'cases'), where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
+    let casesCollection = collection(firestore, 'cases');
+    let q;
 
-    if (location) {
+    if (isAdmin) {
+      // Admin can see all cases, optionally filtered by location
+      q = location ? firestoreQuery(casesCollection, where("municipality", "==", location)) : casesCollection;
+    } else {
+      // Non-admins only see cases they are members of
+      q = firestoreQuery(casesCollection, where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
+      if (location) {
         q = firestoreQuery(q, where("municipality", "==", location));
+      }
     }
     
     return q;
 
-  }, [firestore, user, location]);
+  }, [firestore, user, location, isAdmin]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
@@ -94,7 +110,11 @@ export function CasesTable({ query, location }: { query: string; location: strin
   };
   
   const canPerformAction = (caseItem: WithId<Case>, action: 'edit' | 'delete') => {
-      if (!user || !caseItem.members) return false;
+      if (!user) return false;
+      // Admin can do anything
+      if (isAdmin) return true;
+
+      if (!caseItem.members) return false;
       const userRole = caseItem.members[user.uid];
       if (action === 'edit') {
           return userRole === 'owner' || userRole === 'editor';
@@ -180,7 +200,7 @@ export function CasesTable({ query, location }: { query: string; location: strin
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-24">
-                  No se encontraron casos que coincidan con tu búsqueda o no tienes permisos para verlos.
+                  No se encontraron casos que coincidan con tu búsqueda.
                 </TableCell>
               </TableRow>
             )}

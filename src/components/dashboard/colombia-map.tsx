@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
-export function ColombiaMap() {
+export function ColombiaMap({ userRole }: { userRole?: string }) {
   const [hovered, setHovered] = useState<string | null>(null);
 
   const regions = [
@@ -13,6 +13,14 @@ export function ColombiaMap() {
     { id: 'piendamo', name: 'Piendamó', path: 'M180 160 L210 150 L220 170 L190 180 Z' },
     { id: 'morales', name: 'Morales', path: 'M220 170 L250 170 L230 200 L200 200 Z' },
   ];
+
+  const createHref = (regionName: string) => {
+    let href = `/dashboard/cases?location=${regionName}`;
+    if (userRole) {
+      href += `&role=${userRole}`;
+    }
+    return href;
+  }
 
   return (
     <div className="flex flex-col md:flex-row items-center gap-8 w-full">
@@ -27,7 +35,7 @@ export function ColombiaMap() {
           
           {/* Interactive region paths */}
           {regions.map(region => (
-            <Link href={`/dashboard/cases?location=${region.name}`} key={region.id}>
+            <Link href={createHref(region.name)} key={region.id}>
               <path
                 d={region.path}
                 className={cn(
@@ -47,7 +55,7 @@ export function ColombiaMap() {
       <div className="w-full md:w-1/3 flex flex-col gap-4">
         <h3 className="text-lg font-semibold text-center md:text-left">Municipios</h3>
         {regions.map(region => (
-          <Link href={`/dashboard/cases?location=${region.name}`} key={`btn-${region.id}`} passHref>
+          <Link href={createHref(region.name)} key={`btn-${region.id}`} passHref>
             <Button
               variant="secondary"
               size="lg"

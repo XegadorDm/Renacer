@@ -15,6 +15,7 @@ export default function CasesPage() {
   const searchParams = useSearchParams();
   const query = searchParams.get('query') || '';
   const location = searchParams.get('location') || '';
+  const userRole = searchParams.get('role') || '';
 
   const handleSearch = useDebouncedCallback((term: string) => {
     const params = new URLSearchParams(searchParams);
@@ -23,6 +24,9 @@ export default function CasesPage() {
     } else {
       params.delete('query');
     }
+    // Preserve role parameter
+    if(userRole) params.set('role', userRole);
+
     router.replace(`/dashboard/cases?${params.toString()}`);
   }, 300);
 
@@ -58,7 +62,7 @@ export default function CasesPage() {
                 </Button>
                 </div>
                 <Suspense fallback={<div>Cargando casos...</div>}>
-                    <CasesTable query={query} location={location} />
+                    <CasesTable query={query} location={location} userRole={userRole} />
                 </Suspense>
             </CardContent>
         </Card>
