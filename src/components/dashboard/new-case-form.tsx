@@ -24,9 +24,15 @@ import type { Case } from '@/lib/case-schema';
 import { useEffect } from 'react';
 
 const formSchema = z.object({
-  firstName: z.string().min(1, 'El nombre es requerido.'),
-  lastName: z.string().min(1, 'El apellido es requerido.'),
-  documentId: z.string().min(5, 'Documento de identidad es requerido.'),
+  firstName: z.string()
+    .min(1, 'El nombre es requerido.')
+    .regex(/^[a-zA-Z\s]+$/, 'El nombre solo puede contener letras y espacios.'),
+  lastName: z.string()
+    .min(1, 'El apellido es requerido.')
+    .regex(/^[a-zA-Z\s]+$/, 'El apellido solo puede contener letras y espacios.'),
+  documentId: z.string()
+    .min(5, 'Documento de identidad es requerido.')
+    .regex(/^[0-9]+$/, 'El documento solo puede contener números.'),
   internalId: z.string().optional(),
   ethnicGroup: z.string().min(1, 'Grupo étnico es requerido.'),
   maritalStatus: z.string().min(1, 'Estado civil es requerido.'),
@@ -35,8 +41,13 @@ const formSchema = z.object({
   address: z.string().min(1, 'Dirección es requerida.'),
   municipality: z.string().min(1, 'El municipio es requerido.'),
   department: z.string().min(1, 'Departamento es requerido.'),
-  phone1: z.string().min(7, 'Celular 1 es requerido.'),
-  phone2: z.string().optional(),
+  phone1: z.string()
+    .min(7, 'Celular 1 es requerido.')
+    .regex(/^[0-9]+$/, 'El celular solo puede contener números.'),
+  phone2: z.string()
+    .regex(/^[0-9]*$/, 'El celular solo puede contener números.')
+    .optional()
+    .or(z.literal('')),
   displacementType: z.string().min(1, 'Tipo de desplazamiento es requerido.'),
   disability: z.string().min(1, 'Discapacidad es requerida.'),
   age: z.coerce.number().min(0, 'Edad es requerida.'),
