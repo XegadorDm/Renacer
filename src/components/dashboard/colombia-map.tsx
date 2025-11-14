@@ -11,9 +11,9 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
 
   // Approximate coordinates for municipalities within the Cauca department on the new map
   const regions = [
-    { id: 'suarez', name: 'Suárez', path: 'M 125 398 L 145 392 L 149 408 L 129 414 Z' },
-    { id: 'piendamo', name: 'Piendamó', path: 'M 148 405 L 168 399 L 171 415 L 151 421 Z' },
-    { id: 'morales', name: 'Morales', path: 'M 136 418 L 156 412 L 159 428 L 139 434 Z' },
+    { id: 'suarez', name: 'Suárez', path: 'M 140 408 L 160 402 L 164 418 L 144 424 Z' },
+    { id: 'piendamo', name: 'Piendamó', path: 'M 163 405 L 183 399 L 186 415 L 166 421 Z' },
+    { id: 'morales', name: 'Morales', path: 'M 151 418 L 171 412 L 174 428 L 154 434 Z' },
   ];
 
   const createHref = (regionName: string) => {
@@ -45,7 +45,7 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
             <text x="245" y="295" fontSize="24" fill="hsl(var(--muted-foreground))">Cundinamarca</text>
 
             <path d="M138,336 L190,320 L200,380 L140,390Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x="150" y="360" fontSize="24" fill="hsl(var(--muted-foreground))">Valle del Cauca</text>
+            <text x="145" y="360" fontSize="24" fill="hsl(var(--muted-foreground))">Valle del Cauca</text>
 
             <path d="M104,402 L170,380 L175,440 L110,450Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
             <text x="135" y="420" fontSize="24" fill="hsl(var(--muted-foreground))">Cauca</text>
