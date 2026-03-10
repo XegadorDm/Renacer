@@ -198,10 +198,10 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
-            <div className="sr-only">
+            <SheetHeader className="sr-only">
               <SheetTitle>Menú de Navegación</SheetTitle>
-              <SheetDescription>Navegación principal de la plataforma Renacer.</SheetDescription>
-            </div>
+              <SheetDescription>Acceda a las diferentes secciones de la plataforma Renacer.</SheetDescription>
+            </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>

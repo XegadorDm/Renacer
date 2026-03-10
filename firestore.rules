@@ -14,14 +14,14 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // Lectura permitida para cualquier usuario autenticado para evitar errores de listado.
-      allow read: if isSignedIn(); 
+      // Permitir lectura a cualquier usuario autenticado para evitar errores de listado.
+      allow get, list: if isSignedIn(); 
       // Solo administradores maestros pueden modificar la lista.
       allow write: if isMasterAdmin();
     }
     
     match /cases/{caseId} {
-      // Permitir lectura a todos los autenticados para facilitar la colaboración.
+      // Permitir lectura a todos los autenticados.
       allow read: if isSignedIn();
       // Permitir creación a cualquier autenticado.
       allow create: if isSignedIn();
@@ -35,4 +35,4 @@ service cloud.firestore {
     }
   }
 }
-// Force deployment update - Ver. 1.1.5 - Fix Permissions and Access for Admins
+// Force deployment update - Ver. 1.2.0 - Definitive Permissions Fix

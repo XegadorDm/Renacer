@@ -23,8 +23,11 @@ export default function AdminPage() {
 
   const isAdmin = useMemo(() => {
     if (!user) return false;
-    const admins = ['diegomauriciopastusano@gmail.com', 'aleksimbachi@gmail.com'];
-    return admins.includes(user.email || '');
+    const adminEmails = [
+      'diegomauriciopastusano@gmail.com',
+      'aleksimbachi@gmail.com'
+    ];
+    return adminEmails.includes(user.email || '');
   }, [user]);
 
   const authEmailsQuery = useMemoFirebase(() => {
@@ -58,7 +61,7 @@ export default function AdminPage() {
       setIsAdding(false);
       toast({ title: 'Éxito', description: 'Correo autorizado correctamente.' });
     }).catch(() => {
-        setIsAdding(false);
+      setIsAdding(false);
     });
   };
 
@@ -81,7 +84,7 @@ export default function AdminPage() {
     return (
       <div className="max-w-md mx-auto py-20 text-center space-y-4">
         <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
-        <h2 className="text-2xl font-bold">Acceso Denegado</h2>
+        <h2 className="text-2xl font-bold font-headline">Acceso Denegado</h2>
         <p className="text-muted-foreground">No tienes permisos para acceder a esta sección administrativa.</p>
         <Button onClick={() => router.push('/dashboard')}>Volver al Inicio</Button>
       </div>
@@ -92,7 +95,7 @@ export default function AdminPage() {
     <div className="max-w-4xl mx-auto py-6 space-y-6 w-full">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-headline">
             <UserCheck className="text-primary" />
             Gestión de Aspirantes Autorizados
           </CardTitle>
@@ -120,7 +123,7 @@ export default function AdminPage() {
                 <TableRow>
                   <TableHead>Correo Autorizado</TableHead>
                   <TableHead className="hidden md:table-cell">Autorizado Por</TableHead>
-                  <TableHead className="hidden sm:cell">Fecha</TableHead>
+                  <TableHead className="hidden sm:table-cell">Fecha</TableHead>
                   <TableHead className="w-[100px] text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -134,7 +137,7 @@ export default function AdminPage() {
                 ) : tableError ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-10 text-destructive font-semibold">
-                      Error de permisos: Intente recargar la página.
+                      Error al cargar datos. Verifique su conexión.
                     </TableCell>
                   </TableRow>
                 ) : authorizedEmails?.length === 0 ? (
@@ -147,7 +150,7 @@ export default function AdminPage() {
                   authorizedEmails?.map((item: any) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.email}</TableCell>
-                      <TableCell className="hidden md:table-cell">{item.addedBy}</TableCell>
+                      <TableCell className="hidden md:table-cell text-xs">{item.addedBy}</TableCell>
                       <TableCell className="hidden sm:table-cell">
                         {item.addedAt ? new Date(item.addedAt).toLocaleDateString() : 'N/A'}
                       </TableCell>
