@@ -66,9 +66,13 @@ export function RegisterForm() {
       const result = await requestRegistrationCode({ email });
       if (result.success) {
         setGeneratedCode(result.code);
+        // El código NO se muestra en la interfaz para simular envío real.
+        // Se imprime en consola para que el desarrollador pueda probarlo.
+        console.log(`[SIMULACIÓN DE CORREO] Código para ${email}: ${result.code}`);
+        
         toast({
           title: 'Código Enviado',
-          description: `Se ha enviado el código al correo ${email}. (Para propósitos de prueba: ${result.code})`,
+          description: `Se ha enviado un código de seguridad a ${email}. Por favor, revisa tu bandeja de entrada.`,
         });
       }
     } catch (error) {
@@ -177,14 +181,14 @@ export function RegisterForm() {
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <FormField control={form.control} name="email" render={({ field }) => (
-                <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="dianazasalar1@gmail.com" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="tu@correo.com" {...field} /></FormControl><FormMessage /></FormItem>
               )}
             />
           </div>
           <Button 
             type="button" 
             variant="secondary" 
-            className="mb-[2px]" 
+            className="mb-[2px] h-10 px-4" 
             onClick={handleRequestCode}
             disabled={isRequestingCode}
           >
