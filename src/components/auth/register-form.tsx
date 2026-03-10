@@ -144,11 +144,11 @@ export function RegisterForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="firstName" render={({ field }) => (
-              <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Ej: Diego Mauricio" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Ingrese sus nombres" {...field} /></FormControl><FormMessage /></FormItem>
             )}
           />
           <FormField control={form.control} name="lastName" render={({ field }) => (
-              <FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Ej: Pastusano" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Ingrese sus apellidos" {...field} /></FormControl><FormMessage /></FormItem>
             )}
           />
         </div>
@@ -156,7 +156,7 @@ export function RegisterForm() {
             <FormField control={form.control} name="documentType" render={({ field }) => (
                 <FormItem><FormLabel>Tipo de Documento</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="C.C" /></SelectTrigger></FormControl>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccione" /></SelectTrigger></FormControl>
                     <SelectContent>
                         <SelectItem value="cc">C.C.</SelectItem>
                         <SelectItem value="ti">T.I.</SelectItem>
@@ -167,7 +167,7 @@ export function RegisterForm() {
               )}
             />
             <FormField control={form.control} name="documentNumber" render={({ field }) => (
-                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="1006017710" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="Número de identificación" {...field} /></FormControl><FormMessage /></FormItem>
               )}
             />
         </div>
@@ -175,7 +175,7 @@ export function RegisterForm() {
         <div className="flex items-end gap-2">
           <div className="flex-1">
             <FormField control={form.control} name="email" render={({ field }) => (
-                <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="tu@correo.com" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="ejemplo@correo.com" {...field} /></FormControl><FormMessage /></FormItem>
               )}
             />
           </div>
@@ -242,7 +242,7 @@ export function RegisterForm() {
             <FormItem>
               <FormLabel>Código de Seguridad (Enviado al correo)</FormLabel>
               <FormControl>
-                <Input placeholder="Ingresa el código" {...field} />
+                <Input placeholder="Ingrese el código recibido" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
