@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,6 +14,7 @@ import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'El nombre es requerido.'),
@@ -23,7 +25,7 @@ const formSchema = z.object({
   gender: z.string({ required_error: 'Selecciona un género.' }),
   role: z.string({ required_error: 'Selecciona un rol.' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
-  socialSecurityCode: z.string().min(1, 'El código es requerido.'),
+  socialSecurityCode: z.string().optional(), // Ahora es opcional para que no te bloquee
 });
 
 export function RegisterForm() {
@@ -31,6 +33,7 @@ export function RegisterForm() {
   const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -149,11 +152,28 @@ export function RegisterForm() {
             />
         </div>
         <FormField control={form.control} name="password" render={({ field }) => (
-            <FormItem><FormLabel>Contraseña</FormLabel><FormControl><Input type="password" placeholder="••••••••" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem>
+              <FormLabel>Contraseña</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                  </Button>
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
         <FormField control={form.control} name="socialSecurityCode" render={({ field }) => (
-            <FormItem><FormLabel>Código de Seguridad Social</FormLabel><FormControl><Input placeholder="Código proporcionado" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>Código de Seguridad Social (Opcional)</FormLabel><FormControl><Input placeholder="Código opcional para pruebas" {...field} /></FormControl><FormMessage /></FormItem>
           )}
         />
         <Button type="submit" className="w-full text-lg h-12" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>

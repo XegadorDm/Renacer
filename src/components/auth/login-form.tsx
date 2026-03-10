@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useAuth } from '@/firebase';
 import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff } from 'lucide-react';
 
 const formSchema = z.object({
   email: z.string().email('Por favor ingresa un correo válido.'),
@@ -21,6 +23,7 @@ export function LoginForm() {
   const router = useRouter();
   const auth = useAuth();
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -81,7 +84,18 @@ export function LoginForm() {
                 </Link>
               </div>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <div className="relative">
+                  <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                  </Button>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
