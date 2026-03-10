@@ -11,17 +11,21 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Función de administrador robusta
+    // Función de administrador robusta con correos hardcodeados para evitar bloqueos iniciales
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'diegomauriciopastusano@gmail.com' ||
+        request.auth.token.email == 'aleksimbachi@gmail.com' ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
       );
     }
 
     match /cases/{caseId} {
+      // Todos los usuarios autenticados pueden ver la lista compartida de casos
       allow read: if isSignedIn();
+      // Cualquier usuario autenticado puede crear un caso
       allow create: if isSignedIn();
+      // Solo administradores o el dueño del caso pueden editar/borrar
       allow update, delete: if isAdmin() || (resource.data.members[request.auth.uid] == 'owner');
     }
     
@@ -31,9 +35,10 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // Permitimos lectura pública para que el flujo de registro pueda validar correos antes de loguearse
+      // Permitimos lectura total para usuarios autenticados para evitar errores de carga en el dashboard
+      // y lectura pública (vía query) para el flujo de registro.
       allow read: if true;
-      // Solo los administradores reales pueden gestionar la lista
+      // Solo los administradores reales pueden añadir o quitar correos de la lista
       allow write: if isAdmin();
     }
   }

@@ -1,17 +1,18 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useFirestore, useCollection, useUser, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
 import { collection, doc, query, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2, UserCheck, AlertTriangle } from "lucide-react";
 import { useMemoFirebase } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface UserProfile {
     role: string;
@@ -32,11 +33,14 @@ export default function AdminPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Validación de administrador: Coincide con las reglas de seguridad
-  const isAdmin = userProfile?.role === 'admin' || user?.email === 'diegomauriciopastusano@gmail.com';
+  // Validación de administrador consistente con las reglas
+  const isAdmin = 
+    user?.email === 'diegomauriciopastusano@gmail.com' || 
+    user?.email === 'aleksimbachi@gmail.com' ||
+    userProfile?.role === 'admin';
 
   const authEmailsQuery = useMemoFirebase(() => {
-    // Solo realizamos la consulta si el usuario es admin y los datos del perfil ya cargaron
+    // Solo cargamos la lista si ya sabemos que es admin y no estamos cargando el perfil
     if (!firestore || !isAdmin || isProfileLoading) return null;
     return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
   }, [firestore, isAdmin, isProfileLoading]);
@@ -76,7 +80,7 @@ export default function AdminPage() {
     toast({ title: 'Eliminado', description: 'El correo ha sido removido de la lista.' });
   };
 
-  if (isUserLoading || isProfileLoading) {
+  if (isUserLoading || (isProfileLoading && !isAdmin)) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -84,7 +88,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isProfileLoading) {
     return (
       <div className="max-w-md mx-auto py-20 text-center space-y-4">
         <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
@@ -104,7 +108,7 @@ export default function AdminPage() {
             Gestión de Aspirantes Autorizados
           </CardTitle>
           <CardDescription>
-            Solo los correos electrónicos registrados aquí podrán solicitar códigos para crear una cuenta de Asesor.
+            Solo los correos registrados aquí podrán solicitar códigos para crear una cuenta de Asesor.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -135,7 +139,7 @@ export default function AdminPage() {
                 {isTableLoading ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4">Cargando...</TableCell></TableRow>
                 ) : tableError ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error al cargar datos. Verifique sus permisos.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error de permisos al cargar datos.</TableCell></TableRow>
                 ) : authorizedEmails?.length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No hay correos autorizados.</TableCell></TableRow>
                 ) : (
