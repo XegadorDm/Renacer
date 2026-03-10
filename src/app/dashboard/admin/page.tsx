@@ -1,21 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useFirestore, useCollection, useUser, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useUser } from "@/firebase";
 import { collection, doc, query, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Plus, Trash2, UserCheck, AlertTriangle } from "lucide-react";
 import { useMemoFirebase } from '@/firebase/provider';
 import { useRouter } from 'next/navigation';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-
-interface UserProfile {
-    role: string;
-}
 
 export default function AdminPage() {
   const { user, isUserLoading } = useUser();
@@ -25,10 +21,11 @@ export default function AdminPage() {
   const [newEmail, setNewEmail] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  // Validación de administrador por correo y rol
-  const isAdmin = 
-    user?.email === 'diegomauriciopastusano@gmail.com' || 
-    user?.email === 'aleksimbachi@gmail.com';
+  const isAdmin = useMemo(() => {
+    if (!user) return false;
+    const admins = ['diegomauriciopastusano@gmail.com', 'aleksimbachi@gmail.com'];
+    return admins.includes(user.email || '');
+  }, [user]);
 
   const authEmailsQuery = useMemoFirebase(() => {
     if (!firestore || !isAdmin) return null;
@@ -44,7 +41,6 @@ export default function AdminPage() {
     }
 
     const emailLower = newEmail.toLowerCase();
-
     if (authorizedEmails?.some(e => e.email === emailLower)) {
       toast({ variant: 'destructive', title: 'Error', description: 'Este correo ya está en la lista.' });
       return;
@@ -93,7 +89,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-6 space-y-6">
+    <div className="max-w-4xl mx-auto py-6 space-y-6 w-full">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -132,7 +128,7 @@ export default function AdminPage() {
                 {isTableLoading ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                 ) : tableError ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-10 text-destructive">Error al cargar la lista. Verifique su conexión.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-10 text-destructive">Error de permisos o conexión. Intente recargar.</TableCell></TableRow>
                 ) : authorizedEmails?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">

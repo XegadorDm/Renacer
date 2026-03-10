@@ -6,7 +6,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Validación de administradores maestros por correo electrónico.
     function isMasterAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'diegomauriciopastusano@gmail.com' ||
@@ -15,10 +14,9 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // Lectura permitida para cualquier usuario autenticado (necesario para validación y dashboard).
+      // Lectura permitida para cualquier usuario autenticado para evitar errores de listado.
       allow read: if isSignedIn(); 
-      
-      // Solo los administradores maestros pueden agregar o eliminar de la lista.
+      // Solo administradores maestros pueden modificar la lista.
       allow write: if isMasterAdmin();
     }
     
@@ -34,4 +32,4 @@ service cloud.firestore {
     }
   }
 }
-// Force rules deployment update - Ver. 1.0.5
+// Force rules deployment update - Ver. 1.0.8 - Full Access Admin Fix
