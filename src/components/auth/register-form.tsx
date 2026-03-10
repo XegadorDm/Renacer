@@ -66,11 +66,9 @@ export function RegisterForm() {
       const result = await requestRegistrationCode({ email });
       if (result.success) {
         setGeneratedCode(result.code || null);
-        console.log(`[SIMULACIÓN] Código para ${email}: ${result.code}`);
-        
         toast({
           title: 'Código Enviado',
-          description: `Se ha enviado un código a ${email}. Revise su bandeja (o la consola F12).`,
+          description: result.message,
         });
       } else {
         toast({
@@ -91,12 +89,12 @@ export function RegisterForm() {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // El código ahora es opcional por petición del usuario para pruebas
+    // Validación de código solo si se generó uno
     if (generatedCode && values.securityCode && values.securityCode !== generatedCode) {
       toast({
         variant: 'destructive',
         title: 'Código incorrecto',
-        description: 'El código de seguridad ingresado no coincide con el enviado.',
+        description: 'El código de seguridad ingresado no coincide con el enviado a su correo.',
       });
       return;
     }
@@ -169,7 +167,7 @@ export function RegisterForm() {
               )}
             />
             <FormField control={form.control} name="documentNumber" render={({ field }) => (
-                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="1006017710" {...field} /></FormControl><FormMessage /></FormMessage /></FormItem>
+                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="1006017710" {...field} /></FormControl><FormMessage /></FormItem>
               )}
             />
         </div>
@@ -242,9 +240,9 @@ export function RegisterForm() {
         />
         <FormField control={form.control} name="securityCode" render={({ field }) => (
             <FormItem>
-              <FormLabel>Código de Seguridad (Opcional para pruebas)</FormLabel>
+              <FormLabel>Código de Seguridad (Enviado al correo)</FormLabel>
               <FormControl>
-                <Input placeholder="Ingresa el código si lo tienes" {...field} />
+                <Input placeholder="Ingresa el código" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
