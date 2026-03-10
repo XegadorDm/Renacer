@@ -1,4 +1,3 @@
-
 'use client';
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
@@ -20,7 +19,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, Settings, Users, ShieldCheck } from "lucide-react";
+import { Home, LogOut, Settings, Users } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { doc } from "firebase/firestore";
 
@@ -47,8 +46,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       router.replace('/login');
     }
   }, [isUserLoading, user, router]);
-
-  const isAdmin = userProfile?.role === 'admin' || user?.email === 'diegomauriciopastusano@gmail.com';
 
   const casesLinkHref = useMemo(() => {
     let href = "/dashboard/cases";
@@ -106,13 +103,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     <Link href={casesLinkHref}><Users/><span>Casos</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Administración">
-                      <Link href="/dashboard/admin"><ShieldCheck/><span>Administración</span></Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>

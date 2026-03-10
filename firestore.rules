@@ -14,18 +14,15 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // Permitir lectura a cualquier usuario autenticado para evitar errores de listado.
+      // Permitir lectura a cualquier usuario autenticado para el flujo de validación.
       allow read: if isSignedIn(); 
-      // Solo administradores maestros pueden modificar la lista.
+      // Solo los administradores maestros pueden agregar o eliminar correos autorizados.
       allow write: if isMasterAdmin();
     }
     
     match /cases/{caseId} {
-      // Permitir lectura a todos los autenticados.
       allow read: if isSignedIn();
-      // Permitir creación a cualquier autenticado.
       allow create: if isSignedIn();
-      // Permitir edición/borrado a administradores o si el usuario tiene permisos específicos.
       allow update, delete: if isMasterAdmin() || (resource.data.members[request.auth.uid] == 'owner');
     }
     
@@ -35,4 +32,3 @@ service cloud.firestore {
     }
   }
 }
-// Force deployment update - Ver. 1.3.0 - Permissions and Access Stability

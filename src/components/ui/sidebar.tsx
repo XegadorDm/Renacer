@@ -199,8 +199,8 @@ const Sidebar = React.forwardRef<
             side={side}
           >
             <SheetHeader className="sr-only">
-              <SheetTitle>Menú de Navegación</SheetTitle>
-              <SheetDescription>Acceda a las diferentes secciones de la plataforma Renacer.</SheetDescription>
+              <SheetTitle>Menú Renacer</SheetTitle>
+              <SheetDescription>Navegación móvil para la plataforma Renacer.</SheetDescription>
             </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
@@ -273,7 +273,7 @@ const SidebarTrigger = React.forwardRef<
       {...props}
     >
       <PanelLeft className="h-4 w-4" />
-      <span className="sr-only">Alternar Barra Lateral</span>
+      <span className="sr-only">Toggle Sidebar</span>
     </Button>
   )
 })
