@@ -26,7 +26,7 @@ const formSchema = z.object({
   gender: z.string({ required_error: 'Selecciona un género.' }),
   role: z.string({ required_error: 'Selecciona un rol.' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
-  securityCode: z.string().min(6, 'El código de seguridad es obligatorio.'),
+  securityCode: z.string().optional().or(z.literal('')),
 });
 
 export function RegisterForm() {
@@ -65,21 +65,25 @@ export function RegisterForm() {
     try {
       const result = await requestRegistrationCode({ email });
       if (result.success) {
-        setGeneratedCode(result.code);
-        // El código NO se muestra en la interfaz para simular envío real.
-        // Se imprime en consola para que el desarrollador pueda probarlo.
-        console.log(`[SIMULACIÓN DE CORREO] Código para ${email}: ${result.code}`);
+        setGeneratedCode(result.code || null);
+        console.log(`[SIMULACIÓN] Código para ${email}: ${result.code}`);
         
         toast({
           title: 'Código Enviado',
-          description: `Se ha enviado un código de seguridad a ${email}. Por favor, revisa tu bandeja de entrada.`,
+          description: `Se ha enviado un código a ${email}. Revise su bandeja (o la consola F12).`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'No autorizado',
+          description: result.message,
         });
       }
     } catch (error) {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'No se pudo enviar el código. Inténtalo de nuevo.',
+        description: 'No se pudo procesar la solicitud.',
       });
     } finally {
       setIsRequestingCode(false);
@@ -87,20 +91,12 @@ export function RegisterForm() {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!generatedCode) {
-      toast({
-        variant: 'destructive',
-        title: 'Acción requerida',
-        description: 'Debes solicitar un código de seguridad antes de registrarte.',
-      });
-      return;
-    }
-
-    if (values.securityCode !== generatedCode) {
+    // El código ahora es opcional por petición del usuario para pruebas
+    if (generatedCode && values.securityCode && values.securityCode !== generatedCode) {
       toast({
         variant: 'destructive',
         title: 'Código incorrecto',
-        description: 'El código de seguridad ingresado no es válido.',
+        description: 'El código de seguridad ingresado no coincide con el enviado.',
       });
       return;
     }
@@ -125,12 +121,12 @@ export function RegisterForm() {
       await setDoc(userDocRef, { 
         ...userData, 
         id: user.uid,
+        createdAt: new Date().toISOString(),
       });
 
       toast({
         title: '¡Registro Exitoso!',
-        description: 'Tu cuenta ha sido creada y ahora estás conectado.',
-        duration: 5000,
+        description: 'Tu cuenta ha sido creada correctamente.',
       });
 
       router.push('/dashboard');
@@ -140,7 +136,7 @@ export function RegisterForm() {
       toast({
         variant: 'destructive',
         title: 'Error en el registro',
-        description: error.message || 'No se pudo crear la cuenta. Por favor, inténtalo de nuevo.',
+        description: error.message || 'No se pudo crear la cuenta.',
       });
     }
   }
@@ -150,11 +146,11 @@ export function RegisterForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="firstName" render={({ field }) => (
-              <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Diego Mauricio" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Ej: Diego Mauricio" {...field} /></FormControl><FormMessage /></FormItem>
             )}
           />
           <FormField control={form.control} name="lastName" render={({ field }) => (
-              <FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Pastusano Guetio" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Ej: Pastusano" {...field} /></FormControl><FormMessage /></FormItem>
             )}
           />
         </div>
@@ -173,7 +169,7 @@ export function RegisterForm() {
               )}
             />
             <FormField control={form.control} name="documentNumber" render={({ field }) => (
-                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="1006017710" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="1006017710" {...field} /></FormControl><FormMessage /></FormMessage /></FormItem>
               )}
             />
         </div>
@@ -246,9 +242,9 @@ export function RegisterForm() {
         />
         <FormField control={form.control} name="securityCode" render={({ field }) => (
             <FormItem>
-              <FormLabel>Código de Seguridad</FormLabel>
+              <FormLabel>Código de Seguridad (Opcional para pruebas)</FormLabel>
               <FormControl>
-                <Input placeholder="Ingresa el código enviado" {...field} />
+                <Input placeholder="Ingresa el código si lo tienes" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
