@@ -14,7 +14,8 @@ import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { requestRegistrationCode } from '@/ai/flows/registration-code-flow';
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'El nombre es requerido.'),
@@ -25,7 +26,7 @@ const formSchema = z.object({
   gender: z.string({ required_error: 'Selecciona un género.' }),
   role: z.string({ required_error: 'Selecciona un rol.' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
-  socialSecurityCode: z.string().optional(),
+  securityCode: z.string().min(6, 'El código de seguridad es obligatorio.'),
 });
 
 export function RegisterForm() {
@@ -34,6 +35,8 @@ export function RegisterForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+  const [isRequestingCode, setIsRequestingCode] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -43,11 +46,61 @@ export function RegisterForm() {
       documentNumber: '',
       email: '',
       password: '',
-      socialSecurityCode: '',
+      securityCode: '',
     },
   });
 
+  const handleRequestCode = async () => {
+    const email = form.getValues('email');
+    if (!email || !email.includes('@')) {
+      toast({
+        variant: 'destructive',
+        title: 'Correo inválido',
+        description: 'Por favor, ingresa un correo electrónico válido antes de solicitar el código.',
+      });
+      return;
+    }
+
+    setIsRequestingCode(true);
+    try {
+      const result = await requestRegistrationCode({ email });
+      if (result.success) {
+        setGeneratedCode(result.code);
+        toast({
+          title: 'Código Enviado',
+          description: `Se ha enviado el código al correo ${email}. (Para propósitos de prueba: ${result.code})`,
+        });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo enviar el código. Inténtalo de nuevo.',
+      });
+    } finally {
+      setIsRequestingCode(false);
+    }
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!generatedCode) {
+      toast({
+        variant: 'destructive',
+        title: 'Acción requerida',
+        description: 'Debes solicitar un código de seguridad antes de registrarte.',
+      });
+      return;
+    }
+
+    if (values.securityCode !== generatedCode) {
+      toast({
+        variant: 'destructive',
+        title: 'Código incorrecto',
+        description: 'El código de seguridad ingresado no es válido.',
+      });
+      return;
+    }
+
     if (!auth || !firestore) {
       toast({
         variant: 'destructive',
@@ -61,7 +114,7 @@ export function RegisterForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      const { password, ...userData } = values;
+      const { password, securityCode, ...userData } = values;
       
       const userDocRef = doc(firestore, 'users', user.uid);
       
@@ -120,10 +173,25 @@ export function RegisterForm() {
               )}
             />
         </div>
-        <FormField control={form.control} name="email" render={({ field }) => (
-            <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="dianazasalar1@gmail.com" {...field} /></FormControl><FormMessage /></FormItem>
-          )}
-        />
+        
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="dianazasalar1@gmail.com" {...field} /></FormControl><FormMessage /></FormItem>
+              )}
+            />
+          </div>
+          <Button 
+            type="button" 
+            variant="secondary" 
+            className="mb-[2px]" 
+            onClick={handleRequestCode}
+            disabled={isRequestingCode}
+          >
+            {isRequestingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Solicitar Código'}
+          </Button>
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
             <FormField control={form.control} name="gender" render={({ field }) => (
                 <FormItem><FormLabel>Género</FormLabel>
@@ -143,7 +211,7 @@ export function RegisterForm() {
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
                     <SelectContent>
-                        <SelectItem value="case-worker">Trabajador Social</SelectItem>
+                        <SelectItem value="case-worker">Asesor</SelectItem>
                         <SelectItem value="admin">Administrador</SelectItem>
                     </SelectContent>
                   </Select>
@@ -172,8 +240,14 @@ export function RegisterForm() {
             </FormItem>
           )}
         />
-        <FormField control={form.control} name="socialSecurityCode" render={({ field }) => (
-            <FormItem><FormLabel>Código de Seguridad Social (Opcional)</FormLabel><FormControl><Input placeholder="Código opcional para pruebas" {...field} /></FormControl><FormMessage /></FormItem>
+        <FormField control={form.control} name="securityCode" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Código de Seguridad</FormLabel>
+              <FormControl>
+                <Input placeholder="Ingresa el código enviado" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
           )}
         />
         <Button type="submit" className="w-full text-lg h-12" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
