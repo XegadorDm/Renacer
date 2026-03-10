@@ -1,3 +1,4 @@
+
 'use client';
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
@@ -19,12 +20,13 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, Settings, Users, PanelLeft } from "lucide-react";
+import { Home, LogOut, Settings, Users, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { doc } from "firebase/firestore";
 
 interface UserProfile {
     role: string;
+    firstName?: string;
 }
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -45,6 +47,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       router.replace('/login');
     }
   }, [isUserLoading, user, router]);
+
+  const isAdmin = userProfile?.role === 'admin';
 
   const casesLinkHref = useMemo(() => {
     let href = "/dashboard/cases";
@@ -103,6 +107,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     <Link href={casesLinkHref}><Users/><span>Casos</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Administración">
+                      <Link href="/dashboard/admin"><ShieldCheck/><span>Administración</span></Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
@@ -124,12 +135,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
                   <Avatar>
                     <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40/40`} alt="Avatar" />
-                    <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                    <AvatarFallback>{getInitials(user.displayName || userProfile?.firstName)}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{user.displayName || 'Mi Cuenta'}</DropdownMenuLabel>
+                <DropdownMenuLabel>{user.displayName || userProfile?.firstName || 'Mi Cuenta'}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Configuración</DropdownMenuItem>
                 <DropdownMenuItem>Soporte</DropdownMenuItem>

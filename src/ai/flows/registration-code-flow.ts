@@ -1,10 +1,20 @@
+
 'use server';
 /**
- * @fileOverview Flujo para la generación y envío simulado de códigos de seguridad de registro.
+ * @fileOverview Flujo para la generación y envío de códigos de seguridad, validando contra la lista de autorizados.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { firebaseConfig } from '@/firebase/config';
+
+// Inicializamos Firebase para uso en el servidor si no está inicializado
+if (!getApps().length) {
+  initializeApp(firebaseConfig);
+}
+const db = getFirestore();
 
 const RegistrationCodeInputSchema = z.object({
   email: z.string().email().describe('El correo electrónico del usuario que solicita el registro.'),
@@ -12,8 +22,9 @@ const RegistrationCodeInputSchema = z.object({
 
 const RegistrationCodeOutputSchema = z.object({
   success: z.boolean(),
-  code: z.string().describe('El código de seguridad generado.'),
-  message: z.string().describe('Mensaje de confirmación del envío.'),
+  code: z.string().optional(),
+  message: z.string(),
+  isAuthorized: z.boolean(),
 });
 
 export async function requestRegistrationCode(input: { email: string }) {
@@ -27,35 +38,32 @@ const registrationCodeFlow = ai.defineFlow(
     outputSchema: RegistrationCodeOutputSchema,
   },
   async (input) => {
-    // Generamos un código aleatorio de 6 dígitos
+    const emailLower = input.email.toLowerCase();
+
+    // 1. Verificar si el correo está en la lista de autorizados
+    const authEmailsRef = collection(db, 'authorized_emails');
+    const q = query(authEmailsRef, where("email", "==", emailLower));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return {
+        success: false,
+        message: 'Lo sentimos, este correo electrónico no está autorizado para el registro. Contacte con el administrador.',
+        isAuthorized: false,
+      };
+    }
+
+    // 2. Generar código de 6 dígitos
     const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // En una aplicación de producción, aquí se llamaría a un servicio de correo (como Resend o SendGrid)
-    // Para este prototipo, simulamos el envío y devolvemos el código para validación en el cliente.
-    
-    const emailBody = `
-      Hola,
+    // Simulación de envío (imprimir en consola para el prototipo)
+    console.log(`[RENACER] Código enviado a ${emailLower}: ${generatedCode}`);
 
-      Desde el equipo del Grupo Renacer le informamos que ha solicitado el registro de una cuenta para el cargo de Asesor.
-
-      Para completar el proceso de creación de su cuenta, utilice el siguiente código de seguridad:
-
-      Código: [${generatedCode}]
-
-      Este código es confidencial y tiene una validez limitada. Por favor, no lo comparta con terceros.
-
-      Si usted no realizó esta solicitud, le recomendamos ignorar este mensaje o comunicarse con el equipo de soporte.
-
-      Cordialmente,
-      Equipo de Administración
-      Grupo Renacer
-    `;
-
-    // Retornamos el éxito y el código (el cliente lo recibirá para poder compararlo)
     return {
       success: true,
       code: generatedCode,
-      message: `Código enviado exitosamente a ${input.email}`,
+      message: `Código enviado exitosamente a ${emailLower}. Revise su bandeja de entrada.`,
+      isAuthorized: true,
     };
   }
 );

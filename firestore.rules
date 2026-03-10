@@ -2,61 +2,33 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * @description Controls access to individual case documents.
-     */
-    match /cases/{caseId} {
-      // Allow reading a single document if the user is signed in.
-      // Security is enforced by client-side queries ensuring users only see cases they are members of.
-      allow get: if isSignedIn();
-      
-      // User can list cases they are a member of. Client-side queries enforce this.
-      allow list: if isSignedIn();
-
-      // A signed-in user can create a case if they are the sole owner in the new document.
-      allow create: if isSignedIn() && isNewCaseOwner();
-
-      // An owner can update all fields, but cannot remove themselves as owner.
-      allow update: if isSignedIn() && isOwner(caseId) 
-                    && request.resource.data.members[request.auth.uid] == 'owner';
-      
-      // An editor can update data fields, but cannot change the members map.
-      allow update: if isSignedIn() && isEditor(caseId) 
-                    && request.resource.data.diff(resource.data).affectedKeys().toSet().intersection(['members']).size() == 0;
-
-      // Only the owner can delete a case.
-      allow delete: if isSignedIn() && isOwner(caseId);
-    }
     
-    match /users/{userId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    // ------ Helper Functions ------
-
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function getRole(caseId) {
-      // Safely access data using a get() call. Returns null if document or field doesn't exist.
-      return get(/databases/$(database)/documents/cases/$(caseId)).data.members[request.auth.uid];
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isOwner(caseId) {
-      return getRole(caseId) == 'owner';
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'admin';
     }
 
-    function isEditor(caseId) {
-      return getRole(caseId) == 'editor';
+    match /cases/{caseId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin() || (resource.data.members[request.auth.uid] == 'owner');
     }
     
-    // Checks that the user creating the document is making themselves the owner, and only themselves.
-    function isNewCaseOwner() {
-      let user = request.auth.uid;
-      let members = request.resource.data.members;
-      return members.size() == 1 && members[user] == 'owner';
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /authorized_emails/{emailId} {
+      allow read: if true; // Permite verificar si un correo está autorizado sin estar logueado
+      allow write: if isAdmin();
     }
   }
 }

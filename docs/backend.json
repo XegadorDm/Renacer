@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Case": {
@@ -6,129 +7,46 @@
       "type": "object",
       "description": "Represents a social case for displaced and vulnerable people.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Case entity."
-        },
-        "caseNumber": {
-          "type": "string",
-          "description": "The official case number."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "First name of the person."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "Last name of the person."
-        },
-        "documentType": {
-          "type": "string",
-          "description": "Type of identification document."
-        },
-        "documentId": {
-          "type": "string",
-          "description": "Identification document number."
-        },
-        "internalId": {
-          "type": "string",
-          "description": "Internal identification number."
-        },
-        "ethnicGroup": {
-          "type": "string",
-          "description": "Ethnic group of the person."
-        },
-        "maritalStatus": {
-          "type": "string",
-          "description": "Marital status of the person."
-        },
-        "gender": {
-          "type": "string",
-          "description": "Gender of the person."
-        },
-        "birthDate": {
-          "type": "string",
-          "description": "Date of birth of the person.",
-          "format": "date-time"
-        },
-        "address": {
-          "type": "string",
-          "description": "Address of the person."
-        },
-        "locality": {
-          "type": "string",
-          "description": "Locality (Vereda/Corregimiento) of the person."
-        },
-        "department": {
-          "type": "string",
-          "description": "Department of the person."
-        },
-        "cellphone1": {
-          "type": "string",
-          "description": "First cellphone number of the person."
-        },
-        "cellphone2": {
-          "type": "string",
-          "description": "Second cellphone number of the person."
-        },
-        "displacementType": {
-          "type": "string",
-          "description": "Type of displacement experienced."
-        },
-        "disability": {
-          "type": "string",
-          "description": "Any disability the person has."
-        },
-        "age": {
-          "type": "number",
-          "description": "Age of the person."
-        },
-        "isElderly": {
-          "type": "boolean",
-          "description": "Indicates if the person is an elderly adult."
-        },
-        "peopleCount": {
-          "type": "number",
-          "description": "Number of people in the characterization."
-        },
-        "testimony": {
-          "type": "string",
-          "description": "Personal testimony of the person."
-        },
-        "status": {
-          "type": "string",
-          "description": "Status of the case (Pending Payment, Pending Collection, No Issue)."
-        }
+        "id": { "type": "string" },
+        "caseNumber": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "documentType": { "type": "string" },
+        "documentId": { "type": "string" },
+        "internalId": { "type": "string" },
+        "ethnicGroup": { "type": "string" },
+        "maritalStatus": { "type": "string" },
+        "gender": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date-time" },
+        "address": { "type": "string" },
+        "locality": { "type": "string" },
+        "department": { "type": "string" },
+        "cellphone1": { "type": "string" },
+        "cellphone2": { "type": "string" },
+        "displacementType": { "type": "string" },
+        "disability": { "type": "string" },
+        "age": { "type": "number" },
+        "isElderly": { "type": "boolean" },
+        "peopleCount": { "type": "number" },
+        "testimony": { "type": "string" },
+        "status": { "type": "string" }
       },
-      "required": [
-        "id",
-        "caseNumber",
-        "firstName",
-        "lastName",
-        "documentType",
-        "documentId",
-        "ethnicGroup",
-        "maritalStatus",
-        "gender",
-        "birthDate",
-        "address",
-        "locality",
-        "department",
-        "cellphone1",
-        "displacementType",
-        "age",
-        "isElderly",
-        "peopleCount",
-        "testimony",
-        "status"
-      ]
+      "required": ["id", "caseNumber", "firstName", "lastName", "documentType", "documentId", "ethnicGroup", "maritalStatus", "gender", "birthDate", "address", "locality", "department", "cellphone1", "displacementType", "age", "isElderly", "peopleCount", "testimony", "status"]
+    },
+    "AuthorizedEmail": {
+      "title": "AuthorizedEmail",
+      "type": "object",
+      "description": "Emails pre-authorized by an admin to register in the platform.",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "addedBy": { "type": "string" },
+        "addedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "addedBy", "addedAt"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
     "structure": [
@@ -136,19 +54,18 @@
         "path": "/cases/{caseId}",
         "definition": {
           "entityName": "Case",
-          "schema": {
-            "$ref": "#/backend/entities/Case"
-          },
-          "description": "Stores case data. Includes denormalized 'members' map for authorization independence (e.g., members: {uid1: 'owner', uid2: 'viewer'}).",
-          "params": [
-            {
-              "name": "caseId",
-              "description": "Unique identifier for the case document."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Case" },
+          "description": "Stores case data."
+        }
+      },
+      {
+        "path": "/authorized_emails/{emailId}",
+        "definition": {
+          "entityName": "AuthorizedEmail",
+          "schema": { "$ref": "#/backend/entities/AuthorizedEmail" },
+          "description": "Whitelist of emails allowed to sign up."
         }
       }
-    ],
-    "reasoning": "Based on the provided information, the error `FirebaseError: Missing or insufficient permissions` indicates a security rules issue. The user with UID `cNR14J27V4Rm22umULEbzYKguj33` is attempting to `get` a document at `/cases/9xdwtUtgQiJygQdtTTz3`, but the security rules are denying the request. Since it is only one user having an issue and the app has several users, it is safe to assume it is an intended behavior. To fix this, we need to adjust the Firestore data structure and security rules to allow the user to read case documents. Since the app manages 'cases' that include potentially sensitive personal information, we will use path-based ownership and membership map for collaborative access to ensure data privacy and security. Given the nature of the app, we will assume that access must be granted on a per-case basis, and roles will need to be assigned on a case-by-case basis.\n\nThe recommended data structure is as follows:\n\n1.  **/cases/{caseId}**: Stores the case data. A `members` map will determine who has access to the case and their roles. The `caseId` will be a unique identifier for each case document.\n\nThis structure promotes Authorization Independence by denormalizing the `members` map into each case document, eliminating the need for `get()` calls to parent documents. It also supports QAPs (Rules are not Filters) by enabling secure `list` operations since the security rules can directly evaluate the `members` map within each case document. The structure clearly defines ownership and access rights, improving debuggability and maintainability.\n\nFurthermore, to allow case searching, this data structure is suitable."
+    ]
   }
 }
