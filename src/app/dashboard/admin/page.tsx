@@ -41,7 +41,7 @@ export default function AdminPage() {
     return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
   }, [firestore, isAdmin, isProfileLoading]);
 
-  const { data: authorizedEmails, isLoading: isTableLoading } = useCollection(authEmailsQuery);
+  const { data: authorizedEmails, isLoading: isTableLoading, error: tableError } = useCollection(authEmailsQuery);
 
   const handleAddEmail = () => {
     if (!newEmail || !newEmail.includes('@')) {
@@ -134,6 +134,8 @@ export default function AdminPage() {
               <TableBody>
                 {isTableLoading ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4">Cargando...</TableCell></TableRow>
+                ) : tableError ? (
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error al cargar datos. Verifique sus permisos.</TableCell></TableRow>
                 ) : authorizedEmails?.length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No hay correos autorizados.</TableCell></TableRow>
                 ) : (
