@@ -1,30 +1,47 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useFirestore, useCollection, useUser, addDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, addDocumentNonBlocking, deleteDocumentNonBlocking, useDoc } from "@/firebase";
 import { collection, doc, query, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, UserCheck } from "lucide-react";
+import { Loader2, Plus, Trash2, UserCheck, AlertTriangle } from "lucide-react";
 import { useMemoFirebase } from '@/firebase/provider';
+import { useRouter } from 'next/navigation';
+
+interface UserProfile {
+    role: string;
+}
 
 export default function AdminPage() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
   const [newEmail, setNewEmail] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  const authEmailsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
-  }, [firestore]);
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
 
-  const { data: authorizedEmails, isLoading } = useCollection(authEmailsQuery);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
+  // Validación de administrador
+  const isAdmin = userProfile?.role === 'admin' || user?.email === 'diegomauriciopastusano@gmail.com';
+
+  const authEmailsQuery = useMemoFirebase(() => {
+    // Solo realizamos la consulta si el usuario es admin para evitar errores de permisos
+    if (!firestore || !isAdmin) return null;
+    return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
+  }, [firestore, isAdmin]);
+
+  const { data: authorizedEmails, isLoading: isTableLoading } = useCollection(authEmailsQuery);
 
   const handleAddEmail = () => {
     if (!newEmail || !newEmail.includes('@')) {
@@ -57,6 +74,25 @@ export default function AdminPage() {
     toast({ title: 'Eliminado', description: 'El correo ha sido removido de la lista.' });
   };
 
+  if (isUserLoading || isProfileLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="max-w-md mx-auto py-20 text-center space-y-4">
+        <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
+        <h2 className="text-2xl font-bold">Acceso Denegado</h2>
+        <p className="text-muted-foreground">No tienes permisos para acceder a esta sección.</p>
+        <Button onClick={() => router.push('/dashboard')}>Volver al Inicio</Button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto py-6 space-y-6">
       <Card>
@@ -70,7 +106,7 @@ export default function AdminPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-6">
+          <div className="flex flex-col sm:flex-row gap-2 mb-6">
             <Input 
               placeholder="correo@ejemplo.com" 
               value={newEmail}
@@ -83,18 +119,18 @@ export default function AdminPage() {
             </Button>
           </div>
 
-          <div className="border rounded-md">
+          <div className="border rounded-md overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Correo Autorizado</TableHead>
-                  <TableHead>Autorizado Por</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead className="w-[100px]">Acciones</TableHead>
+                  <TableHead className="hidden md:table-cell">Autorizado Por</TableHead>
+                  <TableHead className="hidden sm:table-cell">Fecha</TableHead>
+                  <TableHead className="w-[100px] text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {isLoading ? (
+                {isTableLoading ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4">Cargando...</TableCell></TableRow>
                 ) : authorizedEmails?.length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No hay correos autorizados.</TableCell></TableRow>
@@ -102,9 +138,9 @@ export default function AdminPage() {
                   authorizedEmails?.map((item: any) => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.email}</TableCell>
-                      <TableCell>{item.addedBy}</TableCell>
-                      <TableCell>{new Date(item.addedAt).toLocaleDateString()}</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">{item.addedBy}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{new Date(item.addedAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
                         <Button 
                           variant="ghost" 
                           size="icon" 

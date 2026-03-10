@@ -12,7 +12,9 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && getUserData().role == 'admin';
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             getUserData().role == 'admin';
     }
 
     match /cases/{caseId} {
@@ -27,7 +29,9 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      allow read: if true; // Permite verificar si un correo está autorizado sin estar logueado
+      // Permitimos que cualquier usuario autenticado vea la lista para validar su registro
+      // o que el admin la gestione.
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
   }
