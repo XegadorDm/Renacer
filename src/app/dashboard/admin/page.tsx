@@ -30,18 +30,19 @@ export default function AdminPage() {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Validación de administrador consistente para ambos correos y rol en DB
+  // Validación de administrador consistente
   const isAdmin = 
     user?.email === 'diegomauriciopastusano@gmail.com' || 
     user?.email === 'aleksimbachi@gmail.com' ||
     userProfile?.role === 'admin';
 
   const authEmailsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // Solo realizamos la consulta si el usuario es administrador para evitar errores de permisos innecesarios
+    if (!firestore || !isAdmin) return null;
     return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
-  }, [firestore]);
+  }, [firestore, isAdmin]);
 
   const { data: authorizedEmails, isLoading: isTableLoading, error: tableError } = useCollection(authEmailsQuery);
 
@@ -81,7 +82,7 @@ export default function AdminPage() {
     toast({ title: 'Eliminado', description: 'El correo ha sido removido de la lista.' });
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -94,7 +95,7 @@ export default function AdminPage() {
       <div className="max-w-md mx-auto py-20 text-center space-y-4">
         <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
         <h2 className="text-2xl font-bold">Acceso Denegado</h2>
-        <p className="text-muted-foreground">No tienes permisos para acceder a esta sección.</p>
+        <p className="text-muted-foreground">No tienes permisos para acceder a esta sección administrativa.</p>
         <Button onClick={() => router.push('/dashboard')}>Volver al Inicio</Button>
       </div>
     );
@@ -140,11 +141,11 @@ export default function AdminPage() {
                 {isTableLoading ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4">Cargando...</TableCell></TableRow>
                 ) : tableError ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error al cargar la lista. Verifique sus permisos.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error al cargar la lista. Verifique sus permisos de red.</TableCell></TableRow>
                 ) : authorizedEmails?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
-                      No hay correos autorizados.
+                      No hay correos autorizados todavía.
                     </TableCell>
                   </TableRow>
                 ) : (

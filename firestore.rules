@@ -6,11 +6,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Validación de administrador robusta para acceso total
+    // Validación de administrador robusta para acceso total.
+    // Incluye explícitamente los correos de los líderes del proyecto.
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'diegomauriciopastusano@gmail.com' ||
-        request.auth.token.email == 'aleksimbachi@gmail.com'
+        request.auth.token.email == 'aleksimbachi@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }
 
@@ -26,11 +28,13 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // PERMISOS DE LECTURA GLOBALES para evitar errores en registro y dashboard
-      allow read: if true; 
+      // PERMISOS DE LECTURA AMPLIADOS:
+      // Cualquier usuario autenticado puede listar y leer para validar el registro.
+      allow read: if isSignedIn(); 
       
-      // Solo los administradores pueden modificar la lista de autorizados
+      // Solo los administradores pueden modificar la lista de autorizados.
       allow write: if isAdmin();
     }
   }
 }
+// Force rules deployment update - Ver. 1.0.2
