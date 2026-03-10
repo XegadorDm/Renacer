@@ -1,4 +1,3 @@
-
 'use client';
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
@@ -24,7 +23,6 @@ import { Home, LogOut, Settings, Users, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { doc } from "firebase/firestore";
 
-
 interface UserProfile {
     role: string;
     firstName?: string;
@@ -41,7 +39,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -49,8 +47,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  // Se otorga permiso de admin al correo específico solicitado y a los que tengan el rol en la DB
-  const isAdmin = userProfile?.role === 'admin' || user?.email === 'diegomauriciopastusano@gmail.com';
+  // Se otorga permiso de admin a los correos específicos y a los que tengan el rol en la DB
+  const isAdmin = 
+    user?.email === 'diegomauriciopastusano@gmail.com' || 
+    user?.email === 'aleksimbachi@gmail.com' ||
+    userProfile?.role === 'admin';
 
   const casesLinkHref = useMemo(() => {
     let href = "/dashboard/cases";

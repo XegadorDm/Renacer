@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -11,7 +10,7 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Función de administrador robusta con correos hardcodeados para evitar bloqueos iniciales
+    // Función de administrador robusta con correos autorizados explícitamente
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'diegomauriciopastusano@gmail.com' ||
@@ -21,11 +20,8 @@ service cloud.firestore {
     }
 
     match /cases/{caseId} {
-      // Todos los usuarios autenticados pueden ver la lista compartida de casos
       allow read: if isSignedIn();
-      // Cualquier usuario autenticado puede crear un caso
       allow create: if isSignedIn();
-      // Solo administradores o el dueño del caso pueden editar/borrar
       allow update, delete: if isAdmin() || (resource.data.members[request.auth.uid] == 'owner');
     }
     
@@ -35,10 +31,10 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // Permitimos lectura total para usuarios autenticados para evitar errores de carga en el dashboard
-      // y lectura pública (vía query) para el flujo de registro.
+      // Permitimos lectura para usuarios autenticados para que el Dashboard no falle
+      // También permitimos lectura pública para el proceso de validación en el registro
       allow read: if true;
-      // Solo los administradores reales pueden añadir o quitar correos de la lista
+      // Solo administradores pueden añadir o eliminar de la lista blanca
       allow write: if isAdmin();
     }
   }

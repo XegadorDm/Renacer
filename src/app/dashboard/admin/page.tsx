@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -33,17 +32,17 @@ export default function AdminPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Validación de administrador consistente con las reglas
+  // Validación de administrador consistente
   const isAdmin = 
     user?.email === 'diegomauriciopastusano@gmail.com' || 
     user?.email === 'aleksimbachi@gmail.com' ||
     userProfile?.role === 'admin';
 
   const authEmailsQuery = useMemoFirebase(() => {
-    // Solo cargamos la lista si ya sabemos que es admin y no estamos cargando el perfil
-    if (!firestore || !isAdmin || isProfileLoading) return null;
+    // Solo cargamos si es admin y firestore está listo
+    if (!firestore || !isAdmin) return null;
     return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
-  }, [firestore, isAdmin, isProfileLoading]);
+  }, [firestore, isAdmin]);
 
   const { data: authorizedEmails, isLoading: isTableLoading, error: tableError } = useCollection(authEmailsQuery);
 
@@ -80,7 +79,7 @@ export default function AdminPage() {
     toast({ title: 'Eliminado', description: 'El correo ha sido removido de la lista.' });
   };
 
-  if (isUserLoading || (isProfileLoading && !isAdmin)) {
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -88,7 +87,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!isAdmin && !isProfileLoading) {
+  if (!isAdmin) {
     return (
       <div className="max-w-md mx-auto py-20 text-center space-y-4">
         <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
@@ -139,7 +138,7 @@ export default function AdminPage() {
                 {isTableLoading ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4">Cargando...</TableCell></TableRow>
                 ) : tableError ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error de permisos al cargar datos.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error al cargar la lista. Verifique sus permisos.</TableCell></TableRow>
                 ) : authorizedEmails?.length === 0 ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No hay correos autorizados.</TableCell></TableRow>
                 ) : (
