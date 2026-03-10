@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -56,11 +55,9 @@ export function RegisterForm() {
     }
 
     try {
-      // Step 1: Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      // Step 2: User is now created and signed in. Proceed to create Firestore document for the user profile.
       const { password, ...userData } = values;
       
       const userDocRef = doc(firestore, 'users', user.uid);
@@ -76,7 +73,6 @@ export function RegisterForm() {
         duration: 5000,
       });
 
-      // Redirect directly to the dashboard
       router.push('/dashboard');
 
     } catch (error: any) {
@@ -94,11 +90,11 @@ export function RegisterForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <FormField control={form.control} name="firstName" render={({ field }) => (
-              <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Tu nombre" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input placeholder="Diego Mauricio" {...field} /></FormControl><FormMessage /></FormItem>
             )}
           />
           <FormField control={form.control} name="lastName" render={({ field }) => (
-              <FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Tu apellido" {...field} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Apellido</FormLabel><FormControl><Input placeholder="Pastusano Guetio" {...field} /></FormControl><FormMessage /></FormItem>
             )}
           />
         </div>
@@ -106,27 +102,35 @@ export function RegisterForm() {
             <FormField control={form.control} name="documentType" render={({ field }) => (
                 <FormItem><FormLabel>Tipo de Documento</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
-                    <SelectContent><SelectItem value="cc">C.C.</SelectItem><SelectItem value="ti">T.I.</SelectItem><SelectItem value="ce">C.E.</SelectItem></SelectContent>
+                    <FormControl><SelectTrigger><SelectValue placeholder="C.C" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        <SelectItem value="cc">C.C.</SelectItem>
+                        <SelectItem value="ti">T.I.</SelectItem>
+                        <SelectItem value="ce">C.E.</SelectItem>
+                    </SelectContent>
                   </Select>
                 <FormMessage /></FormItem>
               )}
             />
             <FormField control={form.control} name="documentNumber" render={({ field }) => (
-                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="Tu número" {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Número</FormLabel><FormControl><Input placeholder="1006017710" {...field} /></FormControl><FormMessage /></FormItem>
               )}
             />
         </div>
         <FormField control={form.control} name="email" render={({ field }) => (
-            <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="tu@correo.com" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="dianazasalar1@gmail.com" {...field} /></FormControl><FormMessage /></FormItem>
           )}
         />
         <div className="grid grid-cols-2 gap-4">
             <FormField control={form.control} name="gender" render={({ field }) => (
                 <FormItem><FormLabel>Género</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona tu género" /></SelectTrigger></FormControl>
-                    <SelectContent><SelectItem value="male">Masculino</SelectItem><SelectItem value="female">Femenino</SelectItem><SelectItem value="other">Otro</SelectItem></SelectContent>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        <SelectItem value="male">Masculino</SelectItem>
+                        <SelectItem value="female">Femenino</SelectItem>
+                        <SelectItem value="other">Otro</SelectItem>
+                    </SelectContent>
                   </Select>
                 <FormMessage /></FormItem>
               )}
@@ -134,8 +138,11 @@ export function RegisterForm() {
             <FormField control={form.control} name="role" render={({ field }) => (
                 <FormItem><FormLabel>Rol</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un rol" /></SelectTrigger></FormControl>
-                    <SelectContent><SelectItem value="case-worker">Trabajador Social</SelectItem><SelectItem value="admin">Administrador</SelectItem></SelectContent>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        <SelectItem value="case-worker">Trabajador Social</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                    </SelectContent>
                   </Select>
                 <FormMessage /></FormItem>
               )}
@@ -149,13 +156,13 @@ export function RegisterForm() {
             <FormItem><FormLabel>Código de Seguridad Social</FormLabel><FormControl><Input placeholder="Código proporcionado" {...field} /></FormControl><FormMessage /></FormItem>
           )}
         />
-        <Button type="submit" className="w-full" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+        <Button type="submit" className="w-full text-lg h-12" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
           Crear Cuenta
         </Button>
-        <div className="text-center text-sm text-muted-foreground">
+        <div className="text-center text-sm text-muted-foreground mt-4">
           ¿Ya tienes una cuenta?{' '}
           <Link href="/login" passHref>
-            <Button variant="link" className="p-0 h-auto text-primary">Ingresa aquí</Button>
+            <Button variant="link" className="p-0 h-auto text-primary font-bold">Ingresa aquí</Button>
           </Link>
         </div>
       </form>
