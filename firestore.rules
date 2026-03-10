@@ -11,10 +11,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    // Función de administrador robusta que coincide con la lógica del código
     function isAdmin() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             getUserData().role == 'admin';
+      return isSignedIn() && (
+        request.auth.token.email == 'diegomauriciopastusano@gmail.com' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
+      );
     }
 
     match /cases/{caseId} {
@@ -29,9 +31,9 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // Permitimos que cualquier usuario autenticado vea la lista para validar su registro
-      // o que el admin la gestione.
+      // Permitimos que cualquier usuario autenticado vea la lista (necesario para validar registro)
       allow read: if isSignedIn();
+      // Solo los administradores pueden gestionar la lista
       allow write: if isAdmin();
     }
   }

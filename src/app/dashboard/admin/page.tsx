@@ -32,14 +32,14 @@ export default function AdminPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Validación de administrador
+  // Validación de administrador: Coincide con las reglas de seguridad
   const isAdmin = userProfile?.role === 'admin' || user?.email === 'diegomauriciopastusano@gmail.com';
 
   const authEmailsQuery = useMemoFirebase(() => {
-    // Solo realizamos la consulta si el usuario es admin para evitar errores de permisos
-    if (!firestore || !isAdmin) return null;
+    // Solo realizamos la consulta si el usuario es admin y los datos del perfil ya cargaron
+    if (!firestore || !isAdmin || isProfileLoading) return null;
     return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
-  }, [firestore, isAdmin]);
+  }, [firestore, isAdmin, isProfileLoading]);
 
   const { data: authorizedEmails, isLoading: isTableLoading } = useCollection(authEmailsQuery);
 
@@ -65,6 +65,8 @@ export default function AdminPage() {
       setNewEmail('');
       setIsAdding(false);
       toast({ title: 'Éxito', description: 'Correo autorizado correctamente.' });
+    }).catch(() => {
+        setIsAdding(false);
     });
   };
 
