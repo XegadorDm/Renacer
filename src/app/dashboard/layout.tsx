@@ -95,7 +95,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     Renacer
                 </span>
             </Link>
-            <SidebarTrigger className="hidden md:flex" />
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
@@ -130,7 +129,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </Sidebar>
         <SidebarInset className="flex-1">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 py-2">
-            <SidebarTrigger className="md:hidden" />
+            <SidebarTrigger />
             <div className="flex-1" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
