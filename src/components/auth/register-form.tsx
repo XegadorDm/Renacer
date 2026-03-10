@@ -25,7 +25,7 @@ const formSchema = z.object({
   gender: z.string({ required_error: 'Selecciona un género.' }),
   role: z.string({ required_error: 'Selecciona un rol.' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
-  socialSecurityCode: z.string().optional(), // Ahora es opcional para que no te bloquee
+  socialSecurityCode: z.string().optional(),
 });
 
 export function RegisterForm() {
@@ -164,7 +164,7 @@ export function RegisterForm() {
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                    {showPassword ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
                   </Button>
                 </div>
               </FormControl>
