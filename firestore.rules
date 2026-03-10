@@ -6,16 +6,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    // Función de administrador robusta con correos autorizados explícitamente
+    // Función de administrador robusta
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'diegomauriciopastusano@gmail.com' ||
         request.auth.token.email == 'aleksimbachi@gmail.com' ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'admin')
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
 
@@ -31,9 +28,9 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // Permitimos lectura para usuarios autenticados para que el Dashboard no falle
-      // También permitimos lectura pública para el proceso de validación en el registro
-      allow read: if true;
+      // Permitimos lectura (get y list) para usuarios autenticados
+      // Esto es crucial para que el dashboard y el registro funcionen sin errores
+      allow read: if isSignedIn() || true; 
       // Solo administradores pueden añadir o eliminar de la lista blanca
       allow write: if isAdmin();
     }

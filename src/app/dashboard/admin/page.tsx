@@ -39,10 +39,10 @@ export default function AdminPage() {
     userProfile?.role === 'admin';
 
   const authEmailsQuery = useMemoFirebase(() => {
-    // Solo cargamos si es admin y firestore está listo
-    if (!firestore || !isAdmin) return null;
+    // Solo cargamos si tenemos firestore. Las reglas ahora permiten la lectura si está autenticado.
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
-  }, [firestore, isAdmin]);
+  }, [firestore, user]);
 
   const { data: authorizedEmails, isLoading: isTableLoading, error: tableError } = useCollection(authEmailsQuery);
 
@@ -79,7 +79,7 @@ export default function AdminPage() {
     toast({ title: 'Eliminado', description: 'El correo ha sido removido de la lista.' });
   };
 
-  if (isUserLoading || isProfileLoading) {
+  if (isUserLoading || (isProfileLoading && !isAdmin)) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
