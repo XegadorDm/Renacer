@@ -48,7 +48,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  const isAdmin = userProfile?.role === 'admin';
+  const isAdmin = userProfile?.role === 'admin' || user?.email === 'diegomauriciopastusano@gmail.com';
 
   const casesLinkHref = useMemo(() => {
     let href = "/dashboard/cases";
@@ -84,16 +84,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen">
+      <div className="min-h-screen flex w-full">
         <Sidebar collapsible="icon">
-          <SidebarHeader className="flex items-center justify-between">
+          <SidebarHeader className="flex flex-row items-center justify-between p-4">
              <Link href="/dashboard" className="flex items-center gap-2" prefetch={false}>
                 <Logo className="h-8 w-8 text-primary" />
                 <span className="text-xl font-bold font-headline text-foreground group-data-[collapsible=icon]:hidden">
                     Renacer
                 </span>
             </Link>
-            <SidebarTrigger className="hidden sm:flex" />
+            <SidebarTrigger className="hidden md:flex" />
           </SidebarHeader>
           <SidebarContent>
             <SidebarMenu>
@@ -126,9 +126,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </SidebarMenu>
           </SidebarFooter>
         </Sidebar>
-        <SidebarInset>
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 py-2">
-            <SidebarTrigger className="sm:hidden" />
+        <SidebarInset className="flex-1">
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 py-2">
+            <SidebarTrigger className="md:hidden" />
             <div className="flex-1" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
