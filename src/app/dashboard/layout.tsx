@@ -26,6 +26,7 @@ import { doc } from "firebase/firestore";
 interface UserProfile {
     role: string;
     firstName?: string;
+    lastName?: string;
 }
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -47,11 +48,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  // Se otorga permiso de admin a los correos específicos
   const isAdmin = 
     user?.email === 'diegomauriciopastusano@gmail.com' || 
-    user?.email === 'aleksimbachi@gmail.com' ||
-    userProfile?.role === 'admin';
+    user?.email === 'aleksimbachi@gmail.com';
 
   const casesLinkHref = useMemo(() => {
     let href = "/dashboard/cases";
@@ -65,9 +64,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (isUserLoading || !user) {
     return (
         <div className="flex items-center justify-center min-h-screen">
-            <div className="p-8 bg-background rounded-lg shadow-xl">
-                <p>Cargando...</p>
-            </div>
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
     )
   }
@@ -79,9 +76,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }
 
-  const getInitials = (name: string | null | undefined) => {
-    if (!name) return 'JD';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const getInitials = () => {
+    if (userProfile?.firstName && userProfile?.lastName) {
+      return `${userProfile.firstName[0]}${userProfile.lastName[0]}`.toUpperCase();
+    }
+    return user.email?.[0].toUpperCase() || 'U';
   }
 
 
@@ -137,12 +136,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
                   <Avatar>
                     <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40/40`} alt="Avatar" />
-                    <AvatarFallback>{getInitials(user.displayName || userProfile?.firstName)}</AvatarFallback>
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{user.displayName || userProfile?.firstName || 'Mi Cuenta'}</DropdownMenuLabel>
+                <DropdownMenuLabel>{userProfile?.firstName || user.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Configuración</DropdownMenuItem>
                 <DropdownMenuItem>Soporte</DropdownMenuItem>
@@ -161,3 +160,5 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
+import { Loader2 } from "lucide-react";

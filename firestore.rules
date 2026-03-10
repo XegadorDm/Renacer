@@ -6,35 +6,32 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Validación de administrador robusta para acceso total.
-    // Incluye explícitamente los correos de los líderes del proyecto.
-    function isAdmin() {
+    // Validación de administradores maestros por correo electrónico.
+    function isMasterAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'diegomauriciopastusano@gmail.com' ||
-        request.auth.token.email == 'aleksimbachi@gmail.com' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        request.auth.token.email == 'aleksimbachi@gmail.com'
       );
     }
 
+    match /authorized_emails/{emailId} {
+      // Lectura permitida para cualquier usuario autenticado (necesario para validación y dashboard).
+      allow read: if isSignedIn(); 
+      
+      // Solo los administradores maestros pueden agregar o eliminar de la lista.
+      allow write: if isMasterAdmin();
+    }
+    
     match /cases/{caseId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if isAdmin() || (resource.data.members[request.auth.uid] == 'owner');
+      allow update, delete: if isMasterAdmin() || (resource.data.members[request.auth.uid] == 'owner');
     }
     
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-    }
-
-    match /authorized_emails/{emailId} {
-      // PERMISOS DE LECTURA AMPLIADOS:
-      // Cualquier usuario autenticado puede listar y leer para validar el registro.
-      allow read: if isSignedIn(); 
-      
-      // Solo los administradores pueden modificar la lista de autorizados.
-      allow write: if isAdmin();
+      allow write: if isSignedIn() && (request.auth.uid == userId || isMasterAdmin());
     }
   }
 }
-// Force rules deployment update - Ver. 1.0.2
+// Force rules deployment update - Ver. 1.0.5

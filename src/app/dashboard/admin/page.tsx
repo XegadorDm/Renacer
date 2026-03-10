@@ -25,21 +25,12 @@ export default function AdminPage() {
   const [newEmail, setNewEmail] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
-
-  // Validación de administrador consistente
+  // Validación de administrador por correo y rol
   const isAdmin = 
     user?.email === 'diegomauriciopastusano@gmail.com' || 
-    user?.email === 'aleksimbachi@gmail.com' ||
-    userProfile?.role === 'admin';
+    user?.email === 'aleksimbachi@gmail.com';
 
   const authEmailsQuery = useMemoFirebase(() => {
-    // Solo realizamos la consulta si el usuario es administrador para evitar errores de permisos innecesarios
     if (!firestore || !isAdmin) return null;
     return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
   }, [firestore, isAdmin]);
@@ -82,7 +73,7 @@ export default function AdminPage() {
     toast({ title: 'Eliminado', description: 'El correo ha sido removido de la lista.' });
   };
 
-  if (isUserLoading || isProfileLoading) {
+  if (isUserLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -110,7 +101,7 @@ export default function AdminPage() {
             Gestión de Aspirantes Autorizados
           </CardTitle>
           <CardDescription>
-            Solo los correos registrados aquí podrán solicitar códigos para crear una cuenta de Asesor.
+            Agregue los correos de las personas que pueden registrarse como Asesores.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -121,7 +112,7 @@ export default function AdminPage() {
               onChange={(e) => setNewEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddEmail()}
             />
-            <Button onClick={handleAddEmail} disabled={isAdding}>
+            <Button onClick={handleAddEmail} disabled={isAdding} className="bg-accent hover:bg-accent/90">
               {isAdding ? <Loader2 className="animate-spin h-4 w-4" /> : <Plus className="h-4 w-4 mr-2" />}
               Autorizar Correo
             </Button>
@@ -139,12 +130,12 @@ export default function AdminPage() {
               </TableHeader>
               <TableBody>
                 {isTableLoading ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4">Cargando...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
                 ) : tableError ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error al cargar la lista. Verifique sus permisos de red.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-10 text-destructive">Error al cargar la lista. Verifique su conexión.</TableCell></TableRow>
                 ) : authorizedEmails?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
                       No hay correos autorizados todavía.
                     </TableCell>
                   </TableRow>
@@ -153,7 +144,7 @@ export default function AdminPage() {
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.email}</TableCell>
                       <TableCell className="hidden md:table-cell">{item.addedBy}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{new Date(item.addedAt).toLocaleDateString()}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{item.addedAt ? new Date(item.addedAt).toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell className="text-right">
                         <Button 
                           variant="ghost" 
