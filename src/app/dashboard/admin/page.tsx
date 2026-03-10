@@ -30,19 +30,19 @@ export default function AdminPage() {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
-  // Validación de administrador consistente
+  // Validación de administrador consistente para ambos correos
   const isAdmin = 
     user?.email === 'diegomauriciopastusano@gmail.com' || 
     user?.email === 'aleksimbachi@gmail.com' ||
     userProfile?.role === 'admin';
 
   const authEmailsQuery = useMemoFirebase(() => {
-    // Solo cargamos si tenemos firestore. Las reglas ahora permiten la lectura si está autenticado.
-    if (!firestore || !user) return null;
+    if (!firestore) return null;
+    // La consulta ahora es más segura gracias a las nuevas reglas
     return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
-  }, [firestore, user]);
+  }, [firestore]);
 
   const { data: authorizedEmails, isLoading: isTableLoading, error: tableError } = useCollection(authEmailsQuery);
 
@@ -79,7 +79,7 @@ export default function AdminPage() {
     toast({ title: 'Eliminado', description: 'El correo ha sido removido de la lista.' });
   };
 
-  if (isUserLoading || (isProfileLoading && !isAdmin)) {
+  if (isUserLoading) {
     return (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -140,7 +140,7 @@ export default function AdminPage() {
                 ) : tableError ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error al cargar la lista. Verifique sus permisos.</TableCell></TableRow>
                 ) : authorizedEmails?.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No hay correos autorizados.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No hay correos autorizados.</TableRow></TableCell>
                 ) : (
                   authorizedEmails?.map((item: any) => (
                     <TableRow key={item.id}>

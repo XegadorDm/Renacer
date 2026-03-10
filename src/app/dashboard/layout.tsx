@@ -39,7 +39,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  // Se otorga permiso de admin a los correos específicos y a los que tengan el rol en la DB
+  // Se otorga permiso de admin a los correos específicos
   const isAdmin = 
     user?.email === 'diegomauriciopastusano@gmail.com' || 
     user?.email === 'aleksimbachi@gmail.com' ||
