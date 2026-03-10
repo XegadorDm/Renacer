@@ -8,7 +8,7 @@ import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, query as firestoreQuery, where, doc, or } from "firebase/firestore";
+import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
 import { 
@@ -58,21 +58,18 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
     const casesCollection = collection(firestore, 'cases');
     let queryConstraints = [];
 
-    // Location filter is always applied if present
+    // El filtro de ubicación se aplica si se selecciona un municipio en el mapa
     if (location) {
       queryConstraints.push(where("municipality", "==", location));
     }
 
-    // Role-based filter
-    if (!isAdmin) {
-      // Non-admins only see cases they are members of
-      queryConstraints.push(where(`members.${user.uid}`, "in", ['owner', 'editor', 'viewer']));
-    } 
-    // Admins see all cases, so no additional `where` clause is needed for roles.
+    // Se ha eliminado la restricción de 'members' para permitir la conectividad total.
+    // Ahora todos los usuarios autenticados pueden ver todos los casos (filtrados por ubicación si aplica).
+    // Las reglas de seguridad de Firestore (firestore.rules) permiten 'list' si el usuario está autenticado.
 
     return queryConstraints.length > 0 ? firestoreQuery(casesCollection, ...queryConstraints) : casesCollection;
 
-  }, [firestore, user, location, isAdmin]);
+  }, [firestore, user, location]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
@@ -81,7 +78,6 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
     if (!query) return cases;
 
     const searchTerm = query.toLowerCase();
-    // More robust filtering to avoid errors on nullish values
     return cases.filter(c => 
       c && (
         `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().includes(searchTerm) || 
@@ -113,10 +109,10 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
   
   const canPerformAction = (caseItem: WithId<Case>, action: 'edit' | 'delete') => {
       if (!user) return false;
-      // Admin can do anything
+      // Los administradores tienen permisos totales
       if (isAdmin) return true;
 
-      // For other users, check the members map
+      // Para otros usuarios, se verifica el mapa de miembros para acciones de escritura
       if (!caseItem.members) return false;
       const userRoleInCase = caseItem.members[user.uid];
       if (action === 'edit') {
