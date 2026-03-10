@@ -32,7 +32,7 @@ export default function AdminPage() {
 
   const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
-  // Validación de administrador consistente para ambos correos
+  // Validación de administrador consistente para ambos correos y rol en DB
   const isAdmin = 
     user?.email === 'diegomauriciopastusano@gmail.com' || 
     user?.email === 'aleksimbachi@gmail.com' ||
@@ -40,7 +40,6 @@ export default function AdminPage() {
 
   const authEmailsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // La consulta ahora es más segura gracias a las nuevas reglas
     return query(collection(firestore, 'authorized_emails'), orderBy('addedAt', 'desc'));
   }, [firestore]);
 
@@ -52,7 +51,9 @@ export default function AdminPage() {
       return;
     }
 
-    if (authorizedEmails?.some(e => e.email === newEmail.toLowerCase())) {
+    const emailLower = newEmail.toLowerCase();
+
+    if (authorizedEmails?.some(e => e.email === emailLower)) {
       toast({ variant: 'destructive', title: 'Error', description: 'Este correo ya está en la lista.' });
       return;
     }
@@ -61,7 +62,7 @@ export default function AdminPage() {
     const emailsRef = collection(firestore!, 'authorized_emails');
     
     addDocumentNonBlocking(emailsRef, {
-      email: newEmail.toLowerCase(),
+      email: emailLower,
       addedBy: user?.email,
       addedAt: new Date().toISOString(),
     }).then(() => {
@@ -74,7 +75,8 @@ export default function AdminPage() {
   };
 
   const handleDeleteEmail = (id: string) => {
-    const docRef = doc(firestore!, 'authorized_emails', id);
+    if (!firestore) return;
+    const docRef = doc(firestore, 'authorized_emails', id);
     deleteDocumentNonBlocking(docRef);
     toast({ title: 'Eliminado', description: 'El correo ha sido removido de la lista.' });
   };
@@ -140,7 +142,11 @@ export default function AdminPage() {
                 ) : tableError ? (
                   <TableRow><TableCell colSpan={4} className="text-center py-4 text-destructive">Error al cargar la lista. Verifique sus permisos.</TableCell></TableRow>
                 ) : authorizedEmails?.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No hay correos autorizados.</TableRow></TableCell>
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                      No hay correos autorizados.
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   authorizedEmails?.map((item: any) => (
                     <TableRow key={item.id}>

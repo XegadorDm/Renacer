@@ -6,7 +6,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Validación de administrador por correo directo para máxima fiabilidad
+    // Validación de administrador robusta para acceso total
     function isAdmin() {
       return isSignedIn() && (
         request.auth.token.email == 'diegomauriciopastusano@gmail.com' ||
@@ -26,10 +26,10 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // PERMISOS TOTALES DE LECTURA para evitar errores de bloqueo en el registro y dashboard
+      // PERMISOS DE LECTURA GLOBALES para evitar errores en registro y dashboard
       allow read: if true; 
       
-      // Solo los administradores reales pueden modificar la lista
+      // Solo los administradores pueden modificar la lista de autorizados
       allow write: if isAdmin();
     }
   }
