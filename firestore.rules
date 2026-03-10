@@ -21,8 +21,11 @@ service cloud.firestore {
     }
     
     match /cases/{caseId} {
+      // Permitir lectura a todos los autenticados para facilitar la colaboración.
       allow read: if isSignedIn();
+      // Permitir creación a cualquier autenticado.
       allow create: if isSignedIn();
+      // Solo el dueño o un admin maestro puede editar/borrar.
       allow update, delete: if isMasterAdmin() || (resource.data.members[request.auth.uid] == 'owner');
     }
     
@@ -32,4 +35,4 @@ service cloud.firestore {
     }
   }
 }
-// Force rules deployment update - Ver. 1.0.8 - Full Access Admin Fix
+// Force deployment update - Ver. 1.1.5 - Fix Permissions and Access for Admins

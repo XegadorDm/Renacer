@@ -120,15 +120,23 @@ export default function AdminPage() {
                 <TableRow>
                   <TableHead>Correo Autorizado</TableHead>
                   <TableHead className="hidden md:table-cell">Autorizado Por</TableHead>
-                  <TableHead className="hidden sm:table-cell">Fecha</TableHead>
+                  <TableHead className="hidden sm:cell">Fecha</TableHead>
                   <TableHead className="w-[100px] text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isTableLoading ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-10">
+                      <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                    </TableCell>
+                  </TableRow>
                 ) : tableError ? (
-                  <TableRow><TableCell colSpan={4} className="text-center py-10 text-destructive">Error de permisos o conexión. Intente recargar.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-10 text-destructive font-semibold">
+                      Error de permisos: Intente recargar la página.
+                    </TableCell>
+                  </TableRow>
                 ) : authorizedEmails?.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center py-10 text-muted-foreground">
@@ -140,7 +148,9 @@ export default function AdminPage() {
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.email}</TableCell>
                       <TableCell className="hidden md:table-cell">{item.addedBy}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{item.addedAt ? new Date(item.addedAt).toLocaleDateString() : 'N/A'}</TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        {item.addedAt ? new Date(item.addedAt).toLocaleDateString() : 'N/A'}
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button 
                           variant="ghost" 
