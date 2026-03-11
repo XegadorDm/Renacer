@@ -47,13 +47,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  const casesLinkHref = useMemo(() => {
-    let href = "/dashboard/cases";
-    if (userProfile?.role) {
-      href += `?role=${userProfile.role}`;
-    }
-    return href;
-  }, [userProfile?.role]);
+  const casesLinkHref = "/dashboard/cases";
 
 
   if (isUserLoading || !user) {
@@ -74,7 +68,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   const getInitials = (name: string | null | undefined) => {
-    if (!name) return 'JD';
+    if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   }
 

@@ -14,8 +14,8 @@ export default function AdminPage() {
   }, [router]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <p className="text-muted-foreground">Redirigiendo...</p>
+    <div className="flex items-center justify-center min-h-[400px]">
+      <p className="text-muted-foreground animate-pulse">Redirigiendo...</p>
     </div>
   );
 }
