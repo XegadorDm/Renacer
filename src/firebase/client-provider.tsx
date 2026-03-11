@@ -11,12 +11,15 @@ interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Proveedor de Firebase simplificado para evitar errores de caché local y permisos.
+ */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
     const existingApps = getApps();
     const app = existingApps.length === 0 ? initializeApp(firebaseConfig) : getApp();
     
-    // Eliminamos la persistencia offline compleja para evitar errores de caché y permisos
+    // Obtenemos Firestore sin configuraciones offline complejas para asegurar sincronización inmediata con las reglas.
     const firestore = getFirestore(app);
 
     return {
