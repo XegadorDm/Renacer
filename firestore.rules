@@ -2,32 +2,33 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // DESPLIEGUE CRÍTICO DE EMERGENCIA: 2025-03-11 19:25:00 UTC
-    // Se abren permisos totales para usuarios autenticados para garantizar la fluidez en la gestión de casos.
+    // ============================================================
+    // DESPLIEGUE DE EMERGENCIA FINAL: 2025-03-11 20:45:00 UTC
+    // PROPÓSITO: ELIMINAR CUALQUIER BLOQUEO DE PERMISOS PARA USUARIOS AUTENTICADOS.
+    // ============================================================
     
     function loggedIn() {
       return request.auth != null;
     }
     
-    // Permisos para la colección de casos
+    // Regla global: Cualquier usuario con sesión activa puede leer y escribir en todo.
+    // Esto garantiza que el cambio de estado de los casos funcione sin importar el rol.
+    match /{document=**} {
+      allow read, write: if loggedIn();
+    }
+
+    // Reglas explícitas para mayor seguridad interna (pero redundantes con la global de arriba)
     match /cases/{caseId} {
       allow read, write: if loggedIn();
     }
 
-    // Permisos para perfiles de usuario
     match /users/{userId} {
       allow read, write: if loggedIn();
     }
 
-    // Permisos para la lista de correos autorizados
     match /authorized_emails/{emailId} {
       allow read: if true;
       allow write: if loggedIn();
-    }
-    
-    // Regla global de respaldo: Todo usuario logueado puede leer y escribir.
-    match /{document=**} {
-      allow read, write: if loggedIn();
     }
   }
 }
