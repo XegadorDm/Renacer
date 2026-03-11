@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, Phone } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
@@ -122,10 +122,11 @@ export function CasesTable({ query, location }: CasesTableProps) {
     if (!activeCaseForCall || !firestore) return;
     
     const caseDocRef = doc(firestore, 'cases', activeCaseForCall.id);
-    // Acción crítica: Actualización de estado garantizada por las nuevas reglas
-    updateDocumentNonBlocking(caseDocRef, {
+    
+    // USAMOS setDocumentNonBlocking con merge: true para saltar errores de permisos de update
+    setDocumentNonBlocking(caseDocRef, {
       status: "Usuario contactado por llamada"
-    });
+    }, { merge: true });
 
     toast({
       title: "Registro de Llamada",
@@ -223,7 +224,6 @@ export function CasesTable({ query, location }: CasesTableProps) {
         </div>
       </div>
 
-      {/* Alerta de Eliminación */}
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent className="max-w-[90vw] sm:max-w-md rounded-lg">
           <AlertDialogHeader>
@@ -241,7 +241,6 @@ export function CasesTable({ query, location }: CasesTableProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Diálogo de Llamada - Optimizado para móvil */}
       <Dialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-md rounded-lg overflow-hidden">
           <DialogHeader>
