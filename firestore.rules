@@ -4,18 +4,13 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - SISTEMA DE NOTIFICACIONES
-    // PROPÓSITO: Permitir gestión de casos y notificaciones.
-    // TIMESTAMP: 2024-05-20T21:30:00Z
+    // REGLAS DE SEGURIDAD RENACER - SISTEMA LIMPIO
+    // PROPÓSITO: Permitir gestión de casos para usuarios autenticados.
+    // TIMESTAMP: 2024-05-21T00:00:00Z
     // ============================================================
 
     function isSignedIn() {
       return request.auth != null;
-    }
-
-    match /notifications/{notificationId} {
-      allow read, update: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow create: if isSignedIn();
     }
 
     match /{document=**} {
