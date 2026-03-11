@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, RefreshCcw } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case, CaseStatus } from "@/lib/case-schema";
@@ -106,8 +106,8 @@ export function CasesTable({ query, location }: CasesTableProps) {
     if (!firestore) return;
     const caseDocRef = doc(firestore, 'cases', caseItem.id);
     
-    // Actualización directa sin validaciones complejas en el cliente
-    updateDocumentNonBlocking(caseDocRef, { status: newStatus });
+    // Usamos setDocumentNonBlocking con merge: true para mayor resiliencia
+    setDocumentNonBlocking(caseDocRef, { status: newStatus }, { merge: true });
     
     toast({
       title: "Estado Actualizado",

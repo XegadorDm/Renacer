@@ -2,19 +2,16 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+/**
+ * Página de administración inactiva.
+ * Redirige al dashboard principal para evitar conflictos de acceso.
+ */
 export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirección inmediata para evitar errores de permisos en rutas no configuradas
     router.replace('/dashboard');
   }, [router]);
 
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="animate-pulse text-muted-foreground">
-        Redirigiendo al Dashboard...
-      </div>
-    </div>
-  );
+  return null;
 }

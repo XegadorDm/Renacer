@@ -1,27 +1,17 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // DESPLIEGUE DE EMERGENCIA TOTAL: 2025-02-24 21:00:00 UTC
+    // DESPLIEGUE DE EMERGENCIA TOTAL: 2025-02-24 21:30:00 UTC
     // Este cambio fuerza la propagación inmediata de reglas permisivas para usuarios autenticados.
+    // Se permite lectura y escritura total a cualquier usuario que haya iniciado sesión.
     
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
 
-    // Regla redundante para asegurar el acceso a la colección de casos
-    match /cases/{caseId} {
-      allow read, write, create, update, delete: if request.auth != null;
-    }
-
-    // Acceso público para la lista blanca de correos (necesario para el registro)
-    match /authorized_emails/{document=**} {
+    // Acceso público necesario para la lista blanca de correos durante el registro
+    match /authorized_emails/{emailId} {
       allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    // Acceso para perfiles de usuario
-    match /users/{userId} {
-      allow read, write: if request.auth != null;
     }
   }
 }
