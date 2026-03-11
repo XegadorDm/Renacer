@@ -1,22 +1,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // DESPLIEGUE CRÍTICO DE EMERGENCIA: 2025-02-25 00:10:00 UTC
-    // Este cambio fuerza la invalidación de caché de reglas en el servidor.
+    // DESPLIEGUE DEFINITIVO DE EMERGENCIA: 2025-03-11 18:35:00 UTC
+    // Este cambio fuerza la apertura total de la base de datos para usuarios autenticados.
     
-    // Regla global: Usuarios autenticados tienen acceso total a todo.
+    // Regla global: Cualquier usuario logueado tiene acceso total.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
 
-    // Regla explícita para la colección de casos (prioridad alta).
+    // Regla explícita para la colección de casos (máxima prioridad).
     match /cases/{caseId} {
-      allow read, write: if request.auth != null;
+      allow get, list, create, update, delete: if request.auth != null;
     }
 
-    // Acceso público necesario para la lista blanca durante el registro.
+    // Acceso público para la lista de correos autorizados (necesario para registro).
     match /authorized_emails/{emailId} {
       allow read: if true;
+      allow write: if request.auth != null;
+    }
+    
+    // Perfiles de usuario.
+    match /users/{userId} {
+      allow read, write: if request.auth != null;
     }
   }
 }

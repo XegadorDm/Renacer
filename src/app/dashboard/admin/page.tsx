@@ -2,10 +2,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-/**
- * Página de administración inactiva.
- * Redirige al dashboard principal para evitar cualquier error de renderizado.
- */
 export default function AdminPage() {
   const router = useRouter();
 
