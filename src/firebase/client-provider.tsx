@@ -2,9 +2,9 @@
 
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-import { getApps, initializeApp, getApp, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence, type Firestore } from 'firebase/firestore';
+import { getApps, initializeApp, getApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 interface FirebaseClientProviderProps {
@@ -13,25 +13,13 @@ interface FirebaseClientProviderProps {
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
+    // Inicialización simple sin persistencia offline para evitar conflictos de caché
     if (!getApps().length) {
       const app = initializeApp(firebaseConfig);
-      const firestoreInstance = getFirestore(app);
-
-      // Activar persistencia para que funcione sin conexión
-      if (typeof window !== 'undefined') {
-        enableIndexedDbPersistence(firestoreInstance).catch((err) => {
-          if (err.code == 'failed-precondition') {
-            console.warn('Persistencia falló: múltiples pestañas abiertas.');
-          } else if (err.code == 'unimplemented') {
-            console.warn('Persistencia no soportada por el navegador.');
-          }
-        });
-      }
-
       return {
         firebaseApp: app,
         auth: getAuth(app),
-        firestore: firestoreInstance,
+        firestore: getFirestore(app),
       };
     }
     

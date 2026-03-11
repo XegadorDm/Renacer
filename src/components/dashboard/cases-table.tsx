@@ -122,6 +122,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
     if (!activeCaseForCall || !firestore) return;
     
     const caseDocRef = doc(firestore, 'cases', activeCaseForCall.id);
+    // Acción crítica: Actualización de estado
     updateDocumentNonBlocking(caseDocRef, {
       status: "Usuario contactado por llamada"
     });
