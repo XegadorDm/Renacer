@@ -4,12 +4,12 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, RefreshCw } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
-import type { Case } from "@/lib/case-schema";
+import type { Case, CaseStatus } from "@/lib/case-schema";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,11 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuLabel, 
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useMemoFirebase } from "@/firebase/provider";
@@ -99,6 +103,18 @@ export function CasesTable({ query, location }: CasesTableProps) {
     setCaseToDelete(null);
   };
   
+  const handleUpdateStatus = (caseItem: WithId<Case>, newStatus: CaseStatus) => {
+    if (!firestore) return;
+    const docRef = doc(firestore, 'cases', caseItem.id);
+    
+    updateDocumentNonBlocking(docRef, { status: newStatus });
+    
+    toast({
+        title: "Estado Actualizado",
+        description: `El estado ha cambiado a: ${newStatus}`,
+    });
+  }
+
   const handleViewDetails = (caseItem: WithId<Case>) => {
     const caseDataString = encodeURIComponent(JSON.stringify(caseItem));
     router.push(`/dashboard/cases/${caseItem.id}?data=${caseDataString}`);
@@ -146,8 +162,8 @@ export function CasesTable({ query, location }: CasesTableProps) {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56 shadow-xl">
-                        <DropdownMenuLabel>Opciones de Gestión</DropdownMenuLabel>
+                      <DropdownMenuContent align="end" className="w-64 shadow-xl">
+                        <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         
                         <DropdownMenuItem onClick={() => handleViewDetails(c)} className="cursor-pointer">
@@ -159,6 +175,36 @@ export function CasesTable({ query, location }: CasesTableProps) {
                               <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar Datos
                             </Link>
                         </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+                        
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="cursor-pointer">
+                            <RefreshCw className="mr-2 h-4 w-4 text-primary" /> CAMBIAR ESTADO DE PROCESO
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent className="w-56">
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdateStatus(c, "Sin novedad")}
+                                className="cursor-pointer"
+                              >
+                                <span className="h-2 w-2 rounded-full bg-red-600 mr-2" /> Sin novedad
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdateStatus(c, "Respuesta de gobierno en curso")}
+                                className="cursor-pointer"
+                              >
+                                <span className="h-2 w-2 rounded-full bg-amber-400 mr-2" /> Respuesta de gobierno en curso
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleUpdateStatus(c, "Proceso finalizado con éxito")}
+                                className="cursor-pointer"
+                              >
+                                <span className="h-2 w-2 rounded-full bg-green-600 mr-2" /> Proceso finalizado con éxito
+                              </DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
                         
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
