@@ -1,4 +1,4 @@
-export type CaseStatus = "Pendiente de pago" | "Pendiente de cobro" | "Sin novedad";
+export type CaseStatus = "Sin novedad" | "Respuesta Gobierno en curso" | "Proceso finalizado con exito";
 
 export interface Case {
     id: string;

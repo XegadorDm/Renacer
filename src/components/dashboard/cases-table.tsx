@@ -1,16 +1,15 @@
-
 'use client';
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, ChevronRight } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
-import type { Case } from "@/lib/case-schema";
+import type { Case, CaseStatus } from "@/lib/case-schema";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +26,10 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuLabel, 
-  DropdownMenuSeparator 
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useMemoFirebase } from "@/firebase/provider";
@@ -58,14 +60,9 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
     const casesCollection = collection(firestore, 'cases');
     let queryConstraints = [];
 
-    // El filtro de ubicación se aplica si se selecciona un municipio en el mapa
     if (location) {
       queryConstraints.push(where("municipality", "==", location));
     }
-
-    // Se ha eliminado la restricción de 'members' para permitir la conectividad total.
-    // Ahora todos los usuarios autenticados pueden ver todos los casos (filtrados por ubicación si aplica).
-    // Las reglas de seguridad de Firestore (firestore.rules) permiten 'list' si el usuario está autenticado.
 
     return queryConstraints.length > 0 ? firestoreQuery(casesCollection, ...queryConstraints) : casesCollection;
 
@@ -106,13 +103,20 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
     setIsAlertOpen(false);
     setCaseToDelete(null);
   };
+
+  const handleUpdateStatus = (caseItem: WithId<Case>, newStatus: CaseStatus) => {
+    if (!firestore) return;
+    const caseDocRef = doc(firestore, 'cases', caseItem.id);
+    updateDocumentNonBlocking(caseDocRef, { status: newStatus });
+    toast({
+      title: "Estado Actualizado",
+      description: `El estado del caso ha cambiado a: ${newStatus}`,
+    });
+  };
   
   const canPerformAction = (caseItem: WithId<Case>, action: 'edit' | 'delete') => {
       if (!user) return false;
-      // Los administradores tienen permisos totales
       if (isAdmin) return true;
-
-      // Para otros usuarios, se verifica el mapa de miembros para acciones de escritura
       if (!caseItem.members) return false;
       const userRoleInCase = caseItem.members[user.uid];
       if (action === 'edit') {
@@ -179,9 +183,36 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
                            Ver Detalles
                         </DropdownMenuItem>
                         {canPerformAction(c, 'edit') && (
+                          <>
                             <DropdownMenuItem asChild>
                                 <Link href={`/dashboard/cases/${c.id}/edit`}>Editar</Link>
                             </DropdownMenuItem>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger className="flex items-center justify-between w-full">
+                                Cambiar estado
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Sin novedad")}>
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-red-500" />
+                                    Sin novedad
+                                  </span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Respuesta Gobierno en curso")}>
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                                    Respuesta Gobierno en curso
+                                  </span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Proceso finalizado con exito")}>
+                                  <span className="flex items-center gap-2">
+                                    <span className="h-2 w-2 rounded-full bg-green-500" />
+                                    Proceso finalizado con exito
+                                  </span>
+                                </DropdownMenuItem>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                          </>
                         )}
                         {canPerformAction(c, 'delete') && (
                           <DropdownMenuItem 
