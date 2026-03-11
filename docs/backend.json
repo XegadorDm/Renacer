@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Case": {
@@ -29,9 +28,24 @@
         "isElderly": { "type": "boolean" },
         "peopleCount": { "type": "number" },
         "testimony": { "type": "string" },
-        "status": { "type": "string" }
+        "status": { "type": "string" },
+        "members": { "type": "object" }
       },
       "required": ["id", "caseNumber", "firstName", "lastName", "documentType", "documentId", "ethnicGroup", "maritalStatus", "gender", "birthDate", "address", "locality", "department", "cellphone1", "displacementType", "age", "isElderly", "peopleCount", "testimony", "status"]
+    },
+    "User": {
+      "title": "User",
+      "type": "object",
+      "description": "System user profile including roles.",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "case-worker"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email", "role"]
     },
     "AuthorizedEmail": {
       "title": "AuthorizedEmail",
@@ -56,6 +70,14 @@
           "entityName": "Case",
           "schema": { "$ref": "#/backend/entities/Case" },
           "description": "Stores case data."
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": { "$ref": "#/backend/entities/User" },
+          "description": "Stores user profile and roles."
         }
       },
       {

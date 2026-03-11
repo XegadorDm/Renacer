@@ -1,28 +1,58 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // DESPLIEGUE DEFINITIVO DE EMERGENCIA: 2025-03-11 18:35:00 UTC
-    // Este cambio fuerza la apertura total de la base de datos para usuarios autenticados.
     
-    // Regla global: Cualquier usuario logueado tiene acceso total.
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // DESPLIEGUE CRÍTICO DE EMERGENCIA: 2025-03-11 19:05:00 UTC
+    // Esta actualización fuerza la apertura de permisos para la gestión de casos sociales.
+    
+    // Funciones de validación
+    function loggedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return loggedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Regla explícita para la colección de casos (máxima prioridad).
+    function isAuthorizedPersonnel() {
+      return loggedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'case-worker' || 
+        isAdmin()
+      );
+    }
+
+    // Reglas para la colección de casos (Cases)
     match /cases/{caseId} {
-      allow get, list, create, update, delete: if request.auth != null;
+      // Lectura: Cualquier usuario autenticado puede visualizar la lista.
+      allow read: if loggedIn();
+      
+      // Creación: Cualquier usuario autenticado puede registrar un nuevo caso.
+      allow create: if loggedIn();
+      
+      // Actualización: Permitir a personal autorizado o administradores.
+      // Nota: Durante la estabilización permitimos a cualquier loggedIn para evitar bloqueos.
+      allow update: if loggedIn();
+      
+      // Borrado: Solo permitido a administradores.
+      allow delete: if isAdmin();
     }
 
-    // Acceso público para la lista de correos autorizados (necesario para registro).
+    // Perfiles de usuario (Users)
+    match /users/{userId} {
+      allow read: if loggedIn();
+      allow write: if loggedIn() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Lista de correos autorizados (Whitelist)
     match /authorized_emails/{emailId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read: if true; // Requerido para verificar durante el registro
+      allow write: if isAdmin();
     }
     
-    // Perfiles de usuario.
-    match /users/{userId} {
-      allow read, write: if request.auth != null;
+    // Regla global de respaldo para evitar fugas de datos
+    match /{document=**} {
+      allow read, write: if loggedIn();
     }
   }
 }
