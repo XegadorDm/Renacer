@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 
 /**
  * MÓDULO ELIMINADO SEGÚN SOLICITUD DEL USUARIO.
- * Redirige automáticamente al dashboard principal.
  */
 export default function AdminPage() {
   const router = useRouter();
@@ -15,7 +14,7 @@ export default function AdminPage() {
 
   return (
     <div className="flex items-center justify-center min-h-[400px]">
-      <p className="text-muted-foreground animate-pulse">Redirigiendo...</p>
+      <p className="text-muted-foreground">Módulo no disponible. Redirigiendo...</p>
     </div>
   );
 }
