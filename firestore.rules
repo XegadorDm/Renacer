@@ -5,14 +5,14 @@ service cloud.firestore {
     // ============================================================
     // REGLAS DE EMERGENCIA TOTAL - ACCESO TOTAL A USUARIOS AUTENTICADOS
     // PROPÓSITO: Eliminar bloqueos de permisos en cambio de estado.
-    // ÚLTIMA ACTUALIZACIÓN FORZADA: 2024-03-20 16:45:00
+    // ÚLTIMA ACTUALIZACIÓN FORZADA: 2024-03-20 17:30:00 (GMT-5)
     // ============================================================
     
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
 
-    // Regla explícita para la colección de casos para asegurar updates
+    // Regla explícita para la colección de casos para asegurar updates inmediatos
     match /cases/{caseId} {
       allow get, list, create, update, delete: if request.auth != null;
     }
