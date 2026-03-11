@@ -181,7 +181,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
                         <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         
-                        <DropdownMenuItem onClick={() => handleCallClick(c)} className="cursor-pointer font-bold text-primary">
+                        <DropdownMenuItem onClick={() => handleCallClick(c)} className="cursor-pointer font-bold text-primary focus:bg-primary/10">
                            <Phone className="mr-2 h-4 w-4" /> LLAMAR AL USUARIO
                         </DropdownMenuItem>
 

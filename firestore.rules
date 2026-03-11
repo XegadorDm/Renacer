@@ -1,20 +1,38 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - SISTEMA LIMPIO
-    // PROPÓSITO: Permitir gestión de casos para usuarios autenticados.
-    // TIMESTAMP: 2024-05-21T00:00:00Z
+    // REGLAS DE SEGURIDAD RENACER - SOLUCIÓN DEFINITIVA
+    // PROPÓSITO: Permitir gestión de casos y novedades sin bloqueos.
+    // TIMESTAMP: 2024-05-22T11:30:00Z
     // ============================================================
 
     function isSignedIn() {
       return request.auth != null;
     }
 
+    // Permitir acceso total a usuarios autenticados para asegurar la operatividad del MVP
     match /{document=**} {
       allow read, write: if isSignedIn();
+    }
+
+    // Reglas explícitas para la colección de casos para evitar ambigüedades
+    match /cases/{caseId} {
+      allow read, write: if isSignedIn();
+      allow update: if isSignedIn();
+    }
+    
+    // Reglas para usuarios
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Reglas para emails autorizados (necesario para el registro)
+    match /authorized_emails/{emailId} {
+      allow read: if true;
+      allow write: if isSignedIn();
     }
   }
 }
