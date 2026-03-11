@@ -48,13 +48,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  const casesLinkHref = useMemo(() => {
-    let href = "/dashboard/cases";
-    if (userProfile?.role) {
-      href += `?role=${userProfile.role}`;
-    }
-    return href;
-  }, [userProfile?.role]);
+  const casesLinkHref = "/dashboard/cases";
 
 
   if (isUserLoading || !user) {

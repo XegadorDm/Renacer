@@ -2,17 +2,17 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+/**
+ * Este módulo ha sido desactivado permanentemente para evitar errores de permisos
+ * y permitir que el equipo se enfoque exclusivamente en la gestión de casos.
+ */
 export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirigir fuera de administración ya que el módulo ha sido desactivado.
+    // Redirigir inmediatamente al dashboard principal
     router.replace('/dashboard');
   }, [router]);
 
-  return (
-    <div className="flex items-center justify-center py-20">
-      <p className="text-muted-foreground">Redirigiendo...</p>
-    </div>
-  );
+  return null;
 }

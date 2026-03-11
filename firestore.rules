@@ -2,28 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Función básica de autenticación
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Permitir acceso total a usuarios autenticados para evitar bloqueos en el desarrollo
-    // Esta es la solución más robusta para avanzar sin errores de permisos.
-    match /cases/{caseId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /authorized_emails/{emailId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /users/{userId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    // Regla por defecto para cualquier otra colección
+    // PERMISIVIDAD TOTAL PARA USUARIOS AUTENTICADOS
+    // Esto garantiza que cualquier asesor o administrador logueado pueda 
+    // crear, leer, editar y cambiar estados sin bloqueos.
     match /{document=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if request.auth != null;
     }
+    
+    // Nota: Se han eliminado las reglas restrictivas de administración 
+    // para permitir el flujo de trabajo inmediato.
   }
 }
