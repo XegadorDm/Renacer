@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -30,6 +29,7 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
 
     const notificationsQuery = useMemoFirebase(() => {
         if (!firestore || !user) return null;
+        // La consulta debe filtrar por el ID del usuario actual para que coincida con la lógica de seguridad y visualización
         return query(
             collection(firestore, 'notifications'),
             where('userId', '==', user.uid),
@@ -65,7 +65,7 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
                         )}
                     </div>
                     <SheetDescription>
-                        Entérate de los cambios en el estado de tus casos.
+                        Historial de actualizaciones de tus casos registrados.
                     </SheetDescription>
                 </SheetHeader>
 
@@ -86,9 +86,9 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
                                 >
                                     <div className="flex justify-between items-start mb-1">
                                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                                            Caso: {notif.caseId.substring(0, 8)}...
+                                            Caso: {notif.caseId.substring(0, 12)}
                                         </p>
-                                        {!notif.read && <div className="h-2 w-2 rounded-full bg-primary" />}
+                                        {!notif.read && <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />}
                                     </div>
                                     <p className="text-sm font-medium mb-2 leading-relaxed">
                                         {notif.message}

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from "react";
@@ -106,33 +105,29 @@ export function CasesTable({ query, location }: CasesTableProps) {
   }
 
   const handleUpdateStatus = (caseItem: WithId<Case>, newStatus: CaseStatus) => {
-    if (!firestore) return;
+    if (!firestore || !user) return;
     
     const caseDocRef = doc(firestore, 'cases', caseItem.id);
     
-    // 1. Update Case Status
+    // 1. Actualizar el estado del caso
     updateDocumentNonBlocking(caseDocRef, { status: newStatus });
 
-    // 2. Generate Notification for all owners/members of the case
-    // For simplicity in this MVP, we notify the members listed in the case
-    if (caseItem.members) {
-        Object.keys(caseItem.members).forEach(uid => {
-            // We don't notify the person who made the change if we want to be clean, 
-            // but for this requirement we notify the "user associated with the case"
-            addDocumentNonBlocking(collection(firestore, 'notifications'), {
-                userId: uid,
-                caseId: caseItem.id,
-                message: `El estado de su caso ha sido actualizado a: ${newStatus}`,
-                status: newStatus,
-                createdAt: new Date().toISOString(),
-                read: false
-            });
-        });
-    }
+    // 2. Generar notificación para el usuario asociado al caso
+    // Intentamos obtener el ID del usuario desde el mapa de miembros
+    const targetUserId = caseItem.members ? Object.keys(caseItem.members)[0] : user.uid;
+
+    addDocumentNonBlocking(collection(firestore, 'notifications'), {
+        userId: targetUserId,
+        caseId: caseItem.id,
+        message: `El estado de su caso ha sido actualizado a: ${newStatus}`,
+        status: newStatus,
+        createdAt: new Date().toISOString(),
+        read: false
+    });
 
     toast({
         title: "Estado Actualizado",
-        description: `El estado se cambió a "${newStatus}" y se notificó al usuario.`,
+        description: `Se cambió a "${newStatus}" y se generó la notificación.`,
     });
   }
 
@@ -188,17 +183,17 @@ export function CasesTable({ query, location }: CasesTableProps) {
                         
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger className="cursor-pointer">
-                            <RefreshCcw className="mr-2 h-4 w-4 text-muted-foreground" /> Cambiar Estado
+                            <RefreshCcw className="mr-2 h-4 w-4 text-muted-foreground" /> CAMBIAR ESTADO DE PROCESO
                           </DropdownMenuSubTrigger>
                           <DropdownMenuSubContent className="w-64">
                              <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Sin novedad")} className="cursor-pointer">
-                                <span className="h-2 w-2 rounded-full bg-red-500 mr-2" /> Sin novedad
+                                <span className="h-2 w-2 rounded-full bg-red-600 mr-2" /> Sin novedad
                              </DropdownMenuItem>
                              <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Respuesta de gobierno en curso")} className="cursor-pointer">
                                 <span className="h-2 w-2 rounded-full bg-yellow-500 mr-2" /> Respuesta de gobierno en curso
                              </DropdownMenuItem>
                              <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Proceso finalizado con exito")} className="cursor-pointer">
-                                <span className="h-2 w-2 rounded-full bg-green-500 mr-2" /> Proceso finalizado con éxito
+                                <span className="h-2 w-2 rounded-full bg-green-600 mr-2" /> Proceso finalizado con éxito
                              </DropdownMenuItem>
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>
