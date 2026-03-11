@@ -3,36 +3,31 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - SOLUCIÓN DEFINITIVA
-    // PROPÓSITO: Permitir gestión de casos y novedades sin bloqueos.
-    // TIMESTAMP: 2024-05-22T11:30:00Z
+    // REGLAS DE SEGURIDAD RENACER - SOLUCIÓN NUCLEAR DEFINITIVA
+    // PROPÓSITO: Eliminar cualquier bloqueo de permisos para usuarios autenticados.
+    // TIMESTAMP: 2024-05-22T14:45:00Z (FORZAR DESPLIEGUE)
     // ============================================================
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Permitir acceso total a usuarios autenticados para asegurar la operatividad del MVP
+    // Permitir acceso total a cualquier usuario autenticado en toda la base de datos
     match /{document=**} {
-      allow read, write: if isSignedIn();
+      allow read, write: if request.auth != null;
     }
 
-    // Reglas explícitas para la colección de casos para evitar ambigüedades
+    // Reglas explícitas para la colección de casos (prioridad máxima)
     match /cases/{caseId} {
-      allow read, write: if isSignedIn();
-      allow update: if isSignedIn();
+      allow read, write, update, delete: if request.auth != null;
     }
     
-    // Reglas para usuarios
+    // Reglas para perfiles de usuario
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == userId;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Reglas para emails autorizados (necesario para el registro)
+    // Reglas para correos autorizados
     match /authorized_emails/{emailId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if request.auth != null;
     }
   }
 }
