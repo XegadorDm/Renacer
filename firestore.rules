@@ -3,9 +3,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - SOLUCIÓN NUCLEAR DEFINITIVA
-    // PROPÓSITO: Eliminar cualquier bloqueo de permisos para usuarios autenticados.
-    // TIMESTAMP: 2024-05-22T15:10:00Z (FORZAR DESPLIEGUE FINAL)
+    // REGLAS DE SEGURIDAD RENACER - DESPLIEGUE FINAL DE EMERGENCIA
+    // PROPÓSITO: Garantizar permisos de actualización para novedades de llamadas.
+    // TIMESTAMP: 2024-05-22T15:30:00Z (FORCE SYNC)
     // ============================================================
 
     // Permitir acceso total a cualquier usuario autenticado en toda la base de datos
