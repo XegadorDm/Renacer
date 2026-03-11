@@ -14,9 +14,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
-  TooltipContent,
   TooltipProvider,
   TooltipTrigger,
+  TooltipContent,
 } from "@/components/ui/tooltip"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
@@ -200,7 +200,7 @@ const Sidebar = React.forwardRef<
           >
             <SheetHeader className="sr-only">
               <SheetTitle>Menú Renacer</SheetTitle>
-              <SheetDescription>Acceso a secciones de gestión de casos.</SheetDescription>
+              <SheetDescription>Navegación del sistema de gestión de casos.</SheetDescription>
             </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
