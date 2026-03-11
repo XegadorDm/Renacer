@@ -1,13 +1,12 @@
-
 'use client';
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
@@ -32,6 +31,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useMemoFirebase } from "@/firebase/provider";
 import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 type WithId<T> = T & { id: string };
 
@@ -50,6 +57,9 @@ export function CasesTable({ query, location }: CasesTableProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
   
+  const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
+  const [activeCase, setActiveCase] = useState<WithId<Case> | null>(null);
+
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     
@@ -102,6 +112,28 @@ export function CasesTable({ query, location }: CasesTableProps) {
     router.push(`/dashboard/cases/${caseItem.id}?data=${caseDataString}`);
   }
 
+  const handleCallClick = (caseItem: WithId<Case>) => {
+    setActiveCase(caseItem);
+    setIsCallDialogOpen(true);
+  }
+
+  const handleExecuteCall = () => {
+    if (!activeCase || !firestore) return;
+    
+    const caseDocRef = doc(firestore, 'cases', activeCase.id);
+    updateDocumentNonBlocking(caseDocRef, {
+      status: "Usuario contactado por llamada"
+    });
+
+    toast({
+      title: "Llamada Registrada",
+      description: `Se ha registrado el contacto telefónico para ${activeCase.firstName} ${activeCase.lastName}.`,
+    });
+
+    setIsCallDialogOpen(false);
+    setActiveCase(null);
+  }
+
   if (isLoading) {
     return (
         <div className="border rounded-lg p-4 space-y-4">
@@ -148,6 +180,12 @@ export function CasesTable({ query, location }: CasesTableProps) {
                         <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         
+                        <DropdownMenuItem onClick={() => handleCallClick(c)} className="cursor-pointer font-bold text-primary">
+                           <Phone className="mr-2 h-4 w-4" /> LLAMAR AL USUARIO
+                        </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
                         <DropdownMenuItem onClick={() => handleViewDetails(c)} className="cursor-pointer">
                            <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
                         </DropdownMenuItem>
@@ -180,6 +218,59 @@ export function CasesTable({ query, location }: CasesTableProps) {
           </TableBody>
         </Table>
       </div>
+
+      {/* Dialog para Llamada */}
+      <Dialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Phone className="h-5 w-5 text-primary" /> Contactar Usuario
+            </DialogTitle>
+            <DialogDescription>
+              Información de contacto para la gestión del caso.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+              <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-bold uppercase">{activeCase?.firstName} {activeCase?.lastName}</p>
+                <p className="text-xs text-muted-foreground">Documento: {activeCase?.documentId}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase">Números de contacto:</label>
+              <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+                  <span className="text-sm font-mono">{activeCase?.phone1}</span>
+                  <Badge variant="outline">Principal</Badge>
+                </div>
+                {activeCase?.phone2 && (
+                  <div className="flex items-center justify-between p-3 rounded-md border bg-background">
+                    <span className="text-sm font-mono">{activeCase?.phone2}</span>
+                    <Badge variant="outline">Alternativo</Badge>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="sm:justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsCallDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              className="bg-primary hover:bg-primary/90"
+              onClick={handleExecuteCall}
+            >
+              <Phone className="mr-2 h-4 w-4" /> Llamar y Registrar Novedad
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
