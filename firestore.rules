@@ -1,7 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // REGLAS DE EMERGENCIA ABSOLUTA - Timestamp: 2024-05-23 15:55:00
+    // REGLAS DE EMERGENCIA ABSOLUTA - FIX PERMISOS URGENTE
+    // Última actualización: 2024-05-23 17:00:00
     // Permite lectura y escritura a cualquier usuario autenticado en toda la base de datos.
     // Esto garantiza que el cambio de estado de los casos funcione sin bloqueos.
     
@@ -9,7 +10,7 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // Acceso público para la lista de correos si fuera necesario
+    // Acceso público para la lista de correos autorizados (necesario para el registro)
     match /authorized_emails/{document=**} {
       allow read: if true;
     }
