@@ -4,7 +4,7 @@ import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { getApps, initializeApp, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 interface FirebaseClientProviderProps {
@@ -13,21 +13,24 @@ interface FirebaseClientProviderProps {
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // Inicialización simple sin persistencia offline para evitar conflictos de caché
-    if (!getApps().length) {
-      const app = initializeApp(firebaseConfig);
-      return {
-        firebaseApp: app,
-        auth: getAuth(app),
-        firestore: getFirestore(app),
-      };
-    }
+    const existingApps = getApps();
+    const app = existingApps.length === 0 ? initializeApp(firebaseConfig) : getApp();
     
-    const app = getApp();
+    // Habilitamos persistencia offline para que funcione en cualquier dispositivo sin internet
+    let firestore;
+    try {
+      firestore = initializeFirestore(app, {
+        localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+      });
+    } catch (e) {
+      // Si ya está inicializado, obtenemos la instancia existente
+      firestore = getFirestore(app);
+    }
+
     return {
       firebaseApp: app,
       auth: getAuth(app),
-      firestore: getFirestore(app),
+      firestore: firestore,
     };
   }, []);
 

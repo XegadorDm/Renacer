@@ -122,7 +122,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
     if (!activeCaseForCall || !firestore) return;
     
     const caseDocRef = doc(firestore, 'cases', activeCaseForCall.id);
-    // Acción crítica: Actualización de estado
+    // Acción crítica: Actualización de estado garantizada por las nuevas reglas
     updateDocumentNonBlocking(caseDocRef, {
       status: "Usuario contactado por llamada"
     });
@@ -241,16 +241,16 @@ export function CasesTable({ query, location }: CasesTableProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Diálogo de Llamada */}
+      {/* Diálogo de Llamada - Optimizado para móvil */}
       <Dialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md rounded-lg">
+        <DialogContent className="max-w-[95vw] sm:max-w-md rounded-lg overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-primary" />
               Contacto de Usuario
             </DialogTitle>
             <DialogDescription>
-              Datos de contacto para el caso de <span className="font-bold">{activeCaseForCall?.firstName} {activeCaseForCall?.lastName}</span>.
+              Datos registrados para <span className="font-bold">{activeCaseForCall?.firstName} {activeCaseForCall?.lastName}</span>.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
