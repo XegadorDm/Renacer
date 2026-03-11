@@ -14,16 +14,23 @@ service cloud.firestore {
     }
 
     match /authorized_emails/{emailId} {
-      // Permitir lectura a cualquier usuario autenticado para el flujo de validación.
-      allow read: if isSignedIn(); 
-      // Solo los administradores maestros pueden agregar o eliminar correos autorizados.
+      // Permitir lectura a cualquier usuario autenticado para validación.
+      allow read, list: if isSignedIn(); 
+      // Solo los administradores maestros pueden gestionar la lista.
       allow write: if isMasterAdmin();
     }
     
     match /cases/{caseId} {
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow create: if isSignedIn();
-      allow update, delete: if isMasterAdmin() || (resource.data.members[request.auth.uid] == 'owner');
+      // Regla de actualización robusta: Admin o dueño/editor del caso.
+      allow update: if isSignedIn() && (
+        isMasterAdmin() || 
+        (resource.data.members != null && resource.data.members[request.auth.uid] != null)
+      );
+      allow delete: if isMasterAdmin() || (
+        resource.data.members != null && resource.data.members[request.auth.uid] == 'owner'
+      );
     }
     
     match /users/{userId} {
