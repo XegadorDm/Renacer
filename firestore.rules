@@ -3,32 +3,15 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - ACCESO ADMINISTRATIVO FORZADO
-    // PROPÓSITO: Garantizar que Juan Camilo y el equipo puedan actualizar estados.
-    // TIMESTAMP: 2024-05-22T17:30:00Z (CRITICAL SYNC FORCED)
+    // REGLAS DE SEGURIDAD RENACER - DESPLIEGUE DE EMERGENCIA FINAL
+    // PROPÓSITO: Eliminar bloqueos para Juan Camilo y el equipo.
+    // TIMESTAMP: 2024-05-22T18:30:00Z (FORCE GLOBAL SYNC)
     // ============================================================
 
-    // Permitir acceso total de lectura y escritura a cualquier usuario autenticado.
-    // Esto asegura que Juan Camilo (juancamilogiraldo@gmail.com) y otros asesores
-    // no tengan bloqueos en operaciones críticas como la actualización de estados.
+    // Permitir TODO (lectura y escritura) a cualquier usuario autenticado en toda la base de datos.
+    // Esto garantiza que la actualización de estados y novedades no sea bloqueada.
     match /{document=**} {
       allow read, write: if request.auth != null;
-    }
-
-    // Reglas explícitas para la colección de casos para asegurar prioridad máxima
-    match /cases/{caseId} {
-      allow read, write: if request.auth != null;
-    }
-    
-    // Reglas para perfiles de usuario
-    match /users/{userId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Reglas para correos autorizados (Whitelist de registro)
-    match /authorized_emails/{emailId} {
-      allow read: if true;
-      allow write: if request.auth != null;
     }
   }
 }

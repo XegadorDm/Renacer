@@ -268,7 +268,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
               </div>
             )}
             <div className="p-3 rounded-md bg-blue-50 border border-blue-100 text-blue-800 text-sm">
-              Al presionar <strong>"Llamar"</strong>, el sistema registrará automáticamente que el usuario fue contactado.
+              Al presionar <strong>"Registrar Llamada"</strong>, el sistema registrará automáticamente que el usuario fue contactado.
             </div>
           </div>
           <DialogFooter className="sm:justify-end">
