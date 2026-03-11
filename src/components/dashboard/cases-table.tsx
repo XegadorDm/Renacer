@@ -4,9 +4,9 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, CheckCircle2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
@@ -101,21 +101,6 @@ export function CasesTable({ query, location }: CasesTableProps) {
     router.push(`/dashboard/cases/${caseItem.id}?data=${caseDataString}`);
   }
 
-  const handleMarkAsContacted = (caseItem: WithId<Case>) => {
-    if (!firestore) return;
-    
-    const caseDocRef = doc(firestore, 'cases', caseItem.id);
-    
-    updateDocumentNonBlocking(caseDocRef, {
-      status: "Contactado"
-    });
-
-    toast({
-      title: "Estado Actualizado",
-      description: `Se ha marcado a ${caseItem.firstName} ${caseItem.lastName} como Contactado.`,
-    });
-  }
-
   if (isLoading) {
     return (
         <div className="border rounded-lg p-4 space-y-4">
@@ -162,15 +147,6 @@ export function CasesTable({ query, location }: CasesTableProps) {
                         <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         
-                        <DropdownMenuItem 
-                          onClick={() => handleMarkAsContacted(c)} 
-                          className="cursor-pointer font-bold text-primary focus:bg-primary/10"
-                        >
-                           <CheckCircle2 className="mr-2 h-4 w-4" /> MARCAR COMO CONTACTADO
-                        </DropdownMenuItem>
-
-                        <DropdownMenuSeparator />
-
                         <DropdownMenuItem onClick={() => handleViewDetails(c)} className="cursor-pointer">
                            <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
                         </DropdownMenuItem>

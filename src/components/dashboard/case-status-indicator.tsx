@@ -5,7 +5,6 @@ const statusColors: Record<CaseStatus, string> = {
   "Sin novedad": "bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.5)]",
   "Respuesta de gobierno en curso": "bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]",
   "Proceso finalizado con exito": "bg-green-600 shadow-[0_0_10px_rgba(22,163,74,0.5)]",
-  "Contactado": "bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)]",
 };
 
 export function CaseStatusIndicator({ status }: { status: CaseStatus }) {
