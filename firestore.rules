@@ -1,10 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // DESPLIEGUE DE EMERGENCIA: 2024-05-24 15:30:00 UTC
-    // Estas reglas permiten el acceso total a usuarios autenticados para evitar bloqueos en la gestión de casos.
+    // DESPLIEGUE DE EMERGENCIA FINAL: 2025-02-24 19:15:00 UTC
+    // Se permite el acceso total a cualquier usuario autenticado para garantizar la gestión de casos.
     
     match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Acceso explícito para la colección de casos por seguridad adicional
+    match /cases/{caseId} {
       allow read, write: if request.auth != null;
     }
 
