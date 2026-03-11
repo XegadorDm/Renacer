@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, ChevronRight } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, RefreshCcw } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
@@ -43,7 +43,7 @@ interface CasesTableProps {
   userRole?: string;
 }
 
-export function CasesTable({ query, location, userRole }: CasesTableProps) {
+export function CasesTable({ query, location }: CasesTableProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
@@ -52,10 +52,6 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
   
-  const isAdmin = userRole === 'admin' || 
-                  user?.email === 'aleksimbachi@gmail.com' || 
-                  user?.email === 'diegomauriciopastusano@gmail.com';
-
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     
@@ -110,28 +106,14 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
     if (!firestore) return;
     const caseDocRef = doc(firestore, 'cases', caseItem.id);
     
+    // Actualización directa sin validaciones complejas en el cliente
     updateDocumentNonBlocking(caseDocRef, { status: newStatus });
     
     toast({
       title: "Estado Actualizado",
-      description: `El estado del caso ha cambiado a: ${newStatus}`,
+      description: `Estado cambiado a: ${newStatus}`,
     });
   };
-  
-  const canPerformAction = (caseItem: WithId<Case>, action: 'edit' | 'delete' | 'status') => {
-      if (!user) return false;
-      if (isAdmin) return true;
-      if (!caseItem.members) return false;
-      const userRoleInCase = caseItem.members[user.uid];
-      
-      if (action === 'edit' || action === 'status') {
-          return userRoleInCase === 'owner' || userRoleInCase === 'editor';
-      }
-      if (action === 'delete') {
-          return userRoleInCase === 'owner';
-      }
-      return false;
-  }
   
   const handleViewDetails = (caseItem: WithId<Case>) => {
     const caseDataString = encodeURIComponent(JSON.stringify(caseItem));
@@ -140,9 +122,9 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
 
   if (isLoading) {
     return (
-        <div className="border rounded-lg p-4 space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
+        <div className="border rounded-lg p-4 space-y-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
             ))}
         </div>
     )
@@ -150,89 +132,84 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
 
   return (
     <>
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>N° Caso</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Documento</TableHead>
-              <TableHead>Municipio</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead><span className="sr-only">Acciones</span></TableHead>
+            <TableRow className="bg-muted/50">
+              <TableHead className="font-bold">N° Caso</TableHead>
+              <TableHead className="font-bold">Nombre Completo</TableHead>
+              <TableHead className="font-bold">Documento</TableHead>
+              <TableHead className="font-bold">Municipio</TableHead>
+              <TableHead className="font-bold">Estado</TableHead>
+              <TableHead className="text-right font-bold pr-6">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredCases && filteredCases.length > 0 ? (
               filteredCases.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.caseNumber}</TableCell>
-                  <TableCell>{c.firstName} {c.lastName}</TableCell>
+                <TableRow key={c.id} className="hover:bg-muted/30 transition-colors">
+                  <TableCell className="font-mono text-xs">{c.caseNumber}</TableCell>
+                  <TableCell className="font-medium uppercase">{c.firstName} {c.lastName}</TableCell>
                   <TableCell>{c.documentId}</TableCell>
                   <TableCell>{c.municipality}</TableCell>
                   <TableCell>
                     {c.status && <CaseStatusIndicator status={c.status as any} />}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-right pr-6">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Abrir menú</span>
+                        <Button variant="ghost" size="icon" className="hover:bg-primary/10">
+                          <MoreHorizontal className="h-5 w-5" />
+                          <span className="sr-only">Acciones</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => handleViewDetails(c)}>
-                           Ver Detalles
+                        
+                        <DropdownMenuItem onClick={() => handleViewDetails(c)} className="cursor-pointer">
+                           <Eye className="mr-2 h-4 w-4" /> Ver Detalles
                         </DropdownMenuItem>
                         
-                        {canPerformAction(c, 'status') && (
-                          <DropdownMenuSub>
-                            <DropdownMenuSubTrigger className="flex items-center">
-                              Cambiar estado
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent>
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Sin novedad")}>
-                                <span className="flex items-center gap-2">
-                                  <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
-                                  Sin novedad
-                                </span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Respuesta Gobierno en curso")}>
-                                <span className="flex items-center gap-2">
-                                  <span className="h-2.5 w-2.5 rounded-full bg-yellow-500" />
-                                  Respuesta Gobierno en curso
-                                </span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Proceso finalizado con exito")}>
-                                <span className="flex items-center gap-2">
-                                  <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                                  Proceso finalizado con exito
-                                </span>
-                              </DropdownMenuItem>
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-                        )}
-
-                        {canPerformAction(c, 'edit') && (
-                          <DropdownMenuItem asChild>
-                              <Link href={`/dashboard/cases/${c.id}/edit`}>Editar Caso</Link>
-                          </DropdownMenuItem>
-                        )}
-                        
-                        {canPerformAction(c, 'delete') && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
-                              onClick={() => handleDeleteClick(c)}
-                            >
-                              Eliminar Caso
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="cursor-pointer">
+                            <RefreshCcw className="mr-2 h-4 w-4" /> Cambiar Estado
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Sin novedad")} className="cursor-pointer">
+                              <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-red-500" />
+                                Sin novedad
+                              </span>
                             </DropdownMenuItem>
-                          </>
-                         )}
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Respuesta Gobierno en curso")} className="cursor-pointer">
+                              <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                                Respuesta Gobierno en curso
+                              </span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Proceso finalizado con exito")} className="cursor-pointer">
+                              <span className="flex items-center gap-2">
+                                <span className="h-2 w-2 rounded-full bg-green-500" />
+                                Proceso finalizado con exito
+                              </span>
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                            <Link href={`/dashboard/cases/${c.id}/edit`}>
+                              <Edit className="mr-2 h-4 w-4" /> Editar Caso
+                            </Link>
+                        </DropdownMenuItem>
+                        
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-destructive focus:text-destructive-foreground focus:bg-destructive cursor-pointer"
+                          onClick={() => handleDeleteClick(c)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Eliminar Caso
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -240,8 +217,8 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
-                  No se encontraron casos.
+                <TableCell colSpan={6} className="text-center h-32 text-muted-foreground">
+                  No se encontraron casos registrados.
                 </TableCell>
               </TableRow>
             )}
@@ -251,15 +228,15 @@ export function CasesTable({ query, location, userRole }: CasesTableProps) {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará permanentemente el caso de <span className="font-bold">{caseToDelete?.firstName} {caseToDelete?.lastName}</span>.
+              Esta acción eliminará permanentemente la caracterización de <span className="font-bold text-foreground">{caseToDelete?.firstName} {caseToDelete?.lastName}</span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
-              Sí, eliminar
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+              Eliminar Definitivamente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

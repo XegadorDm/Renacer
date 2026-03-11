@@ -8,13 +8,12 @@ const statusColors: Record<CaseStatus, string> = {
 };
 
 export function CaseStatusIndicator({ status }: { status: CaseStatus }) {
-  // Ensure status exists in statusColors to prevent runtime errors
   const colorClass = status in statusColors ? statusColors[status] : "bg-gray-400";
 
   return (
     <div className="flex items-center gap-2">
-      <span className={cn("h-2.5 w-2.5 rounded-full", colorClass)} />
-      <span className="text-sm font-medium text-foreground">{status}</span>
+      <span className={cn("h-3 w-3 rounded-full shadow-sm", colorClass)} />
+      <span className="text-sm font-bold text-foreground">{status}</span>
     </div>
   );
 }
