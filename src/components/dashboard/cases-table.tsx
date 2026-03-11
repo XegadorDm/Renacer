@@ -183,7 +183,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
                             <RefreshCw className="mr-2 h-4 w-4 text-primary" /> CAMBIAR ESTADO DE PROCESO
                           </DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
-                            <DropdownMenuSubContent className="w-56">
+                            <DropdownMenuSubContent className="w-64">
                               <DropdownMenuItem 
                                 onClick={() => handleUpdateStatus(c, "Sin novedad")}
                                 className="cursor-pointer"
@@ -194,7 +194,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
                                 onClick={() => handleUpdateStatus(c, "Respuesta de gobierno en curso")}
                                 className="cursor-pointer"
                               >
-                                <span className="h-2 w-2 rounded-full bg-amber-400 mr-2" /> Respuesta de gobierno en curso
+                                <span className="h-2 w-2 rounded-full bg-yellow-400 mr-2" /> Respuesta de gobierno en curso
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => handleUpdateStatus(c, "Proceso finalizado con éxito")}
