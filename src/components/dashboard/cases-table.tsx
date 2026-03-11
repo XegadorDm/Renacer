@@ -148,81 +148,83 @@ export function CasesTable({ query, location }: CasesTableProps) {
   return (
     <>
       <div className="border rounded-lg overflow-hidden bg-card shadow-md">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead className="font-bold text-primary">N° Caso</TableHead>
-              <TableHead className="font-bold text-primary">Nombre Completo</TableHead>
-              <TableHead className="font-bold text-primary">Documento</TableHead>
-              <TableHead className="font-bold text-primary">Municipio</TableHead>
-              <TableHead className="font-bold text-primary text-center">Novedad</TableHead>
-              <TableHead className="text-right font-bold pr-6 text-primary">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredCases && filteredCases.length > 0 ? (
-              filteredCases.map((c) => (
-                <TableRow key={c.id} className="hover:bg-muted/30 transition-colors">
-                  <TableCell className="font-mono text-[10px] text-muted-foreground">{c.caseNumber}</TableCell>
-                  <TableCell className="font-bold uppercase text-sm">{c.firstName} {c.lastName}</TableCell>
-                  <TableCell className="text-sm">{c.documentId}</TableCell>
-                  <TableCell className="text-sm font-medium">{c.municipality}</TableCell>
-                  <TableCell className="flex justify-center py-4">
-                    {c.status && <CaseStatusIndicator status={c.status as any} />}
-                  </TableCell>
-                  <TableCell className="text-right pr-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="hover:bg-primary/10 rounded-full h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-64 shadow-xl">
-                        <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        
-                        <DropdownMenuItem onClick={() => handleCallAction(c)} className="cursor-pointer text-primary font-bold bg-primary/5">
-                           <Phone className="mr-2 h-4 w-4" /> LLAMAR AL USUARIO
-                        </DropdownMenuItem>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="font-bold text-primary">N° Caso</TableHead>
+                <TableHead className="font-bold text-primary">Nombre Completo</TableHead>
+                <TableHead className="font-bold text-primary">Documento</TableHead>
+                <TableHead className="font-bold text-primary">Municipio</TableHead>
+                <TableHead className="font-bold text-primary text-center">Novedad</TableHead>
+                <TableHead className="text-right font-bold pr-6 text-primary">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredCases && filteredCases.length > 0 ? (
+                filteredCases.map((c) => (
+                  <TableRow key={c.id} className="hover:bg-muted/30 transition-colors">
+                    <TableCell className="font-mono text-[10px] text-muted-foreground whitespace-nowrap">{c.caseNumber}</TableCell>
+                    <TableCell className="font-bold uppercase text-sm whitespace-nowrap">{c.firstName} {c.lastName}</TableCell>
+                    <TableCell className="text-sm">{c.documentId}</TableCell>
+                    <TableCell className="text-sm font-medium">{c.municipality}</TableCell>
+                    <TableCell className="flex justify-center py-4">
+                      {c.status && <CaseStatusIndicator status={c.status as any} />}
+                    </TableCell>
+                    <TableCell className="text-right pr-6">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="hover:bg-primary/10 rounded-full h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-64 shadow-xl">
+                          <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          
+                          <DropdownMenuItem onClick={() => handleCallAction(c)} className="cursor-pointer text-primary font-bold bg-primary/5">
+                             <Phone className="mr-2 h-4 w-4" /> LLAMAR AL USUARIO
+                          </DropdownMenuItem>
 
-                        <DropdownMenuSeparator />
+                          <DropdownMenuSeparator />
 
-                        <DropdownMenuItem onClick={() => handleViewDetails(c)} className="cursor-pointer">
-                           <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
-                        </DropdownMenuItem>
-                        
-                        <DropdownMenuItem asChild className="cursor-pointer">
-                            <Link href={`/dashboard/cases/${c.id}/edit`}>
-                              <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar Datos
-                            </Link>
-                        </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewDetails(c)} className="cursor-pointer">
+                             <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
+                          </DropdownMenuItem>
+                          
+                          <DropdownMenuItem asChild className="cursor-pointer">
+                              <Link href={`/dashboard/cases/${c.id}/edit`}>
+                                <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar Datos
+                              </Link>
+                          </DropdownMenuItem>
 
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-destructive focus:text-destructive-foreground focus:bg-destructive cursor-pointer"
-                          onClick={() => handleDeleteClick(c)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" /> Eliminar Caso
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive-foreground focus:bg-destructive cursor-pointer"
+                            onClick={() => handleDeleteClick(c)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar Caso
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center h-32 text-muted-foreground">
+                    No se encontraron casos registrados para esta búsqueda.
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center h-32 text-muted-foreground">
-                  No se encontraron casos registrados para esta búsqueda.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {/* Alerta de Eliminación */}
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar eliminación del registro?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -240,7 +242,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
 
       {/* Diálogo de Llamada */}
       <Dialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-[90vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-primary" />
@@ -271,13 +273,13 @@ export function CasesTable({ query, location }: CasesTableProps) {
               Al presionar <strong>"Registrar Llamada"</strong>, el sistema registrará automáticamente que el usuario fue contactado.
             </div>
           </div>
-          <DialogFooter className="sm:justify-end">
-            <Button variant="outline" onClick={() => setIsCallDialogOpen(false)}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCallDialogOpen(false)}>
               Cerrar
             </Button>
             <Button 
               type="button" 
-              className="bg-primary hover:bg-primary/90"
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90"
               onClick={confirmCall}
             >
               <Phone className="mr-2 h-4 w-4" /> Registrar Llamada

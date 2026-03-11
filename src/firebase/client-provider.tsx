@@ -25,7 +25,8 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       const firestoreInstance = getFirestore(app);
 
       // IMPORTANT: Enable persistence right after initialization and before any other Firestore operations.
-      try {
+      // This allows the app to work offline.
+      if (typeof window !== 'undefined') {
         enableIndexedDbPersistence(firestoreInstance).catch((err) => {
           if (err.code == 'failed-precondition') {
             console.warn(
@@ -37,8 +38,6 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
             );
           }
         });
-      } catch (error) {
-        console.error("Firebase offline persistence could not be enabled.", error);
       }
 
       return {
