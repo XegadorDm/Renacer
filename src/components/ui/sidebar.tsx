@@ -38,7 +38,7 @@ type SidebarContext = {
 
 const SidebarContext = React.createContext<SidebarContext | null>(null)
 
-function useSidebar() {
+export function useSidebar() {
   const context = React.useContext(SidebarContext)
   if (!context) {
     throw new Error("useSidebar must be used within a SidebarProvider.")
@@ -199,8 +199,8 @@ const Sidebar = React.forwardRef<
             side={side}
           >
             <SheetHeader className="sr-only">
-              <SheetTitle>Menú Renacer</SheetTitle>
-              <SheetDescription>Navegación del sistema de gestión de casos.</SheetDescription>
+              <SheetTitle>Menú de Navegación</SheetTitle>
+              <SheetDescription>Accede a las secciones de la plataforma Renacer.</SheetDescription>
             </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
@@ -273,7 +273,7 @@ const SidebarTrigger = React.forwardRef<
       {...props}
     >
       <PanelLeft className="h-4 w-4" />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">Alternar barra lateral</span>
     </Button>
   )
 })
@@ -750,5 +750,4 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
-  useSidebar,
 }
