@@ -1,7 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // DESPLIEGUE DE EMERGENCIA TOTAL: 2025-02-24 21:50:00 UTC
+    // DESPLIEGUE DE EMERGENCIA TOTAL: 2025-02-24 22:30:00 UTC
     // Este cambio fuerza la propagación inmediata de reglas permisivas para usuarios autenticados.
     // Se permite lectura y escritura total (create, update, delete) a cualquier usuario que haya iniciado sesión.
     
