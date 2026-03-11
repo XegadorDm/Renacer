@@ -1,33 +1,19 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - DESPLIEGUE FINAL DE EMERGENCIA
-    // PROPÓSITO: Eliminar bloqueos de permisos para usuarios autenticados.
-    // TIMESTAMP: 2024-05-20T15:30:00Z
+    // REGLAS DE SEGURIDAD RENACER - LIMPIEZA TOTAL
+    // PROPÓSITO: Solo usuarios autenticados pueden operar.
+    // TIMESTAMP: 2024-05-20T19:00:00Z
     // ============================================================
 
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Regla global: Cualquier usuario autenticado puede leer y escribir en cualquier documento.
-    // Esto asegura que la gestión de casos, usuarios y notificaciones funcione sin errores.
     match /{document=**} {
-      allow read, write: if isSignedIn();
-    }
-
-    // Reglas específicas redundantes para asegurar la propagación en colecciones críticas
-    match /cases/{caseId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /notifications/{notificationId} {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /users/{userId} {
       allow read, write: if isSignedIn();
     }
   }

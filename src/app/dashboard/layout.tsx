@@ -1,7 +1,7 @@
 
 'use client';
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import {
@@ -20,11 +20,9 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, Settings, Users, Loader2, Bell } from "lucide-react";
+import { Home, LogOut, Settings, Users, Loader2 } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
-import { doc, collection, query, where } from "firebase/firestore";
-import { NotificationsSheet } from "@/components/dashboard/notifications-sheet";
-import { useCollection } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 interface UserProfile {
     role: string;
@@ -37,7 +35,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const router = useRouter();
   const firestore = useFirestore();
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -45,18 +42,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [firestore, user]);
 
   const { data: userProfile } = useDoc<UserProfile>(userDocRef);
-
-  // Unread notifications count for the badge
-  const unreadQuery = useMemoFirebase(() => {
-      if (!firestore || !user) return null;
-      return query(
-          collection(firestore, 'notifications'),
-          where('userId', '==', user.uid),
-          where('read', '==', false)
-      );
-  }, [firestore, user]);
-  
-  const { data: unreadNotifications } = useCollection(unreadQuery);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -86,8 +71,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return user.email?.[0].toUpperCase() || 'U';
   }
 
-  const unreadCount = unreadNotifications?.length || 0;
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -110,21 +93,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Casos">
                     <Link href="/dashboard/cases"><Users/><span>Casos</span></Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton 
-                    onClick={() => setIsNotificationsOpen(true)} 
-                    tooltip="Notificaciones"
-                    className="relative"
-                >
-                    <Bell/>
-                    <span>Notificaciones</span>
-                    {unreadCount > 0 && (
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white group-data-[collapsible=icon]:-right-1 group-data-[collapsible=icon]:top-1">
-                            {unreadCount}
-                        </span>
-                    )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -169,7 +137,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </main>
         </SidebarInset>
       </div>
-      <NotificationsSheet open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen} />
     </SidebarProvider>
   );
 }

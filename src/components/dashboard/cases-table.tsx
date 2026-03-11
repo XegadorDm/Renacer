@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
@@ -6,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, RefreshCcw } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case, CaseStatus } from "@/lib/case-schema";
@@ -109,25 +110,12 @@ export function CasesTable({ query, location }: CasesTableProps) {
     
     const caseDocRef = doc(firestore, 'cases', caseItem.id);
     
-    // 1. Actualizar el estado del caso
+    // Actualización directa del estado sin generar notificaciones
     updateDocumentNonBlocking(caseDocRef, { status: newStatus });
-
-    // 2. Generar notificación para el usuario asociado al caso
-    // Intentamos obtener el ID del usuario desde el mapa de miembros
-    const targetUserId = caseItem.members ? Object.keys(caseItem.members)[0] : user.uid;
-
-    addDocumentNonBlocking(collection(firestore, 'notifications'), {
-        userId: targetUserId,
-        caseId: caseItem.id,
-        message: `El estado de su caso ha sido actualizado a: ${newStatus}`,
-        status: newStatus,
-        createdAt: new Date().toISOString(),
-        read: false
-    });
 
     toast({
         title: "Estado Actualizado",
-        description: `Se cambió a "${newStatus}" y se generó la notificación.`,
+        description: `El estado del caso ha cambiado a "${newStatus}".`,
     });
   }
 
