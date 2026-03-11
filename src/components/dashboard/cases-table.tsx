@@ -152,12 +152,12 @@ export function CasesTable({ query, location }: CasesTableProps) {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="font-bold text-primary">N° Caso</TableHead>
-                <TableHead className="font-bold text-primary">Nombre Completo</TableHead>
-                <TableHead className="font-bold text-primary">Documento</TableHead>
-                <TableHead className="font-bold text-primary">Municipio</TableHead>
-                <TableHead className="font-bold text-primary text-center">Novedad</TableHead>
-                <TableHead className="text-right font-bold pr-6 text-primary">Acciones</TableHead>
+                <TableHead className="font-bold text-primary min-w-[100px]">N° Caso</TableHead>
+                <TableHead className="font-bold text-primary min-w-[150px]">Nombre Completo</TableHead>
+                <TableHead className="font-bold text-primary min-w-[120px]">Documento</TableHead>
+                <TableHead className="font-bold text-primary min-w-[120px]">Municipio</TableHead>
+                <TableHead className="font-bold text-primary text-center min-w-[180px]">Novedad</TableHead>
+                <TableHead className="text-right font-bold pr-6 text-primary min-w-[100px]">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -166,8 +166,8 @@ export function CasesTable({ query, location }: CasesTableProps) {
                   <TableRow key={c.id} className="hover:bg-muted/30 transition-colors">
                     <TableCell className="font-mono text-[10px] text-muted-foreground whitespace-nowrap">{c.caseNumber}</TableCell>
                     <TableCell className="font-bold uppercase text-sm whitespace-nowrap">{c.firstName} {c.lastName}</TableCell>
-                    <TableCell className="text-sm">{c.documentId}</TableCell>
-                    <TableCell className="text-sm font-medium">{c.municipality}</TableCell>
+                    <TableCell className="text-sm whitespace-nowrap">{c.documentId}</TableCell>
+                    <TableCell className="text-sm font-medium whitespace-nowrap">{c.municipality}</TableCell>
                     <TableCell className="flex justify-center py-4">
                       {c.status && <CaseStatusIndicator status={c.status as any} />}
                     </TableCell>
@@ -224,7 +224,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
 
       {/* Alerta de Eliminación */}
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
-        <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
+        <AlertDialogContent className="max-w-[90vw] sm:max-w-md rounded-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar eliminación del registro?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -242,7 +242,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
 
       {/* Diálogo de Llamada */}
       <Dialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
-        <DialogContent className="max-w-[90vw] sm:max-w-md">
+        <DialogContent className="max-w-[95vw] sm:max-w-md rounded-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-primary" />
@@ -270,7 +270,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
               </div>
             )}
             <div className="p-3 rounded-md bg-blue-50 border border-blue-100 text-blue-800 text-sm">
-              Al presionar <strong>"Registrar Llamada"</strong>, el sistema registrará automáticamente que el usuario fue contactado.
+              Al presionar <strong>"Registrar Llamada"</strong>, el sistema registrará que el usuario fue contactado.
             </div>
           </div>
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
