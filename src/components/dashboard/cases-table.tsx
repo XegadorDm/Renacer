@@ -4,12 +4,12 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, ChevronRight } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
-import type { Case } from "@/lib/case-schema";
+import type { Case, CaseStatus } from "@/lib/case-schema";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,10 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuLabel, 
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useMemoFirebase } from "@/firebase/provider";
@@ -79,6 +82,16 @@ export function CasesTable({ query, location }: CasesTableProps) {
     );
   }, [cases, query]);
 
+  const handleUpdateStatus = (caseId: string, newStatus: CaseStatus) => {
+    if (!firestore) return;
+    const caseRef = doc(firestore, 'cases', caseId);
+    updateDocumentNonBlocking(caseRef, { status: newStatus });
+    toast({
+      title: "Estado Actualizado",
+      description: `El estado ha sido cambiado a: ${newStatus}`,
+    });
+  };
+
   const handleDeleteClick = (caseItem: WithId<Case>) => {
     setCaseToDelete(caseItem);
     setIsAlertOpen(true);
@@ -86,15 +99,12 @@ export function CasesTable({ query, location }: CasesTableProps) {
 
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
-    
     const caseDocRef = doc(firestore, 'cases', caseToDelete.id);
     deleteDocumentNonBlocking(caseDocRef);
-    
     toast({
         title: "Caso Eliminado",
         description: `El caso N° ${caseToDelete.caseNumber} ha sido eliminado.`,
     });
-
     setIsAlertOpen(false);
     setCaseToDelete(null);
   };
@@ -159,6 +169,23 @@ export function CasesTable({ query, location }: CasesTableProps) {
                               <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar Datos
                             </Link>
                         </DropdownMenuItem>
+
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="cursor-pointer">
+                            <ChevronRight className="mr-2 h-4 w-4 text-muted-foreground" /> CAMBIAR ESTADO
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-64">
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(c.id, "Sin novedad")}>
+                              <span className="h-2 w-2 rounded-full bg-red-500 mr-2" /> Sin novedad
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(c.id, "Respuesta de gobierno en curso")}>
+                              <span className="h-2 w-2 rounded-full bg-yellow-500 mr-2" /> Respuesta de gobierno en curso
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleUpdateStatus(c.id, "Proceso finalizado con exito")}>
+                              <span className="h-2 w-2 rounded-full bg-green-500 mr-2" /> Proceso finalizado con exito
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
 
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 

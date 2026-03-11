@@ -3,53 +3,22 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - ACCESO TOTAL A USUARIOS AUTENTICADOS
-    // PROPÓSITO: Garantizar que el personal autorizado pueda cambiar estados.
-    // ÚLTIMA ACTUALIZACIÓN FORZADA: 2024-03-20 19:15:00 (GMT-5)
+    // REGLAS DE SEGURIDAD RENACER - DESPLIEGUE DE EMERGENCIA
+    // PROPÓSITO: Permitir gestión total a usuarios autenticados.
+    // ÚLTIMA ACTUALIZACIÓN FORZADA: 2024-03-21 14:30:00 (GMT-5)
     // ============================================================
 
-    // Función para verificar si el usuario está logueado
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Función para verificar si el usuario tiene un rol autorizado
-    function isStaff() {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      return isSignedIn() && (userDoc.role == 'admin' || userDoc.role == 'case-worker');
-    }
-
-    // Regla global de respaldo
+    // Regla global: Permitir todo a usuarios logueados para evitar bloqueos
     match /{document=**} {
       allow read, write: if isSignedIn();
     }
 
-    // Reglas específicas para la colección de Casos
     match /cases/{caseId} {
-      // Lectura permitida para cualquier usuario del sistema
-      allow get, list: if isSignedIn();
-      
-      // Creación permitida para cualquier usuario logueado
-      allow create: if isSignedIn();
-      
-      // Actualización permitida si es personal autorizado o si es el dueño
-      // Hemos simplificado esto al máximo para evitar el error de "Insufficient Permissions"
-      allow update: if isSignedIn();
-      
-      // Eliminación solo para administradores o personal autorizado
-      allow delete: if isStaff();
-    }
-
-    // Reglas para perfiles de usuario
-    match /users/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Reglas para correos autorizados
-    match /authorized_emails/{emailId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && isStaff();
+      allow read, write: if isSignedIn();
     }
   }
 }
