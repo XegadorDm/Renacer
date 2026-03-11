@@ -1,15 +1,15 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // REGLAS GLOBALES SIMPLIFICADAS PARA DESBLOQUEO TOTAL
-    // Forzando despliegue - Timestamp: 2024-05-23 10:45:00
+    // REGLAS DE EMERGENCIA TOTAL - Timestamp: 2024-05-23 11:35:00
     // Permite lectura y escritura a cualquier usuario autenticado en toda la base de datos.
+    // Esto elimina cualquier error de "insufficient permissions" de forma inmediata.
     
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
 
-    // Permisividad específica para la lista de correos autorizados
+    // Acceso público para la lista de correos si fuera necesario
     match /authorized_emails/{document=**} {
       allow read: if true;
     }
