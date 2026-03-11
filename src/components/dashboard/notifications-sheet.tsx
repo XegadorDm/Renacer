@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -29,7 +30,6 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
 
     const notificationsQuery = useMemoFirebase(() => {
         if (!firestore || !user) return null;
-        // La consulta debe filtrar por el ID del usuario actual para que coincida con la lógica de seguridad y visualización
         return query(
             collection(firestore, 'notifications'),
             where('userId', '==', user.uid),
@@ -65,7 +65,7 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
                         )}
                     </div>
                     <SheetDescription>
-                        Historial de actualizaciones de tus casos registrados.
+                        Historial de actualizaciones de sus casos.
                     </SheetDescription>
                 </SheetHeader>
 
@@ -86,11 +86,11 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
                                 >
                                     <div className="flex justify-between items-start mb-1">
                                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                                            Caso: {notif.caseId.substring(0, 12)}
+                                            Caso: {notif.caseId.substring(0, 8)}
                                         </p>
                                         {!notif.read && <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />}
                                     </div>
-                                    <p className="text-sm font-medium mb-2 leading-relaxed">
+                                    <p className="text-sm font-medium mb-2">
                                         {notif.message}
                                     </p>
                                     <div className="flex items-center justify-between mt-3">
@@ -111,7 +111,7 @@ export function NotificationsSheet({ open, onOpenChange }: NotificationsSheetPro
                     ) : (
                         <div className="flex flex-col items-center justify-center p-12 text-center">
                             <BellOff className="h-12 w-12 text-muted-foreground/30 mb-4" />
-                            <p className="text-muted-foreground font-medium">No tienes notificaciones por ahora.</p>
+                            <p className="text-muted-foreground font-medium">No hay notificaciones.</p>
                         </div>
                     )}
                 </ScrollArea>

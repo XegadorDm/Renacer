@@ -48,6 +48,20 @@
       },
       "required": ["id", "email", "role"]
     },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "System notification for users.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "caseId": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "userId", "caseId", "message", "createdAt", "read"]
+    },
     "AuthorizedEmail": {
       "title": "AuthorizedEmail",
       "type": "object",
@@ -79,6 +93,14 @@
           "entityName": "User",
           "schema": { "$ref": "#/backend/entities/User" },
           "description": "Stores user profile and roles."
+        }
+      },
+      {
+        "path": "/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": { "$ref": "#/backend/entities/Notification" },
+          "description": "Stores user notifications."
         }
       },
       {

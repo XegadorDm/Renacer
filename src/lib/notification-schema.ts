@@ -4,7 +4,6 @@ export interface Notification {
     userId: string;
     caseId: string;
     message: string;
-    status: string;
     createdAt: string;
     read: boolean;
 }

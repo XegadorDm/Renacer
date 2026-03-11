@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, RefreshCcw } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case, CaseStatus } from "@/lib/case-schema";
@@ -109,13 +109,25 @@ export function CasesTable({ query, location }: CasesTableProps) {
     if (!firestore || !user) return;
     
     const caseDocRef = doc(firestore, 'cases', caseItem.id);
-    
-    // Actualización directa del estado sin generar notificaciones
     updateDocumentNonBlocking(caseDocRef, { status: newStatus });
+
+    // Crear notificación para el dueño del caso (o todos los miembros)
+    if (caseItem.members) {
+        const notificationsCol = collection(firestore, 'notifications');
+        Object.keys(caseItem.members).forEach(memberId => {
+            addDocumentNonBlocking(notificationsCol, {
+                userId: memberId,
+                caseId: caseItem.id,
+                message: "El estado de su caso ha sido actualizado.",
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+        });
+    }
 
     toast({
         title: "Estado Actualizado",
-        description: `El estado del caso ha cambiado a "${newStatus}".`,
+        description: `El estado del caso ha cambiado a "${newStatus}". Se ha generado la notificación correspondiente.`,
     });
   }
 
