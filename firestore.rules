@@ -5,7 +5,7 @@ service cloud.firestore {
     // ============================================================
     // REGLAS DE SEGURIDAD RENACER - SOLUCIÓN NUCLEAR DEFINITIVA
     // PROPÓSITO: Eliminar cualquier bloqueo de permisos para usuarios autenticados.
-    // TIMESTAMP: 2024-05-22T14:45:00Z (FORZAR DESPLIEGUE)
+    // TIMESTAMP: 2024-05-22T15:10:00Z (FORZAR DESPLIEGUE FINAL)
     // ============================================================
 
     // Permitir acceso total a cualquier usuario autenticado en toda la base de datos
@@ -13,7 +13,7 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // Reglas explícitas para la colección de casos (prioridad máxima)
+    // Reglas explícitas para la colección de casos
     match /cases/{caseId} {
       allow read, write, update, delete: if request.auth != null;
     }
