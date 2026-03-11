@@ -5,17 +5,18 @@ service cloud.firestore {
     // ============================================================
     // REGLAS DE SEGURIDAD RENACER - DESPLIEGUE FINAL DE EMERGENCIA
     // PROPÓSITO: Garantizar permisos de actualización para novedades de llamadas.
-    // TIMESTAMP: 2024-05-22T15:30:00Z (FORCE SYNC)
+    // TIMESTAMP: 2024-05-22T16:00:00Z (RE-SYNC FORCED)
     // ============================================================
 
-    // Permitir acceso total a cualquier usuario autenticado en toda la base de datos
+    // Permitir acceso total de lectura y escritura a cualquier usuario autenticado
+    // Esto asegura que las actualizaciones de estado (como llamadas) no sean bloqueadas.
     match /{document=**} {
       allow read, write: if request.auth != null;
     }
 
-    // Reglas explícitas para la colección de casos
+    // Reglas explícitas para la colección de casos para mayor prioridad
     match /cases/{caseId} {
-      allow read, write, update, delete: if request.auth != null;
+      allow read, write: if request.auth != null;
     }
     
     // Reglas para perfiles de usuario
@@ -24,7 +25,7 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Reglas para correos autorizados
+    // Reglas para correos autorizados (Whitelist de registro)
     match /authorized_emails/{emailId} {
       allow read: if true;
       allow write: if request.auth != null;
