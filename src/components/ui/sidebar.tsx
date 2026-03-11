@@ -198,7 +198,7 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
-             <SheetHeader className="sr-only">
+            <SheetHeader className="sr-only">
               <SheetTitle>Menú Renacer</SheetTitle>
               <SheetDescription>Navegación móvil de la plataforma.</SheetDescription>
             </SheetHeader>

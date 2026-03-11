@@ -1,9 +1,9 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // REGLAS DE EMERGENCIA ABSOLUTA - SIN RESTRICCIONES PARA USUARIOS LOGUEADOS
-    // Última actualización forzada: 2024-05-23 19:15:00 UTC
-    // Este cambio fuerza la re-evaluación de permisos en el servidor.
+    // REGLAS DE EMERGENCIA TOTAL - ACCESO PARA USUARIOS AUTENTICADOS
+    // Fecha de despliegue forzado: 2024-05-23 20:30:00 UTC
+    // Este cambio garantiza que cualquier asesor logueado pueda gestionar casos.
     
     match /{document=**} {
       allow read, write: if request.auth != null;
