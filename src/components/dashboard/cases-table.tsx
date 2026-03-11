@@ -4,12 +4,12 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, RefreshCcw } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
-import type { Case, CaseStatus } from "@/lib/case-schema";
+import type { Case } from "@/lib/case-schema";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -26,10 +26,7 @@ import {
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuLabel, 
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useMemoFirebase } from "@/firebase/provider";
@@ -101,19 +98,6 @@ export function CasesTable({ query, location }: CasesTableProps) {
     setIsAlertOpen(false);
     setCaseToDelete(null);
   };
-
-  const handleUpdateStatus = (caseItem: WithId<Case>, newStatus: CaseStatus) => {
-    if (!firestore) return;
-    const caseDocRef = doc(firestore, 'cases', caseItem.id);
-    
-    // Actualización directa del campo status
-    updateDocumentNonBlocking(caseDocRef, { status: newStatus });
-    
-    toast({
-      title: "Estado Actualizado",
-      description: `El estado ahora es: ${newStatus}`,
-    });
-  };
   
   const handleViewDetails = (caseItem: WithId<Case>) => {
     const caseDataString = encodeURIComponent(JSON.stringify(caseItem));
@@ -170,32 +154,6 @@ export function CasesTable({ query, location }: CasesTableProps) {
                            <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
                         </DropdownMenuItem>
                         
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger className="cursor-pointer">
-                            <RefreshCcw className="mr-2 h-4 w-4 text-muted-foreground" /> Cambiar Estado
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent className="shadow-lg">
-                            <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Sin novedad")} className="cursor-pointer">
-                              <span className="flex items-center gap-2">
-                                <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
-                                Sin novedad
-                              </span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Respuesta Gobierno en curso")} className="cursor-pointer">
-                              <span className="flex items-center gap-2">
-                                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                                En curso
-                              </span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Proceso finalizado con exito")} className="cursor-pointer">
-                              <span className="flex items-center gap-2">
-                                <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
-                                Finalizado
-                              </span>
-                            </DropdownMenuItem>
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-
                         <DropdownMenuItem asChild className="cursor-pointer">
                             <Link href={`/dashboard/cases/${c.id}/edit`}>
                               <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar Datos
