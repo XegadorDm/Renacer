@@ -107,12 +107,12 @@ export function CasesTable({ query, location }: CasesTableProps) {
     if (!firestore) return;
     const docRef = doc(firestore, 'cases', caseItem.id);
     
-    // Solo actualizamos el estado, nada más.
+    // Actualización directa del estado mediante updateDoc (vía non-blocking update)
     updateDocumentNonBlocking(docRef, { status: newStatus });
     
     toast({
         title: "Estado Actualizado",
-        description: `El estado ha cambiado a: ${newStatus}`,
+        description: `El estado del caso ha cambiado a: ${newStatus}`,
     });
   }
 
@@ -141,7 +141,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
               <TableHead className="font-bold text-primary">Nombre Completo</TableHead>
               <TableHead className="font-bold text-primary">Documento</TableHead>
               <TableHead className="font-bold text-primary">Municipio</TableHead>
-              <TableHead className="font-bold text-primary text-center">Estado Actual</TableHead>
+              <TableHead className="font-bold text-primary text-center">Novedad</TableHead>
               <TableHead className="text-right font-bold pr-6 text-primary">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -184,24 +184,24 @@ export function CasesTable({ query, location }: CasesTableProps) {
                             <RefreshCw className="mr-2 h-4 w-4 text-primary" /> CAMBIAR ESTADO DE PROCESO
                           </DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
-                            <DropdownMenuSubContent className="w-64">
+                            <DropdownMenuSubContent className="w-72">
                               <DropdownMenuItem 
                                 onClick={() => handleUpdateStatus(c, "Sin novedad")}
-                                className="cursor-pointer"
+                                className="cursor-pointer py-3"
                               >
-                                <span className="h-2 w-2 rounded-full bg-red-600 mr-2" /> Sin novedad
+                                <span className="h-3 w-3 rounded-full bg-red-600 mr-3" /> Sin novedad
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => handleUpdateStatus(c, "Respuesta de gobierno en curso")}
-                                className="cursor-pointer"
+                                className="cursor-pointer py-3"
                               >
-                                <span className="h-2 w-2 rounded-full bg-yellow-400 mr-2" /> Respuesta de gobierno en curso
+                                <span className="h-3 w-3 rounded-full bg-yellow-400 mr-3" /> Respuesta de gobierno en curso
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => handleUpdateStatus(c, "Proceso finalizado con éxito")}
-                                className="cursor-pointer"
+                                className="cursor-pointer py-3"
                               >
-                                <span className="h-2 w-2 rounded-full bg-green-600 mr-2" /> Proceso finalizado con éxito
+                                <span className="h-3 w-3 rounded-full bg-green-600 mr-3" /> Proceso finalizado con éxito
                               </DropdownMenuItem>
                             </DropdownMenuSubContent>
                           </DropdownMenuPortal>
