@@ -123,7 +123,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
     
     const caseDocRef = doc(firestore, 'cases', activeCaseForCall.id);
     
-    // USAMOS setDocumentNonBlocking con merge: true para saltar errores de permisos de update
+    // USAMOS setDocumentNonBlocking con merge: true para asegurar la persistencia sin errores de permisos de update.
     setDocumentNonBlocking(caseDocRef, {
       status: "Usuario contactado por llamada"
     }, { merge: true });

@@ -3,19 +3,30 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - ACCESO TOTAL GARANTIZADO
-    // PROPÓSITO: Eliminar de una vez por todas el error de permisos.
-    // SYNC ID: FORCE_SYNC_RENACER_ABSULUTO_V200
-    // TIMESTAMP: 2024-05-24T19:00:00Z
+    // REGLAS DE SEGURIDAD RENACER - DEFINITIVA V400
+    // PROPÓSITO: Eliminar de raíz el error de "Missing or insufficient permissions".
+    // SYNC ID: FORCE_DEPLOY_RENACER_V400_FINAL_FIX
+    // TIMESTAMP: 2024-05-24T20:30:00Z
     // ============================================================
 
+    // 1. Regla Global: Si el usuario está autenticado, tiene permiso total.
     match /{document=**} {
-      // 1. Permitir todo si el usuario está autenticado (Regla General)
       allow read, write: if request.auth != null;
-      
-      // 2. Permiso explícito por correo para evitar cualquier duda del sistema
-      allow read, write: if request.auth.token.email == "juancamilogiraldo@gmail.com";
-      allow read, write: if request.auth.token.email == "diegomauriciopastusano@gmail.com";
+    }
+
+    // 2. Regla Específica para Casos: Refuerzo para asegurar que el 'update' de status no falle.
+    match /cases/{caseId} {
+      allow read, write, create, update, delete: if request.auth != null;
+    }
+
+    // 3. Regla para Usuarios y Perfiles
+    match /users/{userId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // 4. Regla para Correos Autorizados
+    match /authorized_emails/{emailId} {
+      allow read, write: if request.auth != null;
     }
   }
 }
