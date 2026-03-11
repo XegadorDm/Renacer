@@ -2,10 +2,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-/**
- * MÓDULO REMOVIDO DEFINITIVAMENTE.
- * Redirige automáticamente al dashboard principal para evitar errores de acceso.
- */
 export default function AdminPage() {
   const router = useRouter();
 
