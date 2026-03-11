@@ -1,15 +1,16 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, RefreshCcw } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
-import type { Case } from "@/lib/case-schema";
+import type { Case, CaseStatus } from "@/lib/case-schema";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +28,9 @@ import {
   DropdownMenuItem, 
   DropdownMenuLabel, 
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useMemoFirebase } from "@/firebase/provider";
@@ -101,6 +105,37 @@ export function CasesTable({ query, location }: CasesTableProps) {
     router.push(`/dashboard/cases/${caseItem.id}?data=${caseDataString}`);
   }
 
+  const handleUpdateStatus = (caseItem: WithId<Case>, newStatus: CaseStatus) => {
+    if (!firestore) return;
+    
+    const caseDocRef = doc(firestore, 'cases', caseItem.id);
+    
+    // 1. Update Case Status
+    updateDocumentNonBlocking(caseDocRef, { status: newStatus });
+
+    // 2. Generate Notification for all owners/members of the case
+    // For simplicity in this MVP, we notify the members listed in the case
+    if (caseItem.members) {
+        Object.keys(caseItem.members).forEach(uid => {
+            // We don't notify the person who made the change if we want to be clean, 
+            // but for this requirement we notify the "user associated with the case"
+            addDocumentNonBlocking(collection(firestore, 'notifications'), {
+                userId: uid,
+                caseId: caseItem.id,
+                message: `El estado de su caso ha sido actualizado a: ${newStatus}`,
+                status: newStatus,
+                createdAt: new Date().toISOString(),
+                read: false
+            });
+        });
+    }
+
+    toast({
+        title: "Estado Actualizado",
+        description: `El estado se cambió a "${newStatus}" y se notificó al usuario.`,
+    });
+  }
+
   if (isLoading) {
     return (
         <div className="border rounded-lg p-4 space-y-4">
@@ -143,7 +178,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-64 shadow-xl">
+                      <DropdownMenuContent align="end" className="w-72 shadow-xl">
                         <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         
@@ -151,6 +186,23 @@ export function CasesTable({ query, location }: CasesTableProps) {
                            <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
                         </DropdownMenuItem>
                         
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger className="cursor-pointer">
+                            <RefreshCcw className="mr-2 h-4 w-4 text-muted-foreground" /> Cambiar Estado
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent className="w-64">
+                             <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Sin novedad")} className="cursor-pointer">
+                                <span className="h-2 w-2 rounded-full bg-red-500 mr-2" /> Sin novedad
+                             </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Respuesta de gobierno en curso")} className="cursor-pointer">
+                                <span className="h-2 w-2 rounded-full bg-yellow-500 mr-2" /> Respuesta de gobierno en curso
+                             </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Proceso finalizado con exito")} className="cursor-pointer">
+                                <span className="h-2 w-2 rounded-full bg-green-500 mr-2" /> Proceso finalizado con éxito
+                             </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+
                         <DropdownMenuItem asChild className="cursor-pointer">
                             <Link href={`/dashboard/cases/${c.id}/edit`}>
                               <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar Datos

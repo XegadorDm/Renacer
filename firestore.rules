@@ -1,10 +1,11 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - VERSION SIMPLIFICADA
-    // PROPÓSITO: Permitir gestión a usuarios autenticados.
+    // REGLAS DE SEGURIDAD RENACER - SISTEMA DE NOTIFICACIONES
+    // DESPLIEGUE FINAL - PERMISIVIDAD CONTROLADA
     // ============================================================
 
     function isSignedIn() {
@@ -17,6 +18,13 @@ service cloud.firestore {
 
     match /cases/{caseId} {
       allow read, write: if isSignedIn();
+    }
+    
+    match /notifications/{notificationId} {
+      // Los usuarios pueden leer y actualizar sus propias notificaciones (marcar como leídas)
+      allow read, update: if isSignedIn() && request.auth.uid == resource.data.userId;
+      // Permite creación por parte de cualquier usuario autenticado (asesores generando notificaciones)
+      allow create: if isSignedIn();
     }
   }
 }

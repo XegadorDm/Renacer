@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Case": {
@@ -57,6 +58,21 @@
         "addedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["email", "addedBy", "addedAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "System notification for users.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "caseId": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["userId", "caseId", "message", "status", "createdAt", "read"]
     }
   },
   "auth": {
@@ -86,6 +102,14 @@
           "entityName": "AuthorizedEmail",
           "schema": { "$ref": "#/backend/entities/AuthorizedEmail" },
           "description": "Whitelist of emails allowed to sign up."
+        }
+      },
+      {
+        "path": "/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": { "$ref": "#/backend/entities/Notification" },
+          "description": "Stores system notifications."
         }
       }
     ]
