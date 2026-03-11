@@ -106,7 +106,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
     if (!firestore) return;
     const caseDocRef = doc(firestore, 'cases', caseItem.id);
     
-    // Actualización directa sin vinculaciones
+    // Actualización directa del campo status
     updateDocumentNonBlocking(caseDocRef, { status: newStatus });
     
     toast({
