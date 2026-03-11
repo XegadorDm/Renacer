@@ -106,12 +106,12 @@ export function CasesTable({ query, location }: CasesTableProps) {
     if (!firestore) return;
     const caseDocRef = doc(firestore, 'cases', caseItem.id);
     
-    // Actualización directa del campo status sin vinculaciones externas
+    // Actualización directa sin vinculaciones
     updateDocumentNonBlocking(caseDocRef, { status: newStatus });
     
     toast({
       title: "Estado Actualizado",
-      description: `Estado cambiado a: ${newStatus}`,
+      description: `El estado ahora es: ${newStatus}`,
     });
   };
   
@@ -132,66 +132,65 @@ export function CasesTable({ query, location }: CasesTableProps) {
 
   return (
     <>
-      <div className="border rounded-lg overflow-hidden bg-card shadow-sm">
+      <div className="border rounded-lg overflow-hidden bg-card shadow-md">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="font-bold">N° Caso</TableHead>
-              <TableHead className="font-bold">Nombre Completo</TableHead>
-              <TableHead className="font-bold">Documento</TableHead>
-              <TableHead className="font-bold">Municipio</TableHead>
-              <TableHead className="font-bold">Estado</TableHead>
-              <TableHead className="text-right font-bold pr-6">Acciones</TableHead>
+              <TableHead className="font-bold text-primary">N° Caso</TableHead>
+              <TableHead className="font-bold text-primary">Nombre Completo</TableHead>
+              <TableHead className="font-bold text-primary">Documento</TableHead>
+              <TableHead className="font-bold text-primary">Municipio</TableHead>
+              <TableHead className="font-bold text-primary text-center">Estado Actual</TableHead>
+              <TableHead className="text-right font-bold pr-6 text-primary">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredCases && filteredCases.length > 0 ? (
               filteredCases.map((c) => (
                 <TableRow key={c.id} className="hover:bg-muted/30 transition-colors">
-                  <TableCell className="font-mono text-xs">{c.caseNumber}</TableCell>
-                  <TableCell className="font-medium uppercase">{c.firstName} {c.lastName}</TableCell>
-                  <TableCell>{c.documentId}</TableCell>
-                  <TableCell>{c.municipality}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-mono text-[10px] text-muted-foreground">{c.caseNumber}</TableCell>
+                  <TableCell className="font-bold uppercase text-sm">{c.firstName} {c.lastName}</TableCell>
+                  <TableCell className="text-sm">{c.documentId}</TableCell>
+                  <TableCell className="text-sm font-medium">{c.municipality}</TableCell>
+                  <TableCell className="flex justify-center py-4">
                     {c.status && <CaseStatusIndicator status={c.status as any} />}
                   </TableCell>
                   <TableCell className="text-right pr-6">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="hover:bg-primary/10">
-                          <MoreHorizontal className="h-5 w-5" />
-                          <span className="sr-only">Acciones</span>
+                        <Button variant="ghost" size="icon" className="hover:bg-primary/10 rounded-full h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-56">
-                        <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
+                      <DropdownMenuContent align="end" className="w-56 shadow-xl">
+                        <DropdownMenuLabel>Opciones de Gestión</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         
                         <DropdownMenuItem onClick={() => handleViewDetails(c)} className="cursor-pointer">
-                           <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+                           <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
                         </DropdownMenuItem>
                         
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger className="cursor-pointer">
-                            <RefreshCcw className="mr-2 h-4 w-4" /> Cambiar Estado
+                            <RefreshCcw className="mr-2 h-4 w-4 text-muted-foreground" /> Cambiar Estado
                           </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
+                          <DropdownMenuSubContent className="shadow-lg">
                             <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Sin novedad")} className="cursor-pointer">
                               <span className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-red-500" />
+                                <span className="h-2.5 w-2.5 rounded-full bg-red-600" />
                                 Sin novedad
                               </span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Respuesta Gobierno en curso")} className="cursor-pointer">
                               <span className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                                Respuesta Gobierno en curso
+                                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                                En curso
                               </span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleUpdateStatus(c, "Proceso finalizado con exito")} className="cursor-pointer">
                               <span className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full bg-green-500" />
-                                Proceso finalizado con exito
+                                <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+                                Finalizado
                               </span>
                             </DropdownMenuItem>
                           </DropdownMenuSubContent>
@@ -199,7 +198,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
 
                         <DropdownMenuItem asChild className="cursor-pointer">
                             <Link href={`/dashboard/cases/${c.id}/edit`}>
-                              <Edit className="mr-2 h-4 w-4" /> Editar Caso
+                              <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar Datos
                             </Link>
                         </DropdownMenuItem>
                         
@@ -218,7 +217,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
             ) : (
               <TableRow>
                 <TableCell colSpan={6} className="text-center h-32 text-muted-foreground">
-                  No se encontraron casos registrados.
+                  No se encontraron casos registrados para esta búsqueda.
                 </TableCell>
               </TableRow>
             )}
@@ -228,9 +227,9 @@ export function CasesTable({ query, location }: CasesTableProps) {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogTitle>¿Confirmar eliminación del registro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará permanentemente la caracterización de <span className="font-bold text-foreground">{caseToDelete?.firstName} {caseToDelete?.lastName}</span>.
+              Esta acción eliminará de forma irreversible el caso de <span className="font-bold text-foreground">{caseToDelete?.firstName} {caseToDelete?.lastName}</span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

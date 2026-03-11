@@ -3,31 +3,21 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // DESPLIEGUE DE EMERGENCIA TOTAL: 2025-03-11 21:10:00 UTC
-    // PROPÓSITO: ELIMINAR CUALQUIER BLOQUEO DE PERMISOS.
+    // DESPLIEGUE DE EMERGENCIA TOTAL: 2025-03-11 21:25:00 UTC
+    // PROPÓSITO: ELIMINAR CUALQUIER BLOQUEO DE PERMISOS PARA USUARIOS AUTENTICADOS.
     // ============================================================
     
-    function isAuthed() {
-      return request.auth != null;
-    }
-    
-    // Regla global definitiva: Usuarios autenticados pueden hacer todo.
     match /{document=**} {
-      allow read, create, update, delete: if isAuthed();
+      allow read, write: if request.auth != null;
     }
 
-    // Reglas específicas reforzadas para la colección de casos
+    // Reglas específicas adicionales para asegurar acceso total a casos
     match /cases/{caseId} {
-      allow read, create, update, delete: if isAuthed();
+      allow read, write: if request.auth != null;
     }
 
     match /users/{userId} {
-      allow read, create, update, delete: if isAuthed();
-    }
-
-    match /authorized_emails/{emailId} {
-      allow read: if true;
-      allow create, update, delete: if isAuthed();
+      allow read, write: if request.auth != null;
     }
   }
 }
