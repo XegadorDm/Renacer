@@ -3,16 +3,19 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 /**
- * Este módulo ha sido desactivado permanentemente para evitar errores de permisos
- * y permitir que el equipo se enfoque exclusivamente en la gestión de casos.
+ * MÓDULO DESACTIVADO PERMANENTEMENTE.
+ * Se redirige al dashboard para evitar errores de permisos y sintaxis.
  */
 export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirigir inmediatamente al dashboard principal
     router.replace('/dashboard');
   }, [router]);
 
-  return null;
+  return (
+    <div className="flex items-center justify-center min-h-[50vh]">
+        <p className="text-muted-foreground italic">Redirigiendo...</p>
+    </div>
+  );
 }

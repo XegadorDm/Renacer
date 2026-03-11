@@ -1,13 +1,18 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // REGLAS GLOBALES DE ACCESO (FORZANDO ACTUALIZACIÓN)
+    // Timestamp: 2024-05-22 16:00:00 (Para asegurar despliegue inmediato)
+    // Esto garantiza que cualquier usuario autenticado pueda cambiar estados y gestionar casos.
     
-    // PERMISIVIDAD TOTAL PARA USUARIOS AUTENTICADOS
-    // Esto garantiza que cualquier asesor o administrador logueado pueda 
-    // crear, leer, editar y cambiar estados sin bloqueos de "insufficient permissions".
-    // Forzando despliegue de reglas para asegurar que el cambio surta efecto de inmediato.
     match /{document=**} {
       allow read, write: if request.auth != null;
+    }
+
+    // Permisividad específica para la lista de correos autorizados
+    match /authorized_emails/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }

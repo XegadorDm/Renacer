@@ -200,7 +200,7 @@ const Sidebar = React.forwardRef<
           >
             <SheetHeader className="sr-only">
               <SheetTitle>Menú Renacer</SheetTitle>
-              <SheetDescription>Navegación móvil para la plataforma Renacer.</SheetDescription>
+              <SheetDescription>Acceso a secciones de gestión de casos.</SheetDescription>
             </SheetHeader>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
