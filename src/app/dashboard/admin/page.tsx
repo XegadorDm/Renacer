@@ -6,6 +6,7 @@ export default function AdminPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Redirección inmediata para evitar errores de permisos en rutas no configuradas
     router.replace('/dashboard');
   }, [router]);
 

@@ -199,7 +199,7 @@ const Sidebar = React.forwardRef<
             side={side}
           >
             <SheetTitle className="sr-only">Menú de Navegación</SheetTitle>
-            <SheetDescription className="sr-only">Barra lateral para dispositivos móviles</SheetDescription>
+            <SheetDescription className="sr-only">Navegación lateral para móviles</SheetDescription>
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
