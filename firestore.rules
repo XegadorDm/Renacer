@@ -3,16 +3,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ============================================================
-    // REGLAS DE SEGURIDAD RENACER - DESPLIEGUE DE EMERGENCIA
-    // PROPÓSITO: Permitir gestión total a usuarios autenticados.
-    // ÚLTIMA ACTUALIZACIÓN FORZADA: 2024-03-21 14:30:00 (GMT-5)
+    // REGLAS DE SEGURIDAD RENACER - VERSION SIMPLIFICADA
+    // PROPÓSITO: Permitir gestión a usuarios autenticados.
     // ============================================================
 
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Regla global: Permitir todo a usuarios logueados para evitar bloqueos
     match /{document=**} {
       allow read, write: if isSignedIn();
     }

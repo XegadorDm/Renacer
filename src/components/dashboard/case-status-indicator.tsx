@@ -2,9 +2,9 @@ import { CaseStatus } from "@/lib/case-schema";
 import { cn } from "@/lib/utils";
 
 const statusColors: Record<CaseStatus, string> = {
-  "Sin novedad": "bg-red-500",
-  "Respuesta de gobierno en curso": "bg-yellow-500",
-  "Proceso finalizado con exito": "bg-green-500",
+  "Sin novedad": "bg-slate-400",
+  "Respuesta de gobierno en curso": "bg-slate-400",
+  "Proceso finalizado con exito": "bg-slate-400",
 };
 
 export function CaseStatusIndicator({ status }: { status: CaseStatus }) {
