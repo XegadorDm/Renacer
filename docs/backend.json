@@ -59,56 +59,23 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "email", "role"]
-    },
-    "AuthorizedEmail": {
-      "title": "AuthorizedEmail",
-      "type": "object",
-      "description": "Emails pre-authorized by an admin to register in the platform.",
-      "properties": {
-        "email": { "type": "string", "format": "email" },
-        "addedBy": { "type": "string" },
-        "addedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["email", "addedBy", "addedAt"]
     }
   },
   "auth": {
     "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/cases/{caseId}",
-        "definition": {
-          "entityName": "Case",
-          "schema": { "$ref": "#/backend/entities/Case" },
-          "description": "Stores case data."
-        }
-      },
-      {
-        "path": "/cases/{caseId}/novedades/{novedadId}",
-        "definition": {
-          "entityName": "Novedad",
-          "schema": { "$ref": "#/backend/entities/Novedad" },
-          "description": "Historical log of actions taken on a case."
-        }
-      },
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": { "$ref": "#/backend/entities/User" },
-          "description": "Stores user profile and roles."
-        }
-      },
-      {
-        "path": "/authorized_emails/{emailId}",
-        "definition": {
-          "entityName": "AuthorizedEmail",
-          "schema": { "$ref": "#/backend/entities/AuthorizedEmail" },
-          "description": "Whitelist of emails allowed to sign up."
-        }
-      }
-    ]
+    "/cases/{caseId}": {
+      "schema": "Case",
+      "description": "Stores case data."
+    },
+    "/cases/{caseId}/novedades/{novedadId}": {
+      "schema": "Novedad",
+      "description": "Historical log of actions taken on a case."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Stores user profile and roles."
+    }
   }
 }
