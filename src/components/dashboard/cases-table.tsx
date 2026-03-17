@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, addDocumentNonBlocking, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, serverTimestamp } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
@@ -38,9 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useMemoFirebase } from "@/firebase/provider";
-import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type WithId<T> = T & { id: string };
 
@@ -77,7 +76,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
   
   const filteredCases = useMemo(() => {
     if (!cases) return [];
-    if (!query) return cases;
     const searchTerm = query.toLowerCase();
     return cases.filter(c => 
       c && (
@@ -88,7 +86,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
     );
   }, [cases, query]);
 
-  // Datos del caso seleccionado para el modal de llamada
   const selectedCase = useMemo(() => 
     cases?.find(c => c.id === selectedCaseId) || null, 
     [cases, selectedCaseId]
@@ -181,17 +178,14 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                         <DropdownMenuContent align="end" className="w-56 shadow-xl">
                           <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/cases/${c.id}`)} className="cursor-pointer">
                              <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
                           </DropdownMenuItem>
-                          
                           <DropdownMenuItem asChild className="cursor-pointer">
                               <Link href={`/dashboard/cases/${c.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar Datos
                               </Link>
                           </DropdownMenuItem>
-
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="text-destructive focus:text-destructive-foreground focus:bg-destructive cursor-pointer"
@@ -220,7 +214,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
         </div>
       </div>
 
-      {/* Modal de Llamada ajustado para usar datos directos del caso */}
       <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
         <DialogContent className="max-w-md">
             <DialogHeader>
@@ -248,7 +241,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
 
                         <div className="p-4 bg-accent/10 border border-accent/20 rounded-lg">
                             <p className="text-[10px] text-accent uppercase font-bold mb-2">Números de Contacto</p>
-                            
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between bg-background p-3 rounded border shadow-sm">
                                     <div className="flex items-center gap-3">
@@ -259,7 +251,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                                     </div>
                                     <Badge variant="outline" className="bg-primary/5">Celular 1</Badge>
                                 </div>
-
                                 {selectedCase.phone2 && (
                                     <div className="flex items-center justify-between bg-background p-3 rounded border shadow-sm">
                                         <div className="flex items-center gap-3">
@@ -272,15 +263,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                                     </div>
                                 )}
                             </div>
-                            
-                            {!selectedCase.phone1 && (
-                                <Alert variant="destructive" className="mt-4">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <AlertDescription>
-                                        Atención: Este caso no tiene un número de teléfono principal registrado.
-                                    </AlertDescription>
-                                </Alert>
-                            )}
                         </div>
                     </div>
                 ) : (
@@ -290,16 +272,15 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                 )}
             </div>
 
-            <DialogFooter className="flex-col sm:flex-row gap-3 border-t pt-6">
-                <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="w-full sm:w-auto">
+            <DialogFooter className="flex gap-3 border-t pt-6">
+                <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="flex-1">
                     Cerrar
                 </Button>
-                <div className="flex-1" />
                 <Button 
                     variant="destructive" 
                     onClick={() => handleRegisterNovedad(false)}
                     disabled={!selectedCase}
-                    className="w-full sm:w-auto"
+                    className="flex-1"
                 >
                     <XCircle className="mr-2 h-4 w-4" />
                     No contactado
@@ -308,7 +289,7 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                     variant="default" 
                     onClick={() => handleRegisterNovedad(true)}
                     disabled={!selectedCase}
-                    className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto"
+                    className="bg-primary hover:bg-primary/90 text-white flex-1"
                 >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     Contactado
