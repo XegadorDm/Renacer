@@ -1,17 +1,21 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // RENACER - DESPLIEGUE FINAL DE EMERGENCIA V800
+    // RENACER - DESPLIEGUE FINAL DE EMERGENCIA V900
     // Sincronización forzada para resolver error de permisos de forma definitiva
-    // Permitir acceso total de lectura y escritura a cualquier usuario autenticado
-    // Identificador de sincronización: SYNC_ID_RENACER_FINAL_V800_STABLE
+    // Identificador de sincronización: SYNC_ID_RENACER_FINAL_V900_STABLE
     
-    match /{document=**} {
+    // Regla sugerida por Juan Camilo para subcolección de novedades
+    match /cases/{caseId} {
       allow read, write: if request.auth != null;
+      
+      match /novedades/{novedadId} {
+        allow read, write: if request.auth != null;
+      }
     }
-    
-    // Regla explícita para la subcolección de novedades por seguridad adicional
-    match /cases/{caseId}/novedades/{novedadId} {
+
+    // Regla general para permitir acceso a usuarios autenticados (ADMINISTRADOR y TRABAJADORSOCIAL)
+    match /{document=**} {
       allow read, write: if request.auth != null;
     }
   }
