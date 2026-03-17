@@ -23,5 +23,14 @@ export interface Case {
     householdMembers: number;
     testimony: string;
     status: CaseStatus;
+    userId: string; // ID del usuario asociado al caso
     members: { [uid: string]: 'owner' | 'editor' | 'viewer' };
+}
+
+export interface Novedad {
+    id?: string;
+    mensaje: string;
+    tipo: 'llamada' | 'nota' | 'sistema';
+    createdAt: any;
+    createdBy: string;
 }
