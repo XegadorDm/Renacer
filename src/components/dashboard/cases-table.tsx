@@ -4,9 +4,9 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, setDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
@@ -21,14 +21,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog"
-import { 
   DropdownMenu, 
   DropdownMenuTrigger, 
   DropdownMenuContent, 
@@ -39,7 +31,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useMemoFirebase } from "@/firebase/provider";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
 
 type WithId<T> = T & { id: string };
 
@@ -57,9 +48,6 @@ export function CasesTable({ query, location }: CasesTableProps) {
 
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
-  
-  const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
-  const [activeCaseForCall, setActiveCaseForCall] = useState<WithId<Case> | null>(null);
 
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -113,30 +101,6 @@ export function CasesTable({ query, location }: CasesTableProps) {
     router.push(`/dashboard/cases/${caseItem.id}?data=${caseDataString}`);
   }
 
-  const handleCallAction = (caseItem: WithId<Case>) => {
-    setActiveCaseForCall(caseItem);
-    setIsCallDialogOpen(true);
-  };
-
-  const confirmCall = () => {
-    if (!activeCaseForCall || !firestore) return;
-    
-    const caseDocRef = doc(firestore, 'cases', activeCaseForCall.id);
-    
-    // USAMOS setDocumentNonBlocking con merge: true para asegurar la persistencia sin errores de permisos de update.
-    setDocumentNonBlocking(caseDocRef, {
-      status: "Usuario contactado por llamada"
-    }, { merge: true });
-
-    toast({
-      title: "Registro de Llamada",
-      description: "Se ha registrado la novedad: Usuario contactado por llamada.",
-    });
-
-    setIsCallDialogOpen(false);
-    setActiveCaseForCall(null);
-  };
-
   if (isLoading) {
     return (
         <div className="border rounded-lg p-4 space-y-4">
@@ -158,7 +122,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
                 <TableHead className="font-bold text-primary min-w-[150px]">Nombre Completo</TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px]">Documento</TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px]">Municipio</TableHead>
-                <TableHead className="font-bold text-primary text-center min-w-[180px]">Novedad</TableHead>
+                <TableHead className="font-bold text-primary text-center min-w-[180px]">Estado</TableHead>
                 <TableHead className="text-right font-bold pr-6 text-primary min-w-[100px]">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -180,16 +144,10 @@ export function CasesTable({ query, location }: CasesTableProps) {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-64 shadow-xl">
+                        <DropdownMenuContent align="end" className="w-56 shadow-xl">
                           <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           
-                          <DropdownMenuItem onClick={() => handleCallAction(c)} className="cursor-pointer text-primary font-bold bg-primary/5">
-                             <Phone className="mr-2 h-4 w-4" /> LLAMAR AL USUARIO
-                          </DropdownMenuItem>
-
-                          <DropdownMenuSeparator />
-
                           <DropdownMenuItem onClick={() => handleViewDetails(c)} className="cursor-pointer">
                              <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
                           </DropdownMenuItem>
@@ -227,9 +185,9 @@ export function CasesTable({ query, location }: CasesTableProps) {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent className="max-w-[90vw] sm:max-w-md rounded-lg">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Confirmar eliminación del registro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción eliminará de forma irreversible el caso de <span className="font-bold text-foreground">{caseToDelete?.firstName} {caseToDelete?.lastName}</span>.
+              Esta acción eliminará de forma irreversible el registro de <span className="font-bold text-foreground">{caseToDelete?.firstName} {caseToDelete?.lastName}</span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -240,53 +198,6 @@ export function CasesTable({ query, location }: CasesTableProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Dialog open={isCallDialogOpen} onOpenChange={setIsCallDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md rounded-lg overflow-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-primary" />
-              Contacto de Usuario
-            </DialogTitle>
-            <DialogDescription>
-              Datos registrados para <span className="font-bold">{activeCaseForCall?.firstName} {activeCaseForCall?.lastName}</span>.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid gap-2">
-              <label className="text-xs font-bold text-muted-foreground uppercase">Teléfono Principal</label>
-              <div className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
-                <span className="text-lg font-mono font-bold">{activeCaseForCall?.phone1}</span>
-                <Badge variant="secondary">Principal</Badge>
-              </div>
-            </div>
-            {activeCaseForCall?.phone2 && (
-              <div className="grid gap-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase">Teléfono Secundario</label>
-                <div className="flex items-center justify-between p-3 rounded-md border bg-muted/30">
-                  <span className="text-lg font-mono font-bold">{activeCaseForCall?.phone2}</span>
-                  <Badge variant="outline">Opcional</Badge>
-                </div>
-              </div>
-            )}
-            <div className="p-3 rounded-md bg-blue-50 border border-blue-100 text-blue-800 text-sm">
-              Al presionar <strong>"Registrar Llamada"</strong>, el sistema registrará que el usuario fue contactado.
-            </div>
-          </div>
-          <DialogFooter className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsCallDialogOpen(false)}>
-              Cerrar
-            </Button>
-            <Button 
-              type="button" 
-              className="w-full sm:w-auto bg-primary hover:bg-primary/90"
-              onClick={confirmCall}
-            >
-              <Phone className="mr-2 h-4 w-4" /> Registrar Llamada
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
