@@ -1,8 +1,4 @@
-export type CaseStatus = 
-  | "Sin novedad" 
-  | "Respuesta de gobierno en curso" 
-  | "Proceso finalizado con exito"
-  | "Usuario contactado por llamada";
+export type CaseStatus = "Sin novedad";
 
 export interface Case {
     id: string;

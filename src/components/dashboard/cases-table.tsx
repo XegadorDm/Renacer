@@ -135,7 +135,7 @@ export function CasesTable({ query, location }: CasesTableProps) {
                     <TableCell className="text-sm whitespace-nowrap">{c.documentId}</TableCell>
                     <TableCell className="text-sm font-medium whitespace-nowrap">{c.municipality}</TableCell>
                     <TableCell className="flex justify-center py-4">
-                      {c.status && <CaseStatusIndicator status={c.status as any} />}
+                      <CaseStatusIndicator status={c.status} />
                     </TableCell>
                     <TableCell className="text-right pr-6">
                       <DropdownMenu>

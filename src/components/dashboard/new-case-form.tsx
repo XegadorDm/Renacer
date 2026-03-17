@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -120,7 +119,8 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         const updatedData = {
             ...values,
             birthDate: values.birthDate.toISOString(),
-            members: caseData.members // Preserve existing members map
+            status: "Sin novedad", // Forzamos a Sin novedad
+            members: caseData.members
         };
         setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
         toast({
@@ -135,10 +135,10 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         const newCaseData = {
             ...values,
             birthDate: values.birthDate.toISOString(),
-            id: '', // Firestore will generate this
+            id: '', 
             caseNumber: `CAS-${Date.now()}`,
             status: "Sin novedad" as const,
-            members: { // Set the creator as the owner
+            members: { 
                 [user.uid]: 'owner'
             }
         };
