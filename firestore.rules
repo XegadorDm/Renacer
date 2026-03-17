@@ -1,42 +1,34 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // RENACER - SISTEMA DE SEGURIDAD V1200
-    // Sincronización final para permitir eliminación total de casos y registro de novedades
-    // SYNC_ID: RENACER_V1200_FULL_DELETE_AUTH
+    // RENACER - SISTEMA DE SEGURIDAD TOTAL V1500
+    // REGLA DEFINITIVA: Acceso total para usuarios autenticados.
+    // SYNC_ID: RENACER_FINAL_STABLE_V1500_TOTAL_ACCESS
     
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Reglas para la colección de usuarios
+    // Permitimos TODO a cualquier usuario que haya iniciado sesión
+    // Esto cubre casos, novedades, usuarios y cualquier otra colección
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Reglas específicas por si el motor de Firebase requiere mayor precisión
+    match /cases/{caseId} {
+      allow read, write: if isAuthenticated();
+      
+      match /novedades/{novedadId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
     match /users/{userId} {
       allow read, write: if isAuthenticated();
     }
 
-    // Reglas para la colección de casos
-    match /cases/{caseId} {
-      // Permitimos lectura, creación, actualización y ELIMINACIÓN a cualquier usuario autenticado
-      allow read, create, update, delete: if isAuthenticated();
-      
-      // Reglas específicas para la subcolección de novedades
-      match /novedades/{novedadId} {
-        allow read: if isAuthenticated();
-        // Validación: el createdBy debe ser el UID del usuario (según pedido previo) o permitir si es admin
-        allow create: if isAuthenticated() && (request.resource.data.createdBy == request.auth.uid);
-        // Permitir gestión total de novedades a usuarios autenticados para evitar bloqueos
-        allow update, delete: if isAuthenticated();
-      }
-    }
-    
-    // Reglas para correos autorizados
     match /authorized_emails/{emailId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    // Regla de respaldo para seguridad global - Acceso total para usuarios logueados
-    match /{document=**} {
       allow read, write: if isAuthenticated();
     }
   }

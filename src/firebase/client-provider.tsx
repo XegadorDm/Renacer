@@ -12,8 +12,8 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * Proveedor de Firebase estable y limpio.
- * Se desactiva la persistencia offline compleja para evitar errores de permisos por caché.
+ * Proveedor de Firebase estable y simplificado.
+ * Se eliminan configuraciones experimentales para asegurar que las nuevas reglas se apliquen de inmediato.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {

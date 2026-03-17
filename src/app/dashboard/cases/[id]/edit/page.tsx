@@ -12,7 +12,7 @@ export default function EditCasePage() {
     const id = params.id as string;
     const firestore = useFirestore();
 
-    // Se usa useMemoFirebase para cumplir con los requerimientos de seguridad y rendimiento
+    // Se usa useMemoFirebase para cumplir con los requerimientos técnicos y evitar bucles
     const caseDocRef = useMemoFirebase(() => {
         if (!firestore || !id) return null;
         return doc(firestore, 'cases', id);
@@ -36,10 +36,6 @@ export default function EditCasePage() {
                                 <Skeleton className="h-10 w-full" />
                             </div>
                             ))}
-                        </div>
-                        <div className="flex justify-end gap-4">
-                            <Skeleton className="h-10 w-24" />
-                            <Skeleton className="h-10 w-32" />
                         </div>
                     </CardContent>
                 </Card>
@@ -66,7 +62,7 @@ export default function EditCasePage() {
                 <CardHeader>
                     <CardTitle>Editar Caso</CardTitle>
                     <CardDescription>
-                        Estás modificando la caracterización de <span className="font-semibold text-primary">{caseData.firstName} {caseData.lastName}</span>.
+                        Modificando los datos de {caseData.firstName} {caseData.lastName}.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

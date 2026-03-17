@@ -61,7 +61,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
 
-  // Consulta de casos
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     const casesCollection = collection(firestore, 'cases');
@@ -108,12 +107,11 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
         toast({
             variant: "destructive",
             title: "Error de sesión",
-            description: "No se pudo identificar al usuario. Por favor, reingresa al sistema.",
+            description: "No se pudo identificar al usuario.",
         });
         return;
     }
 
-    // Referencia directa a la subcolección para evitar errores de ruta
     const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
     
     const novedadData = {
@@ -123,18 +121,13 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
         createdBy: authUser.uid
     };
 
-    // Usamos addDocumentNonBlocking para manejar errores de permisos de forma centralizada
     addDocumentNonBlocking(novedadesRef, novedadData)
         .then(() => {
             toast({
                 title: contacted ? "Llamada Registrada" : "Intento Registrado",
-                description: `Se ha guardado la novedad en el historial del caso correctamente.`,
+                description: `Se ha guardado la novedad correctamente.`,
             });
             setIsCallModalOpen(false);
-        })
-        .catch((err) => {
-            console.error("Error al registrar novedad:", err);
-            // El errorEmitter ya maneja el lanzamiento visual si es un error de permisos
         });
   };
 
@@ -236,7 +229,7 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                     Llamar al Usuario
                 </DialogTitle>
                 <DialogDescription>
-                    Información de contacto del beneficiario para este caso.
+                    Información de contacto para este caso.
                 </DialogDescription>
             </DialogHeader>
 
@@ -281,7 +274,7 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                     </div>
                 ) : (
                     <div className="text-center p-8 text-muted-foreground">
-                        Selecciona un caso en la tabla para ver los datos de contacto.
+                        Selecciona un caso en la tabla.
                     </div>
                 )}
             </div>
