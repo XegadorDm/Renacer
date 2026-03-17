@@ -12,8 +12,8 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * Proveedor de Firebase estable y simplificado.
- * Se eliminan configuraciones experimentales para asegurar que las nuevas reglas se apliquen de inmediato.
+ * Proveedor de Firebase optimizado para Renacer.
+ * Se eliminan configuraciones de persistencia local para asegurar que los permisos se sincronicen al instante.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
