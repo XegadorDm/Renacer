@@ -1,14 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // RENACER - SISTEMA DE SEGURIDAD TOTAL V3000
-    // ESTA REGLA ES ABSOLUTA Y DEFINITIVA: 
-    // Permite lectura y escritura total (create, update, delete) 
-    // a cualquier usuario que haya iniciado sesión.
-    // SYNC_ID: RENACER_ULTIMATE_STABLE_V3000_FULL_ACCESS
-    
-    match /{document=**} {
+
+    // Reglas para casos
+    match /cases/{caseId} {
+      allow read, write: if request.auth != null;
+
+      // Reglas para la subcolección novedades
+      match /novedades/{novedadId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+                      && request.resource.data.createdBy == request.auth.uid;
+      }
+    }
+
+    // Reglas para perfiles de usuario
+    match /users/{userId} {
       allow read, write: if request.auth != null;
     }
+
   }
 }
