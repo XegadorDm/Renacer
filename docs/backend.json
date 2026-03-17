@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Case": {
@@ -11,7 +10,6 @@
         "caseNumber": { "type": "string" },
         "firstName": { "type": "string" },
         "lastName": { "type": "string" },
-        "documentType": { "type": "string" },
         "documentId": { "type": "string" },
         "internalId": { "type": "string" },
         "ethnicGroup": { "type": "string" },
@@ -20,9 +18,10 @@
         "birthDate": { "type": "string", "format": "date-time" },
         "address": { "type": "string" },
         "locality": { "type": "string" },
+        "municipality": { "type": "string" },
         "department": { "type": "string" },
-        "cellphone1": { "type": "string" },
-        "cellphone2": { "type": "string" },
+        "phone1": { "type": "string" },
+        "phone2": { "type": "string" },
         "displacementType": { "type": "string" },
         "disability": { "type": "string" },
         "age": { "type": "number" },
@@ -30,9 +29,22 @@
         "peopleCount": { "type": "number" },
         "testimony": { "type": "string" },
         "status": { "type": "string" },
+        "userId": { "type": "string" },
         "members": { "type": "object" }
       },
-      "required": ["id", "caseNumber", "firstName", "lastName", "documentType", "documentId", "ethnicGroup", "maritalStatus", "gender", "birthDate", "address", "locality", "department", "cellphone1", "displacementType", "age", "isElderly", "peopleCount", "testimony", "status"]
+      "required": ["id", "caseNumber", "firstName", "lastName", "documentId", "ethnicGroup", "maritalStatus", "gender", "birthDate", "address", "municipality", "department", "phone1", "displacementType", "age", "isElderly", "peopleCount", "testimony", "status"]
+    },
+    "Novedad": {
+      "title": "Novedad",
+      "type": "object",
+      "description": "Log entry for case follow-ups (calls, notes, etc).",
+      "properties": {
+        "mensaje": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["llamada", "nota", "sistema"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["mensaje", "tipo", "createdAt", "createdBy"]
     },
     "User": {
       "title": "User",
@@ -71,6 +83,14 @@
           "entityName": "Case",
           "schema": { "$ref": "#/backend/entities/Case" },
           "description": "Stores case data."
+        }
+      },
+      {
+        "path": "/cases/{caseId}/novedades/{novedadId}",
+        "definition": {
+          "entityName": "Novedad",
+          "schema": { "$ref": "#/backend/entities/Novedad" },
+          "description": "Historical log of actions taken on a case."
         }
       },
       {

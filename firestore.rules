@@ -1,27 +1,42 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // RENACER - DESPLIEGUE FINAL DE EMERGENCIA V1000
-    // Sincronización forzada definitiva para resolver error de permisos de forma definitiva
-    // Identificador de sincronización: SYNC_ID_RENACER_FINAL_V1000_ULTIMATE
+    // RENACER - SISTEMA DE NOVEDADES V1100
+    // Sincronización de seguridad para registro de llamadas con validación de UID
+    // SYNC_ID: RENACER_NOVEDADES_V1100_SECURE_AUTH
     
-    // Regla de Oro: Cualquier usuario autenticado tiene acceso total a TODO
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    // Función de ayuda para verificar si el usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // Regla explícita para la subcolección de novedades (prioridad alta)
-    match /cases/{caseId}/novedades/{novedadId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Reglas específicas para colecciones principales
-    match /cases/{caseId} {
-      allow read, write: if request.auth != null;
-    }
-
+    // Reglas para la colección de usuarios
     match /users/{userId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAuthenticated();
+    }
+
+    // Reglas para la colección de casos
+    match /cases/{caseId} {
+      allow read, write: if isAuthenticated();
+      
+      // Reglas específicas para la subcolección de novedades
+      // Se permite la creación si el creador es el usuario autenticado
+      match /novedades/{novedadId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && request.resource.data.createdBy == request.auth.uid;
+        allow update, delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      }
+    }
+    
+    // Reglas para correos autorizados
+    match /authorized_emails/{emailId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Regla de respaldo para cualquier otro documento (seguridad por defecto)
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
     }
   }
 }
