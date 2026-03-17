@@ -1,11 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // RENACER - SISTEMA DE NOVEDADES V1100
-    // Sincronización de seguridad para registro de llamadas con validación de UID
-    // SYNC_ID: RENACER_NOVEDADES_V1100_SECURE_AUTH
+    // RENACER - SISTEMA DE SEGURIDAD V1100
+    // Sincronización para permitir eliminación de casos y registro de novedades
+    // SYNC_ID: RENACER_V1100_FULL_ACCESS_AUTH
     
-    // Función de ayuda para verificar si el usuario está autenticado
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -17,24 +16,26 @@ service cloud.firestore {
 
     // Reglas para la colección de casos
     match /cases/{caseId} {
+      // Permitimos lectura y escritura (incluye delete) a cualquier usuario autenticado
       allow read, write: if isAuthenticated();
       
       // Reglas específicas para la subcolección de novedades
-      // Se permite la creación si el creador es el usuario autenticado
       match /novedades/{novedadId} {
         allow read: if isAuthenticated();
+        // Validación solicitada: el createdBy debe ser el UID del usuario
         allow create: if isAuthenticated() && request.resource.data.createdBy == request.auth.uid;
+        // Permitir actualización o borrado si es el autor o es administrador
         allow update, delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       }
     }
     
-    // Reglas para correos autorizados
+    // Reglas para correos autorizados (solo admins pueden escribir)
     match /authorized_emails/{emailId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Regla de respaldo para cualquier otro documento (seguridad por defecto)
+    // Regla de respaldo para seguridad global
     match /{document=**} {
       allow read, write: if isAuthenticated();
     }
