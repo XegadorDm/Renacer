@@ -12,7 +12,7 @@ export default function EditCasePage() {
     const id = params.id as string;
     const firestore = useFirestore();
 
-    // Se usa useMemoFirebase para cumplir con los requerimientos de seguridad y rendimiento de los hooks de Firebase
+    // Se usa useMemoFirebase para cumplir con los requerimientos de seguridad y rendimiento
     const caseDocRef = useMemoFirebase(() => {
         if (!firestore || !id) return null;
         return doc(firestore, 'cases', id);
