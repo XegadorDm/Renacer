@@ -94,13 +94,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
     [cases, selectedCaseId]
   );
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !selectedCase?.userId) return null;
-    return doc(firestore, 'users', selectedCase.userId);
-  }, [firestore, selectedCase?.userId]);
-
-  const { data: associatedUser, isLoading: isUserLoading } = useDoc<any>(userDocRef);
-
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
     const caseDocRef = doc(firestore, 'cases', caseToDelete.id);
@@ -227,7 +220,7 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
         </div>
       </div>
 
-      {/* Modal de Llamada */}
+      {/* Modal de Llamada ajustado para usar datos directos del caso */}
       <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
         <DialogContent className="max-w-md">
             <DialogHeader>
@@ -236,59 +229,35 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                     Llamar al Usuario
                 </DialogTitle>
                 <DialogDescription>
-                    Información de contacto del usuario relacionado con el caso.
+                    Información de contacto del beneficiario para este caso.
                 </DialogDescription>
             </DialogHeader>
 
             <div className="py-6 space-y-6">
-                {!selectedCase?.userId ? (
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Error</AlertTitle>
-                        <AlertDescription>
-                            Este caso no tiene un usuario (userId) asociado. No se puede realizar la llamada.
-                        </AlertDescription>
-                    </Alert>
-                ) : isUserLoading ? (
-                    <div className="flex flex-col items-center gap-4 py-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <Skeleton className="h-4 w-3/4" />
-                        <Skeleton className="h-10 w-full" />
-                    </div>
-                ) : associatedUser ? (
+                {selectedCase ? (
                     <div className="space-y-4">
                         <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
                             <div className="bg-primary/20 p-3 rounded-full">
                                 <User className="h-8 w-8 text-primary" />
                             </div>
                             <div>
-                                <p className="text-xs text-muted-foreground uppercase font-bold">Nombre del Usuario</p>
-                                <p className="text-lg font-bold">{associatedUser.firstName} {associatedUser.lastName}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold">Nombre del Beneficiario</p>
+                                <p className="text-lg font-bold">{selectedCase.firstName} {selectedCase.lastName}</p>
                             </div>
                         </div>
 
-                        {associatedUser.documentNumber && (
-                             <div className="px-4">
-                                <p className="text-xs text-muted-foreground uppercase font-bold">Documento</p>
-                                <p className="font-medium">{associatedUser.documentNumber}</p>
-                             </div>
-                        )}
-
                         <div className="p-4 bg-accent/10 border border-accent/20 rounded-lg">
-                            <p className="text-xs text-accent uppercase font-bold mb-2">Números de Contacto</p>
-                            {associatedUser.email && (associatedUser.email.includes('test') || associatedUser.email.includes('example')) ? (
-                                <p className="text-sm text-muted-foreground italic mb-2">* Datos de prueba detectados</p>
-                            ) : null}
+                            <p className="text-[10px] text-accent uppercase font-bold mb-2">Números de Contacto</p>
                             
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between bg-background p-3 rounded border shadow-sm">
                                     <div className="flex items-center gap-3">
                                         <Phone className="h-5 w-5 text-primary" />
                                         <span className="text-xl font-mono font-bold tracking-widest text-primary">
-                                            {selectedCase.phone1 || associatedUser.phone1 || 'SIN TELÉFONO'}
+                                            {selectedCase.phone1 || 'SIN TELÉFONO'}
                                         </span>
                                     </div>
-                                    <Badge variant="outline" className="bg-primary/5">Principal</Badge>
+                                    <Badge variant="outline" className="bg-primary/5">Celular 1</Badge>
                                 </div>
 
                                 {selectedCase.phone2 && (
@@ -299,29 +268,25 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                                                 {selectedCase.phone2}
                                             </span>
                                         </div>
-                                        <Badge variant="outline">Secundario</Badge>
+                                        <Badge variant="outline">Celular 2</Badge>
                                     </div>
                                 )}
                             </div>
                             
-                            {(!selectedCase.phone1 && !associatedUser.phone1) && (
+                            {!selectedCase.phone1 && (
                                 <Alert variant="destructive" className="mt-4">
                                     <AlertCircle className="h-4 w-4" />
                                     <AlertDescription>
-                                        Atención: El usuario no tiene un número de teléfono registrado en el sistema.
+                                        Atención: Este caso no tiene un número de teléfono principal registrado.
                                     </AlertDescription>
                                 </Alert>
                             )}
                         </div>
                     </div>
                 ) : (
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Usuario no encontrado</AlertTitle>
-                        <AlertDescription>
-                            No se encontraron datos para el ID de usuario: {selectedCase.userId}
-                        </AlertDescription>
-                    </Alert>
+                    <div className="text-center p-8 text-muted-foreground">
+                        Selecciona un caso en la tabla para ver los datos de contacto.
+                    </div>
                 )}
             </div>
 
@@ -333,7 +298,7 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                 <Button 
                     variant="destructive" 
                     onClick={() => handleRegisterNovedad(false)}
-                    disabled={!selectedCase || !associatedUser}
+                    disabled={!selectedCase}
                     className="w-full sm:w-auto"
                 >
                     <XCircle className="mr-2 h-4 w-4" />
@@ -342,7 +307,7 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                 <Button 
                     variant="default" 
                     onClick={() => handleRegisterNovedad(true)}
-                    disabled={!selectedCase || !associatedUser}
+                    disabled={!selectedCase}
                     className="bg-primary hover:bg-primary/90 text-white w-full sm:w-auto"
                 >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
