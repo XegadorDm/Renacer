@@ -28,7 +28,7 @@
         "isElderly": { "type": "boolean" },
         "peopleCount": { "type": "number" },
         "testimony": { "type": "string" },
-        "status": { "type": "string" },
+        "status": { "type": "string", "enum": ["Sin novedad", "CONTACTADO", "NO CONTACTADO"] },
         "userId": { "type": "string" },
         "members": { "type": "object" }
       },

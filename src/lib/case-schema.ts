@@ -1,4 +1,4 @@
-export type CaseStatus = "Sin novedad";
+export type CaseStatus = "Sin novedad" | "CONTACTADO" | "NO CONTACTADO";
 
 export interface Case {
     id: string;
@@ -23,8 +23,17 @@ export interface Case {
     householdMembers: number;
     testimony: string;
     status: CaseStatus;
-    userId: string; // ID del usuario asociado al caso
+    userId: string;
     members: { [uid: string]: 'owner' | 'editor' | 'viewer' };
+}
+
+export interface UserProfile {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: 'admin' | 'case-worker';
+    createdAt: string;
 }
 
 export interface Novedad {
