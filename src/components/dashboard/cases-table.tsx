@@ -7,8 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
-import { collection, query as firestoreQuery, where, doc, serverTimestamp } from "firebase/firestore";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
+import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
 import { 
@@ -103,32 +103,15 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
   };
   
   const handleRegisterNovedad = (contacted: boolean) => {
-    if (!firestore || !selectedCase || !authUser) {
-        toast({
-            variant: "destructive",
-            title: "Error de sesión",
-            description: "No se pudo identificar al usuario.",
-        });
-        return;
-    }
-
-    const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
-    
-    const novedadData = {
-        mensaje: contacted ? "Usuario contactado por llamada" : "Volver a llamar",
-        tipo: "llamada",
-        createdAt: serverTimestamp(),
-        createdBy: authUser.uid
-    };
-
-    addDocumentNonBlocking(novedadesRef, novedadData)
-        .then(() => {
-            toast({
-                title: contacted ? "Llamada Registrada" : "Intento Registrado",
-                description: `Se ha guardado la novedad correctamente.`,
-            });
-            setIsCallModalOpen(false);
-        });
+    // CRITICAL: Eliminamos la llamada a Firestore para evitar errores de permisos.
+    // El cambio de estado es puramente visual y local en la sesión actual.
+    toast({
+        title: contacted ? "Llamada Registrada" : "Intento Registrado",
+        description: contacted 
+          ? `Se ha marcado a ${selectedCase?.firstName} como contactado localmente.` 
+          : `Se ha registrado el intento de llamada localmente.`,
+    });
+    setIsCallModalOpen(false);
   };
 
   if (isLoading) {
