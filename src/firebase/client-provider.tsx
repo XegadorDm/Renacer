@@ -4,7 +4,11 @@ import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { getApps, initializeApp, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentSingleTabManager 
+} from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 interface FirebaseClientProviderProps {
@@ -12,14 +16,21 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * Proveedor de Firebase optimizado para Renacer.
- * Se eliminan configuraciones de persistencia local para asegurar que los permisos se sincronicen al instante.
+ * Proveedor de Firebase optimizado para Renacer con soporte Offline.
+ * Se habilita la persistencia local para permitir el trabajo en zonas rurales sin conexión.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
     const existingApps = getApps();
     const app = existingApps.length === 0 ? initializeApp(firebaseConfig) : getApp();
-    const firestore = getFirestore(app);
+    
+    // Configuramos Firestore con persistencia local habilitada
+    // persistentSingleTabManager es ideal para aplicaciones web modernas
+    const firestore = initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentSingleTabManager()
+      })
+    });
 
     return {
       firebaseApp: app,

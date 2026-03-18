@@ -22,6 +22,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Home, LogOut, Settings, Users, Loader2 } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { doc } from "firebase/firestore";
+import { ConnectionStatus } from "@/components/dashboard/connection-status";
 
 interface UserProfile {
     role: string;
@@ -109,6 +110,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <SidebarInset className="flex-1 overflow-hidden">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 py-2">
             <SidebarTrigger />
+            
+            <div className="ml-2 hidden sm:block">
+              <ConnectionStatus />
+            </div>
+
             <div className="flex-1" />
             
             <DropdownMenu>
