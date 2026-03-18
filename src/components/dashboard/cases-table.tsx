@@ -60,6 +60,9 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
 
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
+  
+  // Estado local para manejar los cambios de estado visuales sin persistencia en DB
+  const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
@@ -103,13 +106,20 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
   };
   
   const handleRegisterNovedad = (contacted: boolean) => {
-    // CRITICAL: Eliminamos la llamada a Firestore para evitar errores de permisos.
-    // El cambio de estado es puramente visual y local en la sesión actual.
+    if (!selectedCase) return;
+
+    // Actualizamos el estado de forma puramente LOCAL y VISUAL
+    const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
+    setLocalStatuses(prev => ({
+      ...prev,
+      [selectedCase.id]: newStatus
+    }));
+
     toast({
         title: contacted ? "Llamada Registrada" : "Intento Registrado",
         description: contacted 
-          ? `Se ha marcado a ${selectedCase?.firstName} como contactado localmente.` 
-          : `Se ha registrado el intento de llamada localmente.`,
+          ? `Se ha marcado a ${selectedCase?.firstName} como contactado visualmente.` 
+          : `Se ha registrado el intento de llamada visualmente.`,
     });
     setIsCallModalOpen(false);
   };
@@ -156,7 +166,8 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                     <TableCell className="text-sm">{c.documentId}</TableCell>
                     <TableCell className="text-sm font-medium">{c.municipality}</TableCell>
                     <TableCell className="flex justify-center py-4">
-                      <CaseStatusIndicator status={c.status} />
+                      {/* Usamos el estado local si existe, sino el de la base de datos */}
+                      <CaseStatusIndicator status={localStatuses[c.id] || c.status} />
                     </TableCell>
                     <TableCell className="text-right pr-6">
                       <DropdownMenu>
