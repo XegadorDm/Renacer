@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -9,7 +8,6 @@ import { Button } from '@/components/ui/button';
 export function ColombiaMap({ userRole }: { userRole?: string }) {
   const [hovered, setHovered] = useState<string | null>(null);
 
-  // Approximate coordinates for municipalities within the Cauca department on the new map
   const regions = [
     { id: 'suarez', name: 'Suárez', path: 'M 140 408 L 160 402 L 164 418 L 144 424 Z' },
     { id: 'piendamo', name: 'Piendamó', path: 'M 163 405 L 183 399 L 186 415 L 166 421 Z' },
@@ -25,9 +23,9 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
   }
 
   return (
-    <div className="flex flex-col md:flex-row items-center gap-8 w-full">
-      <div className="relative w-full md:w-2/3 aspect-square max-w-lg mx-auto">
-        <svg viewBox="80 0 340 550" className="w-full h-full">
+    <div className="flex flex-col xl:flex-row items-center gap-6 lg:gap-10 w-full">
+      <div className="relative w-full max-w-md xl:max-w-xl mx-auto flex justify-center items-center">
+        <svg viewBox="80 0 340 550" className="w-full h-auto drop-shadow-lg">
           <g>
             {/* Colombia Outline */}
             <path
@@ -36,28 +34,20 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
               stroke="hsl(var(--border))"
               strokeWidth="1.5"
             />
-            
-            {/* Department boundaries */}
-            <path d="M184,186 L250,180 L260,240 L175,225Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x="210" y="210" fontSize="24" fill="hsl(var(--muted-foreground))">Antioquia</text>
-
-            <path d="M225,270 L280,260 L290,320 L230,330Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x="245" y="295" fontSize="24" fill="hsl(var(--muted-foreground))">Cundinamarca</text>
-
-            <path d="M138,336 L190,320 L200,380 L140,390Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x="145" y="360" fontSize="24" fill="hsl(var(--muted-foreground))">Valle del Cauca</text>
-
-            <path d="M104,402 L170,380 L175,440 L110,450Z" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
-            <text x="135" y="420" fontSize="24" fill="hsl(var(--muted-foreground))">Cauca</text>
+            {/* Etiquetas de Departamentos */}
+            <text x="210" y="210" fontSize="24" fill="hsl(var(--muted-foreground))" className="opacity-40">Antioquia</text>
+            <text x="245" y="295" fontSize="24" fill="hsl(var(--muted-foreground))" className="opacity-40">Cundinamarca</text>
+            <text x="145" y="360" fontSize="24" fill="hsl(var(--muted-foreground))" className="opacity-40">Valle</text>
+            <text x="135" y="420" fontSize="24" fill="hsl(var(--muted-foreground))" className="font-bold">Cauca</text>
           </g>
 
-          {/* Interactive region paths for Cauca municipalities */}
+          {/* Regiones Interactivas */}
           {regions.map(region => (
             <Link href={createHref(region.name)} key={region.id}>
               <path
                 d={region.path}
                 className={cn(
-                  'fill-primary/20 stroke-primary transition-all duration-300 cursor-pointer opacity-70 hover:opacity-100',
+                  'fill-primary/30 stroke-primary stroke-2 transition-all duration-300 cursor-pointer opacity-70 hover:opacity-100 hover:scale-[1.02] transform-gpu',
                   {'fill-accent/60': hovered === region.id}
                 )}
                 onMouseEnter={() => setHovered(region.id)}
@@ -68,16 +58,16 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
         </svg>
       </div>
       
-      <div className="w-full md:w-1/3 flex flex-col gap-4">
-        <h3 className="text-lg font-semibold text-center md:text-left">Municipios del Cauca</h3>
+      <div className="w-full xl:w-80 flex flex-col gap-3">
+        <h3 className="text-lg font-bold text-center xl:text-left text-primary uppercase tracking-wider mb-2">Municipios Priorizados</h3>
         {regions.map(region => (
-          <Link href={createHref(region.name)} key={`btn-${region.id}`} passHref>
+          <Link href={createHref(region.name)} key={`btn-${region.id}`} passHref className="w-full">
             <Button
               variant="secondary"
               size="lg"
               className={cn(
-                  "w-full justify-center text-base font-bold shadow-md transition-all",
-                  {"bg-accent text-accent-foreground": hovered === region.id }
+                  "w-full justify-center text-sm font-bold shadow-md transition-all active:scale-95",
+                  {"bg-accent text-accent-foreground ring-2 ring-accent ring-offset-2": hovered === region.id }
               )}
               onMouseEnter={() => setHovered(region.id)}
               onMouseLeave={() => setHovered(null)}
@@ -86,6 +76,9 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
             </Button>
           </Link>
         ))}
+        <p className="text-xs text-muted-foreground text-center xl:text-left mt-2 italic">
+          * Haz clic en un municipio para ver los casos registrados en esa zona.
+        </p>
       </div>
     </div>
   );

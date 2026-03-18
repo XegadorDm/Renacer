@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { Case } from '@/lib/case-schema';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
   firstName: z.string()
@@ -64,6 +64,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const isEditMode = !!caseData;
 
@@ -112,42 +113,52 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         });
         return;
     };
-    
-    if (isEditMode && caseData) {
-        // Update existing document
-        const caseDocRef = doc(firestore, 'cases', caseData.id);
-        const updatedData = {
-            ...values,
-            birthDate: values.birthDate.toISOString(),
-            status: "Sin novedad", // Forzamos a Sin novedad
-            members: caseData.members
-        };
-        setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
-        toast({
-            title: "Caso Actualizado",
-            description: `El caso para ${values.firstName} ${values.lastName} ha sido actualizado.`,
-        });
-        router.push(`/dashboard/cases/${caseData.id}`);
 
-    } else {
-        // Create new document
-        const casesCollection = collection(firestore, 'cases');
-        const newCaseData = {
-            ...values,
-            birthDate: values.birthDate.toISOString(),
-            id: '', 
-            caseNumber: `CAS-${Date.now()}`,
-            status: "Sin novedad" as const,
-            members: { 
-                [user.uid]: 'owner'
-            }
-        };
-        addDocumentNonBlocking(casesCollection, newCaseData);
+    setIsSubmitting(true);
+    
+    try {
+        if (isEditMode && caseData) {
+            const caseDocRef = doc(firestore, 'cases', caseData.id);
+            const updatedData = {
+                ...values,
+                birthDate: values.birthDate.toISOString(),
+                status: caseData.status || "Sin novedad",
+                members: caseData.members
+            };
+            setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
+            toast({
+                title: "Caso Actualizado",
+                description: `El caso para ${values.firstName} ${values.lastName} ha sido actualizado.`,
+            });
+            router.push(`/dashboard/cases/${caseData.id}`);
+        } else {
+            const casesCollection = collection(firestore, 'cases');
+            const newCaseData = {
+                ...values,
+                birthDate: values.birthDate.toISOString(),
+                id: '', 
+                caseNumber: `CAS-${Date.now()}`,
+                status: "Sin novedad",
+                userId: user.uid,
+                members: { 
+                    [user.uid]: 'owner'
+                }
+            };
+            addDocumentNonBlocking(casesCollection, newCaseData);
+            toast({
+                title: "Caso Guardado Exitosamente",
+                description: `El caso para ${values.firstName} ${values.lastName} ha sido creado.`,
+            });
+            router.push(`/dashboard/cases?location=${values.municipality}`);
+        }
+    } catch (e) {
         toast({
-            title: "Caso Guardado Exitosamente",
-            description: `El caso para ${values.firstName} ${values.lastName} ha sido creado.`,
+            variant: "destructive",
+            title: "Error al guardar",
+            description: "No se pudo procesar la solicitud."
         });
-        router.push(`/dashboard/cases?location=${values.municipality}`);
+    } finally {
+        setIsSubmitting(false);
     }
   }
 
@@ -169,21 +180,21 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     { name: 'disability', label: 'Discapacidad', component: Select, options: ['Física', 'Visual', 'Auditiva', 'Intelectual', 'Psicosocial', 'Múltiple', 'Ninguna'] },
     { name: 'age', label: 'Edad', component: Input, type: 'number' },
     { name: 'isElderly', label: 'Adulto mayor', component: 'checkbox', description: 'Marcar si la persona es adulto mayor.' },
-    { name: 'householdMembers', label: 'Cantidad de personas en la caracterización', component: Input, type: 'number' },
+    { name: 'householdMembers', label: 'Personas en caracterización', component: Input, type: 'number' },
   ]
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 md:space-y-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 md:gap-y-6">
           {formFields.map((fieldConfig) => (
             <FormField
               key={fieldConfig.name}
               control={form.control}
               name={fieldConfig.name as any}
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{fieldConfig.label}</FormLabel>
+                <FormItem className="space-y-1 md:space-y-2">
+                  <FormLabel className="text-sm font-semibold">{fieldConfig.label}</FormLabel>
                   <FormControl>
                     {fieldConfig.component === 'datepicker' ? (
                        <Popover>
@@ -191,7 +202,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                           <Button
                             variant={"outline"}
                             className={cn(
-                              "w-full justify-start text-left font-normal",
+                              "w-full justify-start text-left font-normal h-10 px-3",
                               !field.value && "text-muted-foreground"
                             )}
                           >
@@ -199,29 +210,30 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                             {field.value ? format(field.value, "PPP", { locale: es }) : <span>Selecciona una fecha</span>}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
+                        <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
                             initialFocus
                             captionLayout="dropdown-buttons"
-                            fromYear={1930}
+                            fromYear={1920}
                             toYear={new Date().getFullYear()}
+                            className="p-3"
                           />
                         </PopoverContent>
                       </Popover>
                     ) : fieldConfig.component === Select ? (
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                        <SelectTrigger className="h-10"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                         <SelectContent>
                           {fieldConfig.options?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     ) : fieldConfig.component === 'checkbox' ? (
-                        <div className="flex items-center space-x-2 h-10">
+                        <div className="flex items-center space-x-2 h-10 bg-muted/20 px-3 rounded-md border border-dashed border-muted">
                             <Checkbox id={fieldConfig.name} checked={field.value} onCheckedChange={field.onChange} />
-                            <label htmlFor={fieldConfig.name} className="text-sm font-medium leading-none text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                            <label htmlFor={fieldConfig.name} className="text-xs font-medium leading-none text-muted-foreground cursor-pointer">
                                 {fieldConfig.description}
                             </label>
                         </div>
@@ -229,12 +241,13 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                       <Input
                         type={fieldConfig.type || 'text'}
                         placeholder={fieldConfig.placeholder || ''}
+                        className="h-10"
                         {...fieldConfig.props}
                         {...field}
                       />
                     )}
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-[10px]" />
                 </FormItem>
               )}
             />
@@ -244,19 +257,39 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             control={form.control}
             name="testimony"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Testimonio</FormLabel>
+              <FormItem className="space-y-2">
+                <FormLabel className="text-sm font-semibold">Testimonio Detallado</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Describe brevemente la situación..." {...field} rows={6} />
+                  <Textarea 
+                    placeholder="Describe brevemente la situación, hechos y necesidades..." 
+                    {...field} 
+                    className="min-h-[150px] resize-none" 
+                  />
                 </FormControl>
+                <FormDescription className="text-xs italic">
+                  * Este relato es fundamental para la caracterización del caso.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
-        <div className="flex justify-end gap-4">
-            <Button type="button" variant="outline" onClick={() => router.back()}>Cancelar</Button>
-            <Button type="submit" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-              {isEditMode ? 'Guardar Cambios' : 'Guardar Caso'}
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => router.back()} className="w-full sm:w-auto">
+              Cancelar
+            </Button>
+            <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground font-bold shadow-lg"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                isEditMode ? 'Guardar Cambios' : 'Registrar Caso'
+              )}
             </Button>
         </div>
       </form>

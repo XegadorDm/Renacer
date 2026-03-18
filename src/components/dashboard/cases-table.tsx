@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
@@ -61,7 +61,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
   
-  // Estado local para manejar los cambios de estado visuales sin persistencia en DB
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
@@ -108,7 +107,6 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
   const handleRegisterNovedad = (contacted: boolean) => {
     if (!selectedCase) return;
 
-    // Actualizamos el estado de forma puramente LOCAL y VISUAL
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
     setLocalStatuses(prev => ({
       ...prev,
@@ -126,9 +124,9 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
 
   if (isLoading) {
     return (
-        <div className="border rounded-lg p-4 space-y-4">
+        <div className="border rounded-lg p-6 space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
+                <Skeleton key={i} className="h-14 w-full rounded-md" />
             ))}
         </div>
     )
@@ -136,18 +134,18 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
 
   return (
     <>
-      <div className="border rounded-lg overflow-hidden bg-card shadow-md">
-        <div className="overflow-x-auto">
+      <div className="border rounded-xl overflow-hidden bg-card shadow-lg border-primary/10">
+        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="w-[50px]"></TableHead>
-                <TableHead className="font-bold text-primary min-w-[100px]">N° Caso</TableHead>
-                <TableHead className="font-bold text-primary min-w-[150px]">Nombre Completo</TableHead>
-                <TableHead className="font-bold text-primary min-w-[120px]">Documento</TableHead>
-                <TableHead className="font-bold text-primary min-w-[120px]">Municipio</TableHead>
-                <TableHead className="font-bold text-primary text-center min-w-[180px]">Estado</TableHead>
-                <TableHead className="text-right font-bold pr-6 text-primary min-w-[100px]">Acciones</TableHead>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableHead className="w-[60px]"></TableHead>
+                <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
+                <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
+                <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Documento</TableHead>
+                <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">Municipio</TableHead>
+                <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Estado Local</TableHead>
+                <TableHead className="text-right font-bold pr-6 text-primary min-w-[100px] uppercase text-[10px] tracking-widest">Gestión</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -155,48 +153,47 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                 filteredCases.map((c) => (
                   <TableRow 
                     key={c.id} 
-                    className={`hover:bg-muted/30 transition-colors cursor-pointer ${selectedCaseId === c.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''}`}
+                    className={`hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b last:border-0 ${selectedCaseId === c.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''}`}
                     onClick={() => onSelectCase(c)}
                   >
-                    <TableCell>
-                        <div className={`w-4 h-4 rounded-full border-2 ${selectedCaseId === c.id ? 'bg-primary border-primary' : 'border-muted-foreground'}`} />
+                    <TableCell className="pl-6">
+                        <div className={`w-3 h-3 rounded-full border-2 transition-all ${selectedCaseId === c.id ? 'bg-primary border-primary scale-125' : 'border-muted-foreground'}`} />
                     </TableCell>
-                    <TableCell className="font-mono text-[10px] text-muted-foreground">{c.caseNumber}</TableCell>
-                    <TableCell className="font-bold uppercase text-sm">{c.firstName} {c.lastName}</TableCell>
-                    <TableCell className="text-sm">{c.documentId}</TableCell>
-                    <TableCell className="text-sm font-medium">{c.municipality}</TableCell>
+                    <TableCell className="font-mono text-[10px] text-muted-foreground font-semibold">{c.caseNumber}</TableCell>
+                    <TableCell className="font-bold uppercase text-xs tracking-tight">{c.firstName} {c.lastName}</TableCell>
+                    <TableCell className="text-xs font-medium text-muted-foreground">{c.documentId}</TableCell>
+                    <TableCell className="text-xs font-semibold">{c.municipality}</TableCell>
                     <TableCell className="flex justify-center py-4">
-                      {/* Usamos el estado local si existe, sino el de la base de datos */}
                       <CaseStatusIndicator status={localStatuses[c.id] || c.status} />
                     </TableCell>
                     <TableCell className="text-right pr-6">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="hover:bg-primary/10 rounded-full h-8 w-8">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button variant="ghost" size="icon" className="hover:bg-primary/10 rounded-full h-9 w-9">
+                            <MoreHorizontal className="h-5 w-5" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 shadow-xl">
-                          <DropdownMenuLabel>Gestión de Caso</DropdownMenuLabel>
+                        <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl shadow-2xl border-primary/20">
+                          <DropdownMenuLabel className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter mb-1">Acciones Disponibles</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => router.push(`/dashboard/cases/${c.id}`)} className="cursor-pointer">
-                             <Eye className="mr-2 h-4 w-4 text-muted-foreground" /> Ver Detalles
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/cases/${c.id}`)} className="cursor-pointer rounded-lg py-2">
+                             <Eye className="mr-3 h-4 w-4 text-primary" /> <span className="text-sm font-medium">Ver Detalles</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild className="cursor-pointer">
+                          <DropdownMenuItem asChild className="cursor-pointer rounded-lg py-2">
                               <Link href={`/dashboard/cases/${c.id}/edit`}>
-                                <Edit className="mr-2 h-4 w-4 text-muted-foreground" /> Editar Datos
+                                <Edit className="mr-3 h-4 w-4 text-primary" /> <span className="text-sm font-medium">Editar Datos</span>
                               </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
+                          <DropdownMenuSeparator className="my-1" />
                           <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive-foreground focus:bg-destructive cursor-pointer"
+                            className="text-destructive focus:text-destructive-foreground focus:bg-destructive cursor-pointer rounded-lg py-2"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setCaseToDelete(c);
                                 setIsDeleteAlertOpen(true);
                             }}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar Caso
+                            <Trash2 className="mr-3 h-4 w-4" /> <span className="text-sm font-bold">Eliminar Caso</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -205,8 +202,11 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-32 text-muted-foreground">
-                    No se encontraron casos registrados.
+                  <TableCell colSpan={7} className="text-center h-48">
+                    <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
+                        <AlertCircle className="h-8 w-8 opacity-20" />
+                        <p className="font-medium">No se encontraron casos registrados para esta búsqueda.</p>
+                    </div>
                   </TableCell>
                 </TableRow>
               )}
@@ -216,101 +216,99 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
       </div>
 
       <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
-        <DialogContent className="max-w-md">
-            <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-                    <Phone className="h-6 w-6 text-primary" />
+        <DialogContent className="max-w-[95vw] sm:max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+            <DialogHeader className="p-6 bg-primary text-primary-foreground">
+                <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+                    <Phone className="h-7 w-7 animate-bounce" />
                     Llamar al Usuario
                 </DialogTitle>
-                <DialogDescription>
-                    Información de contacto para este caso.
+                <DialogDescription className="text-primary-foreground/80 mt-1">
+                    Gestión de contacto directo con el beneficiario.
                 </DialogDescription>
             </DialogHeader>
 
-            <div className="py-6 space-y-6">
+            <div className="p-6 space-y-6 bg-background">
                 {selectedCase ? (
                     <div className="space-y-4">
-                        <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                            <div className="bg-primary/20 p-3 rounded-full">
-                                <User className="h-8 w-8 text-primary" />
+                        <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-xl border border-primary/10">
+                            <div className="bg-primary/10 p-3 rounded-full border border-primary/20">
+                                <User className="h-10 w-10 text-primary" />
                             </div>
                             <div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold">Nombre del Beneficiario</p>
-                                <p className="text-lg font-bold">{selectedCase.firstName} {selectedCase.lastName}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Beneficiario</p>
+                                <p className="text-xl font-bold text-foreground leading-tight">{selectedCase.firstName} {selectedCase.lastName}</p>
                             </div>
                         </div>
 
-                        <div className="p-4 bg-accent/10 border border-accent/20 rounded-lg">
-                            <p className="text-[10px] text-accent uppercase font-bold mb-2">Números de Contacto</p>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between bg-background p-3 rounded border shadow-sm">
-                                    <div className="flex items-center gap-3">
-                                        <Phone className="h-5 w-5 text-primary" />
-                                        <span className="text-xl font-mono font-bold tracking-widest text-primary">
-                                            {selectedCase.phone1 || 'SIN TELÉFONO'}
-                                        </span>
-                                    </div>
-                                    <Badge variant="outline" className="bg-primary/5">Celular 1</Badge>
+                        <div className="p-5 bg-accent/5 border border-accent/20 rounded-xl space-y-4">
+                            <p className="text-[10px] text-accent uppercase font-black tracking-widest text-center">Números Autorizados</p>
+                            
+                            <div className="grid gap-3">
+                                <div className="flex flex-col items-center justify-center bg-background p-4 rounded-lg border shadow-sm ring-1 ring-primary/5">
+                                    <span className="text-3xl font-mono font-black tracking-[0.2em] text-primary mb-1">
+                                        {selectedCase.phone1 || 'SIN NÚMERO'}
+                                    </span>
+                                    <Badge variant="outline" className="bg-primary/5 text-[9px] uppercase font-bold px-3">Línea Principal</Badge>
                                 </div>
+                                
                                 {selectedCase.phone2 && (
-                                    <div className="flex items-center justify-between bg-background p-3 rounded border shadow-sm">
-                                        <div className="flex items-center gap-3">
-                                            <Phone className="h-5 w-5 text-muted-foreground" />
-                                            <span className="text-lg font-mono font-medium tracking-wider">
-                                                {selectedCase.phone2}
-                                            </span>
-                                        </div>
-                                        <Badge variant="outline">Celular 2</Badge>
+                                    <div className="flex flex-col items-center justify-center bg-background p-3 rounded-lg border border-dashed shadow-sm">
+                                        <span className="text-xl font-mono font-bold tracking-widest text-muted-foreground mb-1">
+                                            {selectedCase.phone2}
+                                        </span>
+                                        <Badge variant="outline" className="text-[8px] uppercase">Línea Alternativa</Badge>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center p-8 text-muted-foreground">
-                        Selecciona un caso en la tabla.
+                    <div className="text-center p-10 text-muted-foreground">
+                        No hay un caso seleccionado.
                     </div>
                 )}
             </div>
 
-            <DialogFooter className="flex gap-3 border-t pt-6">
-                <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="flex-1">
-                    Cerrar
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 p-6 bg-muted/20 border-t">
+                <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="w-full sm:flex-1 order-3 sm:order-1 font-bold">
+                    CANCELAR
                 </Button>
                 <Button 
                     variant="destructive" 
                     onClick={() => handleRegisterNovedad(false)}
                     disabled={!selectedCase}
-                    className="flex-1"
+                    className="w-full sm:flex-1 order-2 font-bold shadow-lg"
                 >
                     <XCircle className="mr-2 h-4 w-4" />
-                    No contactado
+                    NO CONTACTO
                 </Button>
                 <Button 
                     variant="default" 
                     onClick={() => handleRegisterNovedad(true)}
                     disabled={!selectedCase}
-                    className="bg-primary hover:bg-primary/90 text-white flex-1"
+                    className="w-full sm:flex-1 order-1 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg"
                 >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Contactado
+                    CONTACTADO
                 </Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl max-w-[90vw] sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará el registro de {caseToDelete?.firstName} {caseToDelete?.lastName}.
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                <Trash2 className="h-5 w-5" /> ¿Confirmar eliminación?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-sm">
+              Esta acción eliminará de forma permanente el registro de <strong>{caseToDelete?.firstName} {caseToDelete?.lastName}</strong>. Esta operación no se puede deshacer.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">
-              Eliminar
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-xl font-bold">CANCELAR</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-xl font-bold shadow-lg">
+              SÍ, ELIMINAR
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
