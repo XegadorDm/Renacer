@@ -9,6 +9,8 @@ import { es } from 'date-fns/locale';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ShieldAlert } from 'lucide-react';
 
 interface UserProfile {
     firstName: string;
@@ -64,16 +66,6 @@ export function UserPanel() {
                           <Skeleton className="h-5 w-24" />
                       </div>
                   </div>
-                  <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                            <span className="font-medium text-muted-foreground">Fecha de visita:</span>
-                            <span className="font-mono text-foreground capitalize">{formattedDate}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-medium text-muted-foreground">Hora exacta:</span>
-                            <span className="font-mono text-foreground">{formattedTime}</span>
-                        </div>
-                    </div>
               </CardContent>
           </Card>
       )
@@ -97,14 +89,25 @@ export function UserPanel() {
             <Badge variant="secondary" className="mt-1">{displayRole}</Badge>
           </div>
         </div>
-        <div className="space-y-2 text-sm">
+
+        {/* BLOQUE DE DEPURACIÓN CRÍTICO PARA JUAN CAMILO */}
+        <Alert variant="destructive" className="bg-primary/5 border-primary/20 text-foreground">
+            <ShieldAlert className="h-4 w-4 text-primary" />
+            <AlertTitle className="text-[10px] font-bold uppercase tracking-tighter">Debug de Permisos</AlertTitle>
+            <AlertDescription className="text-xs font-mono mt-1">
+                UID: <span className="text-primary font-bold">{user?.uid}</span><br/>
+                ROL EN DB: "<span className="text-accent font-bold underline">{userProfile?.role || 'null'}</span>"
+            </AlertDescription>
+        </Alert>
+
+        <div className="space-y-2 text-sm pt-4 border-t">
           <div className="flex justify-between">
-            <span className="font-medium text-muted-foreground">Fecha de visita:</span>
-            <span className="font-mono text-foreground capitalize">{formattedDate}</span>
+            <span className="font-medium text-muted-foreground">Fecha:</span>
+            <span className="font-mono text-foreground capitalize text-[10px]">{formattedDate}</span>
           </div>
           <div className="flex justify-between">
-            <span className="font-medium text-muted-foreground">Hora exacta:</span>
-            <span className="font-mono text-foreground">{formattedTime}</span>
+            <span className="font-medium text-muted-foreground">Hora:</span>
+            <span className="font-mono text-foreground text-[10px]">{formattedTime}</span>
           </div>
         </div>
       </CardContent>
