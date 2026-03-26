@@ -11,6 +11,8 @@ import { Instagram, Facebook, Twitter, Loader2, CheckCircle } from 'lucide-react
 import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 function TikTokIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -45,7 +47,7 @@ export function Contact() {
     const nombre = formData.get('nombre') as string;
     const email = formData.get('email') as string;
     const cedula = formData.get('cedula') as string;
-    const asunto = formData.get('asunto') as string;
+    const asunto = (formData.get('asunto') as string) || "Sin asunto";
     const mensaje = formData.get('mensaje') as string;
 
     if (!nombre || !email || !cedula || !mensaje) {
@@ -59,48 +61,60 @@ export function Contact() {
 
     setIsSubmitting(true);
 
-    try {
-      // 1. Buscar caso vinculado por cédula
-      const casesRef = collection(firestore, 'cases');
-      const q = query(casesRef, where('documentId', '==', cedula));
-      const querySnapshot = await getDocs(q);
-      
-      let linkedCase = undefined;
-      if (!querySnapshot.empty) {
-        const caseDoc = querySnapshot.docs[0];
-        linkedCase = {
-          id: caseDoc.id,
-          caseNumber: caseDoc.data().caseNumber
+    const mensajesRef = collection(firestore, 'mensajes');
+    const casesRef = collection(firestore, 'cases');
+    const q = query(casesRef, where('documentId', '==', cedula));
+
+    // 1. Intentar buscar caso vinculado (con manejo de errores contextual)
+    getDocs(q)
+      .then(async (querySnapshot) => {
+        let linkedCase = undefined;
+        if (!querySnapshot.empty) {
+          const caseDoc = querySnapshot.docs[0];
+          linkedCase = {
+            id: caseDoc.id,
+            caseNumber: caseDoc.data().caseNumber
+          };
+        }
+
+        const data = {
+          nombre,
+          email,
+          cedula,
+          asunto,
+          mensaje,
+          createdAt: new Date().toISOString(),
+          linkedCase
         };
-      }
 
-      // 2. Guardar mensaje
-      await addDoc(collection(firestore, 'mensajes'), {
-        nombre,
-        email,
-        cedula,
-        asunto: asunto || "Sin asunto",
-        mensaje,
-        createdAt: new Date().toISOString(),
-        linkedCase
+        // 2. Guardar mensaje (con manejo de errores contextual)
+        addDoc(mensajesRef, data)
+          .then(() => {
+            setIsSuccess(true);
+            toast({
+              title: "Mensaje Enviado",
+              description: "Hemos recibido tu mensaje correctamente.",
+            });
+            setIsSubmitting(false);
+          })
+          .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+              path: mensajesRef.path,
+              operation: 'create',
+              requestResourceData: data,
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+            setIsSubmitting(false);
+          });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: casesRef.path,
+          operation: 'list',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
+        setIsSubmitting(false);
       });
-
-      setIsSuccess(true);
-      toast({
-        title: "Mensaje Enviado",
-        description: "Hemos recibido tu mensaje correctamente.",
-      });
-      (e.target as HTMLFormElement).reset();
-    } catch (error) {
-      console.error("Error sending message:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se pudo enviar el mensaje. Inténtalo de nuevo.",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   if (isSuccess) {
