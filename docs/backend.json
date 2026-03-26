@@ -59,16 +59,17 @@
     "User": {
       "title": "User",
       "type": "object",
-      "description": "System user profile including roles.",
+      "description": "System user profile including roles and approval status.",
       "properties": {
         "id": { "type": "string" },
         "firstName": { "type": "string" },
         "lastName": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "role": { "type": "string", "enum": ["admin", "case-worker"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "email", "role"]
+      "required": ["id", "email", "role", "status"]
     }
   },
   "auth": {

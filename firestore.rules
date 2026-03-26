@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -8,31 +9,36 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    // Reglas para la colección de casos: Acceso 100% privado para personal autenticado
+    function isApproved() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+    }
+
+    // Reglas para la colección de casos: Acceso privado para personal aprobado
     match /cases/{caseId} {
-      allow read: if request.auth != null;
-      allow delete: if request.auth != null && getRole() == 'admin';
-      allow create, update: if request.auth != null && (getRole() == 'admin' || getRole() == 'case-worker');
+      allow read: if request.auth != null && isApproved();
+      allow delete: if request.auth != null && isApproved() && getRole() == 'admin';
+      allow create, update: if request.auth != null && isApproved() && (getRole() == 'admin' || getRole() == 'case-worker');
 
       match /novedades/{novedadId} {
-        allow read: if request.auth != null;
-        allow create: if request.auth != null && request.resource.data.createdBy == request.auth.uid;
+        allow read: if request.auth != null && isApproved();
+        allow create: if request.auth != null && isApproved() && request.resource.data.createdBy == request.auth.uid;
       }
     }
 
     // Reglas para el buzón de mensajes (Contacto Público)
     match /mensajes/{mensajeId} {
-      // Público puede crear (enviar mensaje)
       allow create: if true;
-      // Solo personal autenticado puede leer, actualizar (marcar leído/resuelto) y eliminar
-      allow read, update, delete: if request.auth != null;
+      allow read, update, delete: if request.auth != null && isApproved();
     }
 
     // Reglas para perfiles de usuario
     match /users/{userId} {
       allow read: if request.auth != null;
-      // El usuario puede editar su propio perfil, o un administrador puede editar cualquier perfil (para cambios de rol)
-      allow write: if request.auth != null && (request.auth.uid == userId || getRole() == 'admin');
+      // Creación permitida para nuevos usuarios
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Solo administradores pueden cambiar roles o estados de otros
+      allow update: if request.auth != null && (getRole() == 'admin' || (request.auth.uid == userId && request.resource.data.status == resource.data.status && request.resource.data.role == resource.data.role));
+      allow delete: if request.auth != null && getRole() == 'admin';
     }
   }
 }

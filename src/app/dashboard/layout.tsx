@@ -1,3 +1,4 @@
+
 'use client';
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
@@ -23,14 +24,8 @@ import { Home, LogOut, Settings, Users, Loader2, Mail, ShieldCheck } from "lucid
 import { Logo } from "@/components/icons/logo";
 import { doc, collection, query, where } from "firebase/firestore";
 import { ConnectionStatus } from "@/components/dashboard/connection-status";
-import { Badge } from "@/components/ui/badge";
+import type { UserProfile } from "@/lib/case-schema";
 import type { Mensaje } from "@/lib/mensaje-schema";
-
-interface UserProfile {
-    role: string;
-    firstName?: string;
-    lastName?: string;
-}
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -43,9 +38,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Contador de mensajes no leídos: Solo se ejecuta si el usuario está autenticado
+  // Contador de mensajes no leídos
   const unreadMessagesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(collection(firestore, 'mensajes'), where('read', '==', false));
@@ -60,7 +55,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  if (isUserLoading || !user) {
+  // Validación de estado de aprobación
+  useEffect(() => {
+    if (!isProfileLoading && userProfile) {
+      if (userProfile.status !== 'approved') {
+        router.replace('/pending-approval');
+      }
+    }
+  }, [isProfileLoading, userProfile, router]);
+
+  if (isUserLoading || isProfileLoading || !user) {
     return (
         <div className="flex items-center justify-center min-h-screen">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -124,8 +128,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </SidebarMenuItem>
               {isAdmin && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Usuarios">
-                      <Link href="/dashboard/users" className="text-accent font-bold"><ShieldCheck className="text-accent"/><span>Usuarios</span></Link>
+                  <SidebarMenuButton asChild tooltip="Solicitudes">
+                      <Link href="/dashboard/users" className="text-accent font-bold"><ShieldCheck className="text-accent"/><span>Solicitudes</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}

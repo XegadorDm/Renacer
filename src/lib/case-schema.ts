@@ -1,4 +1,6 @@
+
 export type CaseStatus = "Sin novedad" | "CONTACTADO" | "NO CONTACTADO";
+export type UserStatus = "pending" | "approved" | "rejected";
 
 export interface Case {
     id: string;
@@ -33,7 +35,11 @@ export interface UserProfile {
     lastName: string;
     email: string;
     role: 'admin' | 'case-worker';
+    status: UserStatus;
     createdAt: string;
+    documentType?: string;
+    documentNumber?: string;
+    gender?: string;
 }
 
 export interface Novedad {

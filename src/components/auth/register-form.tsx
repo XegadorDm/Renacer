@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -69,12 +70,13 @@ export function RegisterForm() {
       await setDoc(userDocRef, { 
         ...userData, 
         id: user.uid,
+        status: 'pending', // Estado inicial
         createdAt: new Date().toISOString(),
       });
 
       toast({
         title: '¡Solicitud Recibida!',
-        description: 'Tu solicitud ha sido recibida exitosamente. Uno de nuestros asesores revisara tu informacion y se pondra en contacto contigo a la brevedad posible. Gracias por confiar en Renacer.',
+        description: 'Tu solicitud ha sido recibida exitosamente. Uno de nuestros asesores revisará tu información y se pondrá en contacto contigo a la brevedad posible. Gracias por confiar en Renacer.',
       });
 
       router.push('/dashboard');
