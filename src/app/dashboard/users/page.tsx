@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, UserCog, IdCard, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2, Crown } from 'lucide-react';
+import { ShieldCheck, UserCog, IdCard, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2, Crown, Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/lib/case-schema';
 import { cn } from '@/lib/utils';
@@ -27,6 +27,12 @@ export default function UsersManagementPage() {
   }, [firestore]);
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+
+  const coreEmails = [
+    'aleksimbachi@gmail.com',
+    'juancamilogiraldo@gmail.com',
+    'diegomauriciopastusano@gmail.com'
+  ];
 
   const handleUpdateStatus = (userId: string, newStatus: string) => {
     if (!firestore) return;
@@ -51,18 +57,12 @@ export default function UsersManagementPage() {
   const handleSyncCoreAdmins = async () => {
     if (!firestore) return;
     setIsSyncingAdmins(true);
-    const coreEmails = [
-      'aleksimbachi@gmail.com',
-      'juancamilogiraldo@gmail.com',
-      'diegomauriciopastusano@gmail.com'
-    ];
-
+    
     try {
       const usersRef = collection(firestore, 'users');
       const batch = writeBatch(firestore);
       let count = 0;
 
-      // Buscamos cada correo
       for (const email of coreEmails) {
         const q = query(usersRef, where("email", "==", email.toLowerCase()));
         const snapshot = await getDocs(q);
@@ -167,8 +167,14 @@ export default function UsersManagementPage() {
   }
 
   const sortedUsers = [...(users || [])].sort((a, b) => {
+    // Prioridad 1: Pendientes
     if (a.status === 'pending' && b.status !== 'pending') return -1;
     if (a.status !== 'pending' && b.status === 'pending') return 1;
+    // Prioridad 2: Core Admins (visual)
+    const aIsCore = coreEmails.includes(a.email.toLowerCase());
+    const bIsCore = coreEmails.includes(b.email.toLowerCase());
+    if (aIsCore && !bIsCore) return -1;
+    if (!aIsCore && bIsCore) return 1;
     return 0;
   });
 
@@ -232,90 +238,95 @@ export default function UsersManagementPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedUsers.map((user) => (
-                  <TableRow 
-                    key={user.id} 
-                    className={cn(
-                        "hover:bg-primary/5 transition-colors",
-                        user.status === 'pending' && "bg-orange-50/50"
-                    )}
-                  >
-                    <TableCell className="pl-6 py-4">
-                      <div className="flex flex-col">
-                          <span className="font-bold text-sm uppercase flex items-center gap-2">
-                              {user.firstName} {user.lastName}
-                              {user.id === authUser?.uid && <Badge variant="outline" className="text-[8px] h-4">Tú</Badge>}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground font-mono">{user.email}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
-                          <IdCard className="h-3 w-3" />
-                          <span>{user.documentType?.toUpperCase()} {user.documentNumber}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={user.status === 'approved' ? 'default' : user.status === 'pending' ? 'secondary' : 'destructive'}
-                        className={cn(
-                            "text-[9px] uppercase font-black py-0 h-5",
-                            (user.status === 'approved' || !user.status) && "bg-green-600",
-                            user.status === 'pending' && "bg-orange-100 text-orange-700 animate-pulse border-orange-200"
-                        )}
-                      >
-                        {user.status === 'approved' ? 'Aprobado' : user.status === 'pending' ? 'Pendiente' : user.status === 'rejected' ? 'Rechazado' : 'Legado (Aprobado)'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Select 
-                        defaultValue={user.role} 
-                        onValueChange={(val) => handleRoleChange(user.id, val)}
-                        disabled={user.id === authUser?.uid || (user.status && user.status !== 'approved')}
-                      >
-                        <SelectTrigger className="w-[140px] h-8 text-[10px] font-bold border-primary/10">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="case-worker" className="text-xs">Asesor</SelectItem>
-                          <SelectItem value="admin" className="text-xs text-accent font-bold">Administrador</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell className="text-right pr-6 space-x-2">
-                      {user.status === 'pending' ? (
-                        <div className="flex justify-end gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="destructive" 
-                            className="h-7 px-3 text-[10px] font-black uppercase"
-                            onClick={() => handleUpdateStatus(user.id, 'rejected')}
-                          >
-                            <XCircle className="h-3 w-3 mr-1" /> Rechazar
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            className="h-7 px-3 text-[10px] font-black uppercase bg-green-600 hover:bg-green-700"
-                            onClick={() => handleUpdateStatus(user.id, 'approved')}
-                          >
-                            <CheckCircle className="h-3 w-3 mr-1" /> Aprobar
-                          </Button>
-                        </div>
-                      ) : (
-                        user.id !== authUser?.uid && (
-                            <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="h-7 text-[9px] opacity-50 hover:opacity-100"
-                                onClick={() => handleUpdateStatus(user.id, user.status === 'approved' || !user.status ? 'rejected' : 'approved')}
-                            >
-                                {user.status === 'approved' || !user.status ? 'Inactivar' : 'Re-activar'}
-                            </Button>
-                        )
+                {sortedUsers.map((user) => {
+                  const isCoreAdmin = coreEmails.includes(user.email.toLowerCase());
+                  return (
+                    <TableRow 
+                      key={user.id} 
+                      className={cn(
+                          "hover:bg-primary/5 transition-colors",
+                          user.status === 'pending' && "bg-orange-50/50",
+                          isCoreAdmin && "bg-accent/5"
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                    >
+                      <TableCell className="pl-6 py-4">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-sm uppercase flex items-center gap-2">
+                                {user.firstName} {user.lastName}
+                                {isCoreAdmin && <Star className="h-3 w-3 fill-accent text-accent" />}
+                                {user.id === authUser?.uid && <Badge variant="outline" className="text-[8px] h-4">Tú</Badge>}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground font-mono">{user.email}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
+                            <IdCard className="h-3 w-3" />
+                            <span>{user.documentType?.toUpperCase()} {user.documentNumber}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={user.status === 'approved' ? 'default' : user.status === 'pending' ? 'secondary' : 'destructive'}
+                          className={cn(
+                              "text-[9px] uppercase font-black py-0 h-5",
+                              (user.status === 'approved' || !user.status) && "bg-green-600",
+                              user.status === 'pending' && "bg-orange-100 text-orange-700 animate-pulse border-orange-200"
+                          )}
+                        >
+                          {user.status === 'approved' ? 'Aprobado' : user.status === 'pending' ? 'Pendiente' : user.status === 'rejected' ? 'Rechazado' : 'Legado (Aprobado)'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Select 
+                          defaultValue={user.role} 
+                          onValueChange={(val) => handleRoleChange(user.id, val)}
+                          disabled={user.id === authUser?.uid || (user.status && user.status !== 'approved')}
+                        >
+                          <SelectTrigger className="w-[140px] h-8 text-[10px] font-bold border-primary/10">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="case-worker" className="text-xs">Asesor</SelectItem>
+                            <SelectItem value="admin" className="text-xs text-accent font-bold">Administrador</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell className="text-right pr-6 space-x-2">
+                        {user.status === 'pending' ? (
+                          <div className="flex justify-end gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="destructive" 
+                              className="h-7 px-3 text-[10px] font-black uppercase"
+                              onClick={() => handleUpdateStatus(user.id, 'rejected')}
+                            >
+                              <XCircle className="h-3 w-3 mr-1" /> Rechazar
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              className="h-7 px-3 text-[10px] font-black uppercase bg-green-600 hover:bg-green-700"
+                              onClick={() => handleUpdateStatus(user.id, 'approved')}
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" /> Aprobar
+                            </Button>
+                          </div>
+                        ) : (
+                          user.id !== authUser?.uid && (
+                              <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-7 text-[9px] opacity-50 hover:opacity-100"
+                                  onClick={() => handleUpdateStatus(user.id, user.status === 'approved' || !user.status ? 'rejected' : 'approved')}
+                              >
+                                  {user.status === 'approved' || !user.status ? 'Inactivar' : 'Re-activar'}
+                              </Button>
+                          )
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

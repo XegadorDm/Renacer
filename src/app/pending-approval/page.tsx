@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -31,7 +30,8 @@ export default function PendingApprovalPage() {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    if (userProfile?.status === 'approved') {
+    // Si el usuario es aprobado o legado (sin status), redirigir al dashboard
+    if (userProfile && (userProfile.status === 'approved' || !userProfile.status)) {
       router.replace('/dashboard');
     }
   }, [userProfile, router]);

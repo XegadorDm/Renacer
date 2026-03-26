@@ -1,7 +1,6 @@
-
 'use client';
 import type { ReactNode } from "react";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import {
@@ -55,10 +54,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  // Validación de estado de aprobación
+  // Validación de estado de aprobación con soporte para usuarios legados
   useEffect(() => {
     if (!isProfileLoading && userProfile) {
-      if (userProfile.status !== 'approved') {
+      // Solo redirigir si el estado es explícitamente 'rejected' o 'pending'
+      // Si el estado es 'approved' o undefined (legado), se permite el acceso
+      if (userProfile.status === 'rejected' || userProfile.status === 'pending') {
         router.replace('/pending-approval');
       }
     }
