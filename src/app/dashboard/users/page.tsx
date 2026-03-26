@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { useFirestore, useCollection, useUser, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDocs, writeBatch, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, UserCog, IdCard, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
+import { ShieldCheck, UserCog, IdCard, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2, Crown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/lib/case-schema';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ export default function UsersManagementPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isMigrating, setIsMigrating] = useState(false);
+  const [isSyncingAdmins, setIsSyncingAdmins] = useState(false);
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -47,6 +48,58 @@ export default function UsersManagementPage() {
     });
   };
 
+  const handleSyncCoreAdmins = async () => {
+    if (!firestore) return;
+    setIsSyncingAdmins(true);
+    const coreEmails = [
+      'aleksimbachi@gmail.com',
+      'juancamilogiraldo@gmail.com',
+      'diegomauriciopastusano@gmail.com'
+    ];
+
+    try {
+      const usersRef = collection(firestore, 'users');
+      const batch = writeBatch(firestore);
+      let count = 0;
+
+      // Buscamos cada correo
+      for (const email of coreEmails) {
+        const q = query(usersRef, where("email", "==", email.toLowerCase()));
+        const snapshot = await getDocs(q);
+        
+        snapshot.docs.forEach((docSnap) => {
+          batch.update(docSnap.ref, { 
+            status: 'approved',
+            role: 'admin'
+          });
+          count++;
+        });
+      }
+
+      if (count > 0) {
+        await batch.commit();
+        toast({
+          title: "Administradores Sincronizados",
+          description: `Se han actualizado ${count} cuentas de líderes del proyecto a Administrador Aprobado.`,
+        });
+      } else {
+        toast({
+          title: "Sin coincidencias",
+          description: "No se encontraron los correos core en la base de datos de usuarios.",
+        });
+      }
+    } catch (error) {
+      console.error("Sync failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Error de Sincronización",
+        description: "No se pudieron actualizar los administradores core.",
+      });
+    } finally {
+      setIsSyncingAdmins(false);
+    }
+  };
+
   const handleMigrateLegacyUsers = async () => {
     if (!firestore) return;
     setIsMigrating(true);
@@ -58,7 +111,6 @@ export default function UsersManagementPage() {
 
       snapshot.docs.forEach((docSnap) => {
         const data = docSnap.data();
-        // Si el usuario no tiene el campo 'status', se considera legado y se aprueba
         if (!data.status) {
           batch.update(docSnap.ref, { status: 'approved' });
           count++;
@@ -114,7 +166,6 @@ export default function UsersManagementPage() {
       )
   }
 
-  // Ordenar para mostrar pendientes primero
   const sortedUsers = [...(users || [])].sort((a, b) => {
     if (a.status === 'pending' && b.status !== 'pending') return -1;
     if (a.status !== 'pending' && b.status === 'pending') return 1;
@@ -131,20 +182,36 @@ export default function UsersManagementPage() {
           </h1>
           <p className="text-muted-foreground">Activa cuentas y asigna permisos de acceso al sistema Renacer.</p>
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleMigrateLegacyUsers}
-          disabled={isMigrating}
-          className="bg-muted/50 border-primary/20 hover:bg-primary/10 text-[10px] font-bold"
-        >
-          {isMigrating ? (
-            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-          ) : (
-            <RefreshCw className="mr-2 h-3 w-3" />
-          )}
-          MIGRAR USUARIOS ANTIGUOS
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleSyncCoreAdmins}
+            disabled={isSyncingAdmins}
+            className="bg-accent/10 border-accent/20 hover:bg-accent/20 text-accent text-[10px] font-bold"
+          >
+            {isSyncingAdmins ? (
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            ) : (
+              <Crown className="mr-2 h-3 w-3" />
+            )}
+            SINCRONIZAR ADMINS CORE
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleMigrateLegacyUsers}
+            disabled={isMigrating}
+            className="bg-muted/50 border-primary/20 hover:bg-primary/10 text-[10px] font-bold"
+          >
+            {isMigrating ? (
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-3 w-3" />
+            )}
+            MIGRAR USUARIOS ANTIGUOS
+          </Button>
+        </div>
       </div>
 
       <Card className="border-primary/10 shadow-lg overflow-hidden">
