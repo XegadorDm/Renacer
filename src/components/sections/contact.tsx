@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Instagram, Facebook, Twitter, Loader2, CheckCircle } from 'lucide-react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, addDoc, limit } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -61,55 +61,29 @@ export function Contact() {
     setIsSubmitting(true);
 
     const mensajesRef = collection(firestore, 'mensajes');
-    const casesRef = collection(firestore, 'cases');
-    
-    // Búsqueda restringida con limit(1) para cumplir con reglas de seguridad públicas
-    const q = query(casesRef, where('documentId', '==', cedula), limit(1));
+    const data = {
+      nombre,
+      email,
+      cedula,
+      asunto,
+      mensaje,
+      createdAt: new Date().toISOString()
+    };
 
-    getDocs(q)
-      .then(async (querySnapshot) => {
-        let linkedCase = undefined;
-        if (!querySnapshot.empty) {
-          const caseDoc = querySnapshot.docs[0];
-          linkedCase = {
-            id: caseDoc.id,
-            caseNumber: caseDoc.data().caseNumber
-          };
-        }
-
-        const data = {
-          nombre,
-          email,
-          cedula,
-          asunto,
-          mensaje,
-          createdAt: new Date().toISOString(),
-          linkedCase
-        };
-
-        addDoc(mensajesRef, data)
-          .then(() => {
-            setIsSuccess(true);
-            toast({
-              title: "Mensaje Enviado",
-              description: "Hemos recibido tu mensaje correctamente.",
-            });
-            setIsSubmitting(false);
-          })
-          .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-              path: mensajesRef.path,
-              operation: 'create',
-              requestResourceData: data,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-            setIsSubmitting(false);
-          });
+    addDoc(mensajesRef, data)
+      .then(() => {
+        setIsSuccess(true);
+        toast({
+          title: "Mensaje Enviado",
+          description: "Hemos recibido tu mensaje correctamente.",
+        });
+        setIsSubmitting(false);
       })
       .catch(async (error) => {
         const permissionError = new FirestorePermissionError({
-          path: casesRef.path,
-          operation: 'list',
+          path: mensajesRef.path,
+          operation: 'create',
+          requestResourceData: data,
         } satisfies SecurityRuleContext);
         errorEmitter.emit('permission-error', permissionError);
         setIsSubmitting(false);

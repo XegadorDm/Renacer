@@ -2,30 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // SYNC_ID: RENACER_PUBLIC_SEARCH_V2100
+    // SYNC_ID: RENACER_PRIVACY_V2500
 
-    // Función auxiliar robusta para obtener el rol del usuario autenticado
     function getRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    // Reglas para la colección de casos
+    // Reglas para la colección de casos: Acceso 100% privado para personal autenticado
     match /cases/{caseId} {
-      // Lectura individual (get) requiere autenticación
-      allow get: if request.auth != null;
-
-      // Listado (list/queries):
-      // 1. Usuarios logueados pueden listar todo.
-      // 2. El público puede buscar SOLO por documentId y con límite de 1 resultado.
-      allow list: if request.auth != null || (
-        request.query.limit == 1 && 
-        request.query.filters.documentId != null
-      );
-
-      // Solo el rol 'admin' puede borrar documentos
+      allow read: if request.auth != null;
       allow delete: if request.auth != null && getRole() == 'admin';
-
-      // Administradores y Trabajadores Sociales pueden crear y editar
       allow create, update: if request.auth != null && (getRole() == 'admin' || getRole() == 'case-worker');
 
       match /novedades/{novedadId} {
@@ -36,9 +22,9 @@ service cloud.firestore {
 
     // Reglas para el buzón de mensajes (Contacto Público)
     match /mensajes/{mensajeId} {
-      // Cualquier persona puede enviar un mensaje (acceso público)
+      // Público puede crear (enviar mensaje)
       allow create: if true;
-      // Solo usuarios autenticados pueden leer el buzón
+      // Solo personal autenticado puede leer el buzón
       allow read: if request.auth != null;
     }
 
