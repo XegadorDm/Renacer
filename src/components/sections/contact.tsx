@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -9,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Instagram, Facebook, Twitter, Loader2, CheckCircle } from 'lucide-react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
@@ -63,9 +62,10 @@ export function Contact() {
 
     const mensajesRef = collection(firestore, 'mensajes');
     const casesRef = collection(firestore, 'cases');
-    const q = query(casesRef, where('documentId', '==', cedula));
+    
+    // Búsqueda restringida con limit(1) para cumplir con reglas de seguridad públicas
+    const q = query(casesRef, where('documentId', '==', cedula), limit(1));
 
-    // 1. Intentar buscar caso vinculado (con manejo de errores contextual)
     getDocs(q)
       .then(async (querySnapshot) => {
         let linkedCase = undefined;
@@ -87,7 +87,6 @@ export function Contact() {
           linkedCase
         };
 
-        // 2. Guardar mensaje (con manejo de errores contextual)
         addDoc(mensajesRef, data)
           .then(() => {
             setIsSuccess(true);
