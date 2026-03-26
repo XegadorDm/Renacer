@@ -1,15 +1,15 @@
-
 'use client';
 
+import { useState } from 'react';
 import { useFirestore, useCollection, useUser, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDocs, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, UserCog, Mail, IdCard, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { ShieldCheck, UserCog, IdCard, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/lib/case-schema';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ export default function UsersManagementPage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isMigrating, setIsMigrating] = useState(false);
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -46,6 +47,48 @@ export default function UsersManagementPage() {
     });
   };
 
+  const handleMigrateLegacyUsers = async () => {
+    if (!firestore) return;
+    setIsMigrating(true);
+    try {
+      const usersRef = collection(firestore, 'users');
+      const snapshot = await getDocs(usersRef);
+      const batch = writeBatch(firestore);
+      let count = 0;
+
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        // Si el usuario no tiene el campo 'status', se considera legado y se aprueba
+        if (!data.status) {
+          batch.update(docSnap.ref, { status: 'approved' });
+          count++;
+        }
+      });
+
+      if (count > 0) {
+        await batch.commit();
+        toast({
+          title: "Migración Completada",
+          description: `Se han actualizado ${count} usuarios antiguos al estado 'aprobado'.`,
+        });
+      } else {
+        toast({
+          title: "Sin cambios",
+          description: "Todos los usuarios ya tienen un estado definido.",
+        });
+      }
+    } catch (error) {
+      console.error("Migration failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Error de Migración",
+        description: "No se pudieron actualizar los usuarios antiguos.",
+      });
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6 py-4">
@@ -58,7 +101,8 @@ export default function UsersManagementPage() {
     );
   }
 
-  const isAdmin = users?.find(u => u.id === authUser?.uid)?.role === 'admin';
+  const userProfile = users?.find(u => u.id === authUser?.uid);
+  const isAdmin = userProfile?.role === 'admin';
 
   if (!isAdmin && users) {
       return (
@@ -79,7 +123,7 @@ export default function UsersManagementPage() {
 
   return (
     <div className="space-y-6 py-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-primary font-headline flex items-center gap-2">
             <UserCog className="h-8 w-8" />
@@ -87,6 +131,20 @@ export default function UsersManagementPage() {
           </h1>
           <p className="text-muted-foreground">Activa cuentas y asigna permisos de acceso al sistema Renacer.</p>
         </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleMigrateLegacyUsers}
+          disabled={isMigrating}
+          className="bg-muted/50 border-primary/20 hover:bg-primary/10 text-[10px] font-bold"
+        >
+          {isMigrating ? (
+            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-2 h-3 w-3" />
+          )}
+          MIGRAR USUARIOS ANTIGUOS
+        </Button>
       </div>
 
       <Card className="border-primary/10 shadow-lg overflow-hidden">
@@ -135,18 +193,18 @@ export default function UsersManagementPage() {
                         variant={user.status === 'approved' ? 'default' : user.status === 'pending' ? 'secondary' : 'destructive'}
                         className={cn(
                             "text-[9px] uppercase font-black py-0 h-5",
-                            user.status === 'approved' && "bg-green-600",
+                            (user.status === 'approved' || !user.status) && "bg-green-600",
                             user.status === 'pending' && "bg-orange-100 text-orange-700 animate-pulse border-orange-200"
                         )}
                       >
-                        {user.status === 'approved' ? 'Aprobado' : user.status === 'pending' ? 'Pendiente' : 'Rechazado'}
+                        {user.status === 'approved' ? 'Aprobado' : user.status === 'pending' ? 'Pendiente' : user.status === 'rejected' ? 'Rechazado' : 'Legado (Aprobado)'}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Select 
                         defaultValue={user.role} 
                         onValueChange={(val) => handleRoleChange(user.id, val)}
-                        disabled={user.id === authUser?.uid || user.status !== 'approved'}
+                        disabled={user.id === authUser?.uid || (user.status && user.status !== 'approved')}
                       >
                         <SelectTrigger className="w-[140px] h-8 text-[10px] font-bold border-primary/10">
                           <SelectValue />
@@ -182,9 +240,9 @@ export default function UsersManagementPage() {
                                 size="sm" 
                                 variant="outline" 
                                 className="h-7 text-[9px] opacity-50 hover:opacity-100"
-                                onClick={() => handleUpdateStatus(user.id, user.status === 'approved' ? 'rejected' : 'approved')}
+                                onClick={() => handleUpdateStatus(user.id, user.status === 'approved' || !user.status ? 'rejected' : 'approved')}
                             >
-                                {user.status === 'approved' ? 'Inactivar' : 'Re-activar'}
+                                {user.status === 'approved' || !user.status ? 'Inactivar' : 'Re-activar'}
                             </Button>
                         )
                       )}

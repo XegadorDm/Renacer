@@ -8,7 +8,10 @@ service cloud.firestore {
     }
 
     function isApproved() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+      // Se obtiene la data del usuario una sola vez para eficiencia
+      let userData = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      // Permitir acceso si el campo 'status' no existe (usuarios antiguos) o si es 'approved'
+      return !("status" in userData) || userData.status == 'approved';
     }
 
     // Reglas para la colección de casos: Acceso privado para personal aprobado
