@@ -1,9 +1,8 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // SYNC_ID: RENACER_PRIVACY_V2500
+    // SYNC_ID: RENACER_PRIVACY_V2501
 
     function getRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
@@ -32,7 +31,8 @@ service cloud.firestore {
     // Reglas para perfiles de usuario
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // El usuario puede editar su propio perfil, o un administrador puede editar cualquier perfil (para cambios de rol)
+      allow write: if request.auth != null && (request.auth.uid == userId || getRole() == 'admin');
     }
   }
 }

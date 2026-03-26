@@ -1,4 +1,3 @@
-
 'use client';
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
@@ -20,7 +19,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, Settings, Users, Loader2, Mail } from "lucide-react";
+import { Home, LogOut, Settings, Users, Loader2, Mail, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { doc, collection, query, where } from "firebase/firestore";
 import { ConnectionStatus } from "@/components/dashboard/connection-status";
@@ -83,6 +82,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return user.email?.[0].toUpperCase() || 'U';
   }
 
+  const isAdmin = userProfile?.role === 'admin';
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -121,6 +122,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Usuarios">
+                      <Link href="/dashboard/users" className="text-accent font-bold"><ShieldCheck className="text-accent"/><span>Usuarios</span></Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>

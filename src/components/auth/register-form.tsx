@@ -14,8 +14,7 @@ import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { requestRegistrationCode } from '@/ai/flows/registration-code-flow';
+import { Eye, EyeOff } from 'lucide-react';
 
 const formSchema = z.object({
   firstName: z.string().min(1, 'El nombre es requerido.'),
@@ -26,7 +25,6 @@ const formSchema = z.object({
   gender: z.string({ required_error: 'Selecciona un género.' }),
   role: z.string({ required_error: 'Selecciona un rol.' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
-  securityCode: z.string().optional().or(z.literal('')),
 });
 
 export function RegisterForm() {
@@ -35,8 +33,7 @@ export function RegisterForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
-  const [isRequestingCode, setIsRequestingCode] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -46,59 +43,10 @@ export function RegisterForm() {
       documentNumber: '',
       email: '',
       password: '',
-      securityCode: '',
     },
   });
 
-  const handleRequestCode = async () => {
-    const email = form.getValues('email');
-    if (!email || !email.includes('@')) {
-      toast({
-        variant: 'destructive',
-        title: 'Correo inválido',
-        description: 'Por favor, ingresa un correo electrónico válido antes de solicitar el código.',
-      });
-      return;
-    }
-
-    setIsRequestingCode(true);
-    try {
-      const result = await requestRegistrationCode({ email });
-      if (result.success) {
-        setGeneratedCode(result.code || null);
-        toast({
-          title: 'Código Enviado',
-          description: result.message,
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'No autorizado',
-          description: result.message,
-        });
-      }
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo procesar la solicitud.',
-      });
-    } finally {
-      setIsRequestingCode(false);
-    }
-  };
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    // Validación de código solo si se generó uno
-    if (generatedCode && values.securityCode && values.securityCode !== generatedCode) {
-      toast({
-        variant: 'destructive',
-        title: 'Código incorrecto',
-        description: 'El código de seguridad ingresado no coincide con el enviado a su correo.',
-      });
-      return;
-    }
-
     if (!auth || !firestore) {
       toast({
         variant: 'destructive',
@@ -108,11 +56,13 @@ export function RegisterForm() {
       return;
     }
 
+    setIsLoading(true);
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      const { password, securityCode, ...userData } = values;
+      const { password, ...userData } = values;
       
       const userDocRef = doc(firestore, 'users', user.uid);
       
@@ -123,8 +73,8 @@ export function RegisterForm() {
       });
 
       toast({
-        title: '¡Registro Exitoso!',
-        description: 'Tu cuenta ha sido creada correctamente.',
+        title: '¡Solicitud Recibida!',
+        description: 'Tu solicitud ha sido recibida exitosamente. Uno de nuestros asesores revisara tu informacion y se pondra en contacto contigo a la brevedad posible. Gracias por confiar en Renacer.',
       });
 
       router.push('/dashboard');
@@ -136,6 +86,8 @@ export function RegisterForm() {
         title: 'Error en el registro',
         description: error.message || 'No se pudo crear la cuenta.',
       });
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -172,23 +124,10 @@ export function RegisterForm() {
             />
         </div>
         
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <FormField control={form.control} name="email" render={({ field }) => (
-                <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="ejemplo@correo.com" {...field} /></FormControl><FormMessage /></FormItem>
-              )}
-            />
-          </div>
-          <Button 
-            type="button" 
-            variant="secondary" 
-            className="mb-[2px] h-10 px-4" 
-            onClick={handleRequestCode}
-            disabled={isRequestingCode}
-          >
-            {isRequestingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Solicitar Código'}
-          </Button>
-        </div>
+        <FormField control={form.control} name="email" render={({ field }) => (
+            <FormItem><FormLabel>Correo Electrónico</FormLabel><FormControl><Input type="email" placeholder="ejemplo@correo.com" {...field} /></FormControl><FormMessage /></FormItem>
+          )}
+        />
 
         <div className="grid grid-cols-2 gap-4">
             <FormField control={form.control} name="gender" render={({ field }) => (
@@ -205,7 +144,7 @@ export function RegisterForm() {
               )}
             />
             <FormField control={form.control} name="role" render={({ field }) => (
-                <FormItem><FormLabel>Rol</FormLabel>
+                <FormItem><FormLabel>Rol Deseado</FormLabel>
                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Selecciona" /></SelectTrigger></FormControl>
                     <SelectContent>
@@ -238,18 +177,8 @@ export function RegisterForm() {
             </FormItem>
           )}
         />
-        <FormField control={form.control} name="securityCode" render={({ field }) => (
-            <FormItem>
-              <FormLabel>Código de Seguridad (Enviado al correo)</FormLabel>
-              <FormControl>
-                <Input placeholder="Ingrese el código recibido" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" className="w-full text-lg h-12" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-          Crear Cuenta
+        <Button type="submit" className="w-full text-lg h-12" disabled={isLoading} style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
+          {isLoading ? 'Procesando...' : 'Crear Cuenta'}
         </Button>
         <div className="text-center text-sm text-muted-foreground mt-4">
           ¿Ya tienes una cuenta?{' '}
