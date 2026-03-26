@@ -238,15 +238,26 @@ export default function MessagesPage() {
   const searchParams = useSearchParams();
   const queryParam = searchParams.get('query') || '';
 
-  const messagesQuery = useMemoFirebase(() => {
+  // 1. Obtener perfil de usuario para validar aprobación antes de consultar mensajes
+  const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'mensajes'), orderBy('createdAt', 'desc'));
+    return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
+  const isApproved = userProfile && (!userProfile.status || userProfile.status === 'approved');
+
+  // 2. Solo crear las consultas si el usuario está aprobado
+  const messagesQuery = useMemoFirebase(() => {
+    if (!firestore || !user || !isApproved) return null;
+    return query(collection(firestore, 'mensajes'), orderBy('createdAt', 'desc'));
+  }, [firestore, user, isApproved]);
+
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !isApproved) return null;
     return collection(firestore, 'cases');
-  }, [firestore, user]);
+  }, [firestore, user, isApproved]);
 
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Mensaje>(messagesQuery);
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);
@@ -263,7 +274,7 @@ export default function MessagesPage() {
 
   // Marcar como leídos al entrar
   useEffect(() => {
-    if (messages && firestore && user) {
+    if (messages && firestore && user && isApproved) {
       messages.forEach(msg => {
         if (msg.read === false) {
           const msgRef = doc(firestore, 'mensajes', msg.id);
@@ -271,7 +282,7 @@ export default function MessagesPage() {
         }
       });
     }
-  }, [messages, firestore, user]);
+  }, [messages, firestore, user, isApproved]);
 
   const categorizedMessages = useMemo(() => {
     if (!messages || !cases) return { linked: [], unlinked: [] };
@@ -300,7 +311,7 @@ export default function MessagesPage() {
     return { linked, unlinked };
   }, [messages, cases, queryParam]);
 
-  if (isMessagesLoading || isCasesLoading) {
+  if (isMessagesLoading || isCasesLoading || isProfileLoading) {
     return (
       <div className="space-y-4 py-4">
         <Skeleton className="h-12 w-64 mb-6" />

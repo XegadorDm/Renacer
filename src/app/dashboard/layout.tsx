@@ -39,11 +39,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Contador de mensajes no leídos
+  // Validación de aprobación: true si es aprobado o legado (sin campo status)
+  const isApproved = userProfile && (!userProfile.status || userProfile.status === 'approved');
+
+  // Contador de mensajes no leídos (solo si el usuario está aprobado)
   const unreadMessagesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || !isApproved) return null;
     return query(collection(firestore, 'mensajes'), where('read', '==', false));
-  }, [firestore, user]);
+  }, [firestore, user, isApproved]);
 
   const { data: unreadMessages } = useCollection<Mensaje>(unreadMessagesQuery);
   const unreadCount = unreadMessages?.length || 0;
@@ -58,7 +61,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isProfileLoading && userProfile) {
       // Solo redirigir si el estado es explícitamente 'rejected' o 'pending'
-      // Si el estado es 'approved' o undefined (legado), se permite el acceso
       if (userProfile.status === 'rejected' || userProfile.status === 'pending') {
         router.replace('/pending-approval');
       }
