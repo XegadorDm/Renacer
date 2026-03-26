@@ -2,18 +2,31 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Mail, User, Calendar, ExternalLink, AlertCircle, CheckCircle2, Phone, ChevronUp, UserCheck, Inbox } from 'lucide-react';
+import { Mail, User, Calendar, ExternalLink, AlertCircle, CheckCircle2, Phone, ChevronUp, UserCheck, Inbox, Trash2, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Mensaje } from '@/lib/mensaje-schema';
 import type { Case, UserProfile } from '@/lib/case-schema';
+import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 function CaseContactDetails({ caseData }: { caseData: Case }) {
   const firestore = useFirestore();
@@ -79,9 +92,35 @@ function CaseContactDetails({ caseData }: { caseData: Case }) {
 
 function MessageCard({ msg, linkedCase }: { msg: Mensaje, linkedCase?: Case }) {
   const [showContact, setShowContact] = useState(false);
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const handleToggleResolved = () => {
+    if (!firestore) return;
+    const msgRef = doc(firestore, 'mensajes', msg.id);
+    updateDocumentNonBlocking(msgRef, { resolved: !msg.resolved });
+    toast({
+      title: !msg.resolved ? "Marcado como resuelto" : "Marcado como pendiente",
+      description: `El mensaje de ${msg.nombre} ha sido actualizado.`,
+    });
+  };
+
+  const handleDelete = () => {
+    if (!firestore) return;
+    const msgRef = doc(firestore, 'mensajes', msg.id);
+    deleteDocumentNonBlocking(msgRef);
+    toast({
+      variant: "destructive",
+      title: "Mensaje eliminado",
+      description: "El mensaje ha sido borrado del buzón permanentemente.",
+    });
+  };
 
   return (
-    <Card className="overflow-hidden border-primary/10 hover:shadow-md transition-all duration-300">
+    <Card className={cn(
+      "overflow-hidden border-primary/10 hover:shadow-md transition-all duration-300",
+      msg.resolved && "bg-green-50/60 border-green-200"
+    )}>
       <CardHeader className="pb-3 bg-muted/5 p-4">
         <div className="flex flex-col gap-3">
           <div className="flex items-start justify-between">
@@ -94,8 +133,13 @@ function MessageCard({ msg, linkedCase }: { msg: Mensaje, linkedCase?: Case }) {
                 <p className="text-[10px] text-muted-foreground font-mono">{msg.email}</p>
               </div>
             </div>
-            <div className="text-[9px] text-muted-foreground uppercase font-bold whitespace-nowrap bg-background border px-2 py-0.5 rounded">
-               {format(new Date(msg.createdAt), "d MMM, HH:mm", { locale: es })}
+            <div className="flex flex-col items-end gap-1">
+              <div className="text-[9px] text-muted-foreground uppercase font-bold whitespace-nowrap bg-background border px-2 py-0.5 rounded">
+                {format(new Date(msg.createdAt), "d MMM, HH:mm", { locale: es })}
+              </div>
+              {msg.resolved && (
+                <Badge className="bg-green-600 text-white text-[8px] h-4 py-0 uppercase font-black">Resuelto</Badge>
+              )}
             </div>
           </div>
           
@@ -143,6 +187,43 @@ function MessageCard({ msg, linkedCase }: { msg: Mensaje, linkedCase?: Case }) {
             </Button>
           </div>
         )}
+
+        <div className="mt-4 pt-3 border-t flex items-center justify-end gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 text-[10px] text-destructive hover:text-destructive hover:bg-destructive/10 font-bold uppercase tracking-tighter">
+                <Trash2 className="h-3 w-3 mr-1" /> Eliminar
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar este mensaje?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción es permanente y no se puede deshacer. El mensaje de <strong>{msg.nombre}</strong> será borrado del buzón.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-xl font-bold">CANCELAR</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 rounded-xl font-bold">
+                  SÍ, ELIMINAR
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <Button 
+            variant={msg.resolved ? "outline" : "default"} 
+            size="sm" 
+            onClick={handleToggleResolved}
+            className={cn(
+              "h-8 text-[10px] font-bold uppercase tracking-tighter",
+              !msg.resolved && "bg-green-600 hover:bg-green-700 text-white"
+            )}
+          >
+            <CheckCircle className="h-3 w-3 mr-1" />
+            {msg.resolved ? "Reabrir Caso" : "Caso Resuelto"}
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
