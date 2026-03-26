@@ -21,7 +21,9 @@ import type { Case, UserProfile } from '@/lib/case-schema';
 function CaseContactDetails({ caseData }: { caseData: Case }) {
   const firestore = useFirestore();
   
+  // Obtenemos la referencia al documento del usuario (asesor) que creó el caso usando su userId
   const workerDocRef = useMemoFirebase(() => {
+    // Es vital que el caso tenga un userId asociado para encontrar al autor
     if (!firestore || !caseData.userId) return null;
     return doc(firestore, 'users', caseData.userId);
   }, [firestore, caseData.userId]);
@@ -49,7 +51,7 @@ function CaseContactDetails({ caseData }: { caseData: Case }) {
             ) : workerProfile ? (
               `${workerProfile.firstName} ${workerProfile.lastName}`
             ) : (
-              "Asesor no identificado"
+              "Asesor no encontrado"
             )}
           </p>
         </div>
