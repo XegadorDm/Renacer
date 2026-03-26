@@ -45,11 +45,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
-  // Contador de mensajes no leídos
+  // Contador de mensajes no leídos: Solo se ejecuta si el usuario está autenticado
   const unreadMessagesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'mensajes'), where('read', '==', false));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: unreadMessages } = useCollection<Mensaje>(unreadMessagesQuery);
   const unreadCount = unreadMessages?.length || 0;

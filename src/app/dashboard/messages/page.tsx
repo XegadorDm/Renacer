@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, useUser } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -234,19 +233,20 @@ function MessageCard({ msg, linkedCase }: { msg: Mensaje, linkedCase?: Case }) {
 
 export default function MessagesPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryParam = searchParams.get('query') || '';
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(collection(firestore, 'mensajes'), orderBy('createdAt', 'desc'));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'cases');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Mensaje>(messagesQuery);
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);
@@ -263,7 +263,7 @@ export default function MessagesPage() {
 
   // Marcar como leídos al entrar
   useEffect(() => {
-    if (messages && firestore) {
+    if (messages && firestore && user) {
       messages.forEach(msg => {
         if (msg.read === false) {
           const msgRef = doc(firestore, 'mensajes', msg.id);
@@ -271,7 +271,7 @@ export default function MessagesPage() {
         }
       });
     }
-  }, [messages, firestore]);
+  }, [messages, firestore, user]);
 
   const categorizedMessages = useMemo(() => {
     if (!messages || !cases) return { linked: [], unlinked: [] };
