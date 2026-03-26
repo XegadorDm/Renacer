@@ -1,9 +1,9 @@
 
 'use client';
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import {
   SidebarProvider,
   Sidebar,
@@ -22,8 +22,10 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Home, LogOut, Settings, Users, Loader2, Mail } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
-import { doc } from "firebase/firestore";
+import { doc, collection, query, where } from "firebase/firestore";
 import { ConnectionStatus } from "@/components/dashboard/connection-status";
+import { Badge } from "@/components/ui/badge";
+import type { Mensaje } from "@/lib/mensaje-schema";
 
 interface UserProfile {
     role: string;
@@ -43,6 +45,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [firestore, user]);
 
   const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+
+  // Contador de mensajes no leídos
+  const unreadMessagesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'mensajes'), where('read', '==', false));
+  }, [firestore]);
+
+  const { data: unreadMessages } = useCollection<Mensaje>(unreadMessagesQuery);
+  const unreadCount = unreadMessages?.length || 0;
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -98,7 +109,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Buzón">
-                    <Link href="/dashboard/messages"><Mail/><span>Buzón</span></Link>
+                    <Link href="/dashboard/messages" className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                            <Mail/><span>Buzón</span>
+                        </div>
+                        {unreadCount > 0 && (
+                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground animate-pulse mr-2 group-data-[collapsible=icon]:hidden">
+                                {unreadCount}
+                            </div>
+                        )}
+                    </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

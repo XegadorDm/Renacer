@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -24,8 +25,8 @@ service cloud.firestore {
     match /mensajes/{mensajeId} {
       // Público puede crear (enviar mensaje)
       allow create: if true;
-      // Solo personal autenticado puede leer el buzón
-      allow read: if request.auth != null;
+      // Solo personal autenticado puede leer el buzón y marcar como leído
+      allow read, update: if request.auth != null;
     }
 
     // Reglas para perfiles de usuario

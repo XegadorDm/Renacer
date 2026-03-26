@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -67,6 +68,7 @@ export function Contact() {
       cedula,
       asunto,
       mensaje,
+      read: false, // Inicialmente no leído
       createdAt: new Date().toISOString()
     };
 

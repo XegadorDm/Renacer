@@ -7,6 +7,7 @@ export interface Mensaje {
   asunto: string;
   mensaje: string;
   createdAt: string;
+  read: boolean; // Indica si el mensaje ha sido visto por un asesor
   linkedCase?: {
     id: string;
     caseNumber: string;
