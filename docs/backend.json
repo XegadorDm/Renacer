@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Case": {
@@ -34,17 +35,26 @@
       },
       "required": ["id", "caseNumber", "firstName", "lastName", "documentId", "ethnicGroup", "maritalStatus", "gender", "birthDate", "address", "municipality", "department", "phone1", "displacementType", "age", "isElderly", "peopleCount", "testimony", "status"]
     },
-    "Novedad": {
-      "title": "Novedad",
+    "Mensaje": {
+      "title": "Mensaje",
       "type": "object",
-      "description": "Log entry for case follow-ups (calls, notes, etc).",
+      "description": "Public contact message received from the landing page.",
       "properties": {
+        "nombre": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "cedula": { "type": "string" },
+        "asunto": { "type": "string" },
         "mensaje": { "type": "string" },
-        "tipo": { "type": "string", "enum": ["llamada", "nota", "sistema"] },
         "createdAt": { "type": "string", "format": "date-time" },
-        "createdBy": { "type": "string" }
+        "linkedCase": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "caseNumber": { "type": "string" }
+          }
+        }
       },
-      "required": ["mensaje", "tipo", "createdAt", "createdBy"]
+      "required": ["nombre", "email", "cedula", "mensaje", "createdAt"]
     },
     "User": {
       "title": "User",
@@ -69,9 +79,9 @@
       "schema": "Case",
       "description": "Stores case data."
     },
-    "/cases/{caseId}/novedades/{novedadId}": {
-      "schema": "Novedad",
-      "description": "Historical log of actions taken on a case."
+    "/mensajes/{mensajeId}": {
+      "schema": "Mensaje",
+      "description": "Stores contact messages."
     },
     "/users/{userId}": {
       "schema": "User",

@@ -1,9 +1,16 @@
+
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Instagram, Facebook, Twitter } from 'lucide-react';
+import { Instagram, Facebook, Twitter, Loader2, CheckCircle } from 'lucide-react';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 function TikTokIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -25,26 +32,120 @@ function TikTokIcon(props: React.SVGProps<SVGSVGElement>) {
 }
 
 export function Contact() {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!firestore) return;
+
+    const formData = new FormData(e.currentTarget);
+    const nombre = formData.get('nombre') as string;
+    const email = formData.get('email') as string;
+    const cedula = formData.get('cedula') as string;
+    const asunto = formData.get('asunto') as string;
+    const mensaje = formData.get('mensaje') as string;
+
+    if (!nombre || !email || !cedula || !mensaje) {
+      toast({
+        variant: "destructive",
+        title: "Campos incompletos",
+        description: "Por favor, completa todos los campos requeridos.",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // 1. Buscar caso vinculado por cédula
+      const casesRef = collection(firestore, 'cases');
+      const q = query(casesRef, where('documentId', '==', cedula));
+      const querySnapshot = await getDocs(q);
+      
+      let linkedCase = undefined;
+      if (!querySnapshot.empty) {
+        const caseDoc = querySnapshot.docs[0];
+        linkedCase = {
+          id: caseDoc.id,
+          caseNumber: caseDoc.data().caseNumber
+        };
+      }
+
+      // 2. Guardar mensaje
+      await addDoc(collection(firestore, 'mensajes'), {
+        nombre,
+        email,
+        cedula,
+        asunto: asunto || "Sin asunto",
+        mensaje,
+        createdAt: new Date().toISOString(),
+        linkedCase
+      });
+
+      setIsSuccess(true);
+      toast({
+        title: "Mensaje Enviado",
+        description: "Hemos recibido tu mensaje correctamente.",
+      });
+      (e.target as HTMLFormElement).reset();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudo enviar el mensaje. Inténtalo de nuevo.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isSuccess) {
+    return (
+      <section id="contact" className="py-16 md:py-24 bg-card">
+        <div className="container mx-auto px-4 md:px-6">
+          <Card className="max-w-2xl mx-auto text-center p-12">
+            <CheckCircle className="h-16 w-16 text-primary mx-auto mb-6" />
+            <CardTitle className="text-3xl font-bold mb-4">¡Gracias por escribirnos!</CardTitle>
+            <CardDescription className="text-lg">
+              Tu mensaje ha sido recibido. Nuestro equipo se pondrá en contacto contigo lo antes posible.
+            </CardDescription>
+            <Button className="mt-8" onClick={() => setIsSuccess(false)}>Enviar otro mensaje</Button>
+          </Card>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="contact" className="py-16 md:py-24 bg-card">
       <div className="container mx-auto px-4 md:px-6">
-        <Card className="max-w-2xl mx-auto">
+        <Card className="max-w-2xl mx-auto shadow-xl">
           <CardHeader className="text-center">
             <CardTitle className="text-3xl md:text-4xl font-bold font-headline">Ponte en Contacto</CardTitle>
             <CardDescription>
-              ¿Tienes preguntas? Envíanos un mensaje y te responderemos pronto.
+              ¿Tienes preguntas o necesitas seguimiento a tu caso? Escríbenos.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4">
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input placeholder="Tu Nombre" />
-                <Input type="email" placeholder="Tu Correo Electrónico" />
+                <Input name="nombre" placeholder="Tu Nombre Completo" required disabled={isSubmitting} />
+                <Input name="email" type="email" placeholder="Tu Correo Electrónico" required disabled={isSubmitting} />
               </div>
-              <Input placeholder="Asunto" />
-              <Textarea placeholder="Tu Mensaje" rows={5} />
-              <Button type="submit" className="w-full" style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}>
-                Enviar Mensaje
+              <Input name="cedula" placeholder="Número de Cédula" required disabled={isSubmitting} />
+              <Input name="asunto" placeholder="Asunto (Opcional)" disabled={isSubmitting} />
+              <Textarea name="mensaje" placeholder="Tu Mensaje..." rows={5} required disabled={isSubmitting} />
+              <Button 
+                type="submit" 
+                className="w-full text-lg h-12" 
+                disabled={isSubmitting}
+                style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }}
+              >
+                {isSubmitting ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> ENVIANDO...</> : "ENVIAR MENSAJE"}
               </Button>
             </form>
             <div className="flex justify-center gap-6 mt-8">
