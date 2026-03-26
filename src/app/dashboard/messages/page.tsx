@@ -8,13 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Mail, User, Calendar, ExternalLink, AlertCircle, CheckCircle2, Phone, ChevronUp, UserCheck, Inbox, Trash2, CheckCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Mail, User, Calendar, ExternalLink, AlertCircle, CheckCircle2, Phone, ChevronUp, UserCheck, Inbox, Trash2, CheckCircle, Search } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Mensaje } from '@/lib/mensaje-schema';
 import type { Case, UserProfile } from '@/lib/case-schema';
 import { cn } from '@/lib/utils';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useDebouncedCallback } from 'use-debounce';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -231,6 +234,9 @@ function MessageCard({ msg, linkedCase }: { msg: Mensaje, linkedCase?: Case }) {
 
 export default function MessagesPage() {
   const firestore = useFirestore();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryParam = searchParams.get('query') || '';
 
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -244,6 +250,16 @@ export default function MessagesPage() {
 
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Mensaje>(messagesQuery);
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);
+
+  const handleSearch = useDebouncedCallback((term: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (term) {
+      params.set('query', term);
+    } else {
+      params.delete('query');
+    }
+    router.replace(`/dashboard/messages?${params.toString()}`);
+  }, 300);
 
   // Marcar como leídos al entrar
   useEffect(() => {
@@ -260,12 +276,19 @@ export default function MessagesPage() {
   const categorizedMessages = useMemo(() => {
     if (!messages || !cases) return { linked: [], unlinked: [] };
 
+    const searchTerm = queryParam.toLowerCase();
+    const filtered = messages.filter(msg => 
+      msg.nombre.toLowerCase().includes(searchTerm) ||
+      msg.cedula.toLowerCase().includes(searchTerm) ||
+      msg.asunto.toLowerCase().includes(searchTerm)
+    );
+
     const caseMap = new Map(cases.map(c => [c.documentId, c]));
     
     const linked: { msg: Mensaje, case: Case }[] = [];
     const unlinked: Mensaje[] = [];
 
-    messages.forEach(msg => {
+    filtered.forEach(msg => {
       const foundCase = caseMap.get(msg.cedula);
       if (foundCase) {
         linked.push({ msg, case: foundCase });
@@ -275,7 +298,7 @@ export default function MessagesPage() {
     });
 
     return { linked, unlinked };
-  }, [messages, cases]);
+  }, [messages, cases, queryParam]);
 
   if (isMessagesLoading || isCasesLoading) {
     return (
@@ -301,6 +324,16 @@ export default function MessagesPage() {
         </div>
       </div>
 
+      <div className="relative w-full md:w-1/2 lg:w-1/3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input 
+          placeholder="Buscar por nombre, cédula o asunto..." 
+          className="pl-9 bg-background border-primary/20"
+          onChange={(e) => handleSearch(e.target.value)}
+          defaultValue={queryParam}
+        />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         {/* Columna Izquierda: Casos Vinculados */}
         <div className="space-y-4">
@@ -318,7 +351,7 @@ export default function MessagesPage() {
                 <MessageCard key={msg.id} msg={msg} linkedCase={linkedCase} />
               ))
             ) : (
-              <p className="text-center text-muted-foreground py-10 italic text-sm">No hay mensajes de usuarios registrados.</p>
+              <p className="text-center text-muted-foreground py-10 italic text-sm">No se encontraron mensajes vinculados.</p>
             )}
           </div>
         </div>
@@ -339,7 +372,7 @@ export default function MessagesPage() {
                 <MessageCard key={msg.id} msg={msg} />
               ))
             ) : (
-              <p className="text-center text-muted-foreground py-10 italic text-sm">No hay mensajes sin vincular.</p>
+              <p className="text-center text-muted-foreground py-10 italic text-sm">No se encontraron mensajes sin vincular.</p>
             )}
           </div>
         </div>
