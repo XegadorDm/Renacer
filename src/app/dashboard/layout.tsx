@@ -91,6 +91,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const isAdmin = userProfile?.role === 'admin';
 
+  // Estilo unificado para los iconos del sidebar
+  const iconClasses = "h-5 w-5 text-black shrink-0";
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -107,19 +110,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Ubicaciones">
-                    <Link href="/dashboard"><Home/><span>Ubicaciones</span></Link>
+                    <Link href="/dashboard"><Home className={iconClasses}/><span>Ubicaciones</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Casos">
-                    <Link href="/dashboard/cases"><Users/><span>Casos</span></Link>
+                    <Link href="/dashboard/cases"><Users className={iconClasses}/><span>Casos</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Buzón">
                     <Link href="/dashboard/messages" className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-2">
-                            <Mail/><span>Buzón</span>
+                            <Mail className={iconClasses}/><span>Buzón</span>
                         </div>
                         {unreadCount > 0 && (
                             <div className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground animate-pulse mr-2 group-data-[collapsible=icon]:hidden">
@@ -132,7 +135,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               {isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Solicitudes">
-                      <Link href="/dashboard/users" className="text-accent font-bold"><ShieldCheck className="text-accent"/><span>Solicitudes</span></Link>
+                      <Link href="/dashboard/users"><ShieldCheck className={iconClasses}/><span>Solicitudes</span></Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
@@ -142,7 +145,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="Configuración">
-                        <Link href="#"><Settings/><span>Configuración</span></Link>
+                        <Link href="#"><Settings className={iconClasses}/><span>Configuración</span></Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>
