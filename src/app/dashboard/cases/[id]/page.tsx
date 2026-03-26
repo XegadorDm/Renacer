@@ -7,7 +7,7 @@ import type { Case } from '@/lib/case-schema';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Edit, FileText, FileDown } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, FileDown, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -15,6 +15,8 @@ import { CaseStatusIndicator } from '@/components/dashboard/case-status-indicato
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 function DetailItem({ label, value }: { label: string, value: React.ReactNode }) {
     if (value === undefined || value === null || value === '') return null;
@@ -31,8 +33,10 @@ function CaseDetailContent() {
     const params = useParams();
     const searchParams = useSearchParams();
     const id = params.id as string;
+    const firestore = useFirestore();
 
-    const caseData = useMemo(() => {
+    // 1. Intentar obtener datos de la URL (optimización para navegación desde la tabla)
+    const caseDataFromUrl = useMemo(() => {
         const dataString = searchParams.get('data');
         if (!dataString) return null;
         try {
@@ -43,6 +47,17 @@ function CaseDetailContent() {
         }
     }, [searchParams]);
 
+    // 2. Buscar en Firestore por ID (necesario para enlaces directos como el del buzón)
+    const caseDocRef = useMemoFirebase(() => {
+        if (!firestore || !id) return null;
+        return doc(firestore, 'cases', id);
+    }, [firestore, id]);
+
+    const { data: caseDataFromDb, isLoading: isDbLoading } = useDoc<Case>(caseDocRef);
+
+    // Priorizar los datos obtenidos (URL o DB)
+    const caseData = caseDataFromUrl || caseDataFromDb;
+
     const details = useMemo(() => {
         if (!caseData) return [];
         return [
@@ -50,7 +65,7 @@ function CaseDetailContent() {
             { label: 'ID Interno', value: caseData.internalId },
             { label: 'Nombre Completo', value: `${caseData.firstName} ${caseData.lastName}` },
             { label: 'Documento de Identidad', value: caseData.documentId },
-            { label: 'Fecha de Nacimiento', value: format(new Date(caseData.birthDate), "d 'de' MMMM, yyyy", { locale: es }) },
+            { label: 'Fecha de Nacimiento', value: caseData.birthDate ? format(new Date(caseData.birthDate), "d 'de' MMMM, yyyy", { locale: es }) : '' },
             { label: 'Edad', value: `${caseData.age} años` },
             { label: 'Género', value: caseData.gender },
             { label: 'Estado Civil', value: caseData.maritalStatus },
@@ -112,6 +127,10 @@ function CaseDetailContent() {
         XLSX.writeFile(workbook, `${caseData.documentId}.xlsx`);
     };
 
+    if (isDbLoading && !caseDataFromUrl) {
+        return <CaseDetailSkeleton />;
+    }
+
     if (!caseData) {
         return (
             <Card className="w-full max-w-4xl mx-auto text-center">
@@ -131,7 +150,7 @@ function CaseDetailContent() {
     return (
         <Card className="w-full max-w-4xl mx-auto">
             <CardHeader className="border-b">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div>
                         <CardTitle className="text-2xl font-bold font-headline flex items-center gap-2">
                            <FileText className="h-6 w-6 text-primary" />
@@ -142,7 +161,7 @@ function CaseDetailContent() {
                         </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="font-semibold">Estado:</span>
+                        <span className="font-semibold text-sm">Estado:</span>
                         <CaseStatusIndicator status={caseData.status} />
                     </div>
                 </div>
@@ -155,23 +174,25 @@ function CaseDetailContent() {
                 </div>
                 <div className="mt-8 pt-6 border-t">
                      <h3 className="text-lg font-semibold mb-2">Testimonio</h3>
-                     <p className="text-muted-foreground whitespace-pre-wrap bg-muted/50 p-4 rounded-md">{caseData.testimony}</p>
+                     <p className="text-muted-foreground whitespace-pre-wrap bg-muted/50 p-4 rounded-md text-sm leading-relaxed">
+                        {caseData.testimony}
+                     </p>
                 </div>
             </CardContent>
-            <CardFooter className="flex-wrap justify-end gap-2 border-t pt-6">
-                 <Button variant="outline" onClick={() => router.back()}>
+            <CardFooter className="flex flex-wrap justify-end gap-2 border-t pt-6">
+                 <Button variant="outline" onClick={() => router.back()} className="flex-1 sm:flex-none">
                     <ArrowLeft className="mr-2 h-4 w-4" /> Volver
                 </Button>
-                <div className='flex-grow sm:flex-grow-0' />
-                <Button variant="secondary" onClick={handleExportPDF}>
-                    <FileDown className="mr-2 h-4 w-4" /> Guardar PDF
+                <div className='hidden sm:block flex-grow' />
+                <Button variant="secondary" onClick={handleExportPDF} className="flex-1 sm:flex-none">
+                    <FileDown className="mr-2 h-4 w-4" /> PDF
                 </Button>
-                <Button variant="secondary" onClick={handleExportExcel}>
-                    <FileDown className="mr-2 h-4 w-4" /> Guardar Excel
+                <Button variant="secondary" onClick={handleExportExcel} className="flex-1 sm:flex-none">
+                    <FileDown className="mr-2 h-4 w-4" /> Excel
                 </Button>
-                <Button asChild>
+                <Button asChild className="flex-1 sm:flex-none">
                     <Link href={`/dashboard/cases/${id}/edit`}>
-                        <Edit className="mr-2 h-4 w-4" /> Editar Caso
+                        <Edit className="mr-2 h-4 w-4" /> Editar
                     </Link>
                 </Button>
             </CardFooter>
@@ -184,21 +205,22 @@ function CaseDetailSkeleton() {
         <Card className="w-full max-w-4xl mx-auto">
             <CardHeader>
                 <Skeleton className="h-8 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-1/2 mt-2" />
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
                 {Array.from({ length: 15 }).map((_, i) => (
                     <div key={i} className="space-y-2">
                         <Skeleton className="h-4 w-1/3" />
                         <Skeleton className="h-5 w-2/3" />
                     </div>
                 ))}
-                <div className="lg:col-span-3 space-y-2">
+                <div className="lg:col-span-3 space-y-2 mt-4">
                     <Skeleton className="h-4 w-1/3" />
-                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-32 w-full" />
                 </div>
             </CardContent>
-            <CardFooter className="flex justify-between">
+            <CardFooter className="flex justify-end gap-2">
+                <Skeleton className="h-10 w-24" />
                 <Skeleton className="h-10 w-24" />
                 <Skeleton className="h-10 w-24" />
             </CardFooter>
@@ -208,8 +230,10 @@ function CaseDetailSkeleton() {
 
 export default function CaseDetailPage() {
     return (
-        <Suspense fallback={<CaseDetailSkeleton />}>
-            <CaseDetailContent />
-        </Suspense>
+        <div className="py-4">
+            <Suspense fallback={<CaseDetailSkeleton />}>
+                <CaseDetailContent />
+            </Suspense>
+        </div>
     );
 }
