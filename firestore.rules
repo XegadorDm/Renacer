@@ -3,8 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // SYNC_ID: RENACER_PRIVACY_V2501
-
+    // Helper functions para validación de permisos
     function getRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
@@ -27,17 +26,29 @@ service cloud.firestore {
 
     // Reglas para el buzón de mensajes (Contacto Público)
     match /mensajes/{mensajeId} {
+      // Cualquier persona puede enviar un mensaje (público)
       allow create: if true;
+      // Solo personal autenticado y aprobado puede ver, marcar como resuelto o eliminar mensajes
       allow read, update, delete: if request.auth != null && isApproved();
     }
 
     // Reglas para perfiles de usuario
     match /users/{userId} {
+      // Cualquier usuario autenticado puede leer perfiles (necesario para verificar su propio estado)
       allow read: if request.auth != null;
-      // Creación permitida para nuevos usuarios
+      
+      // Creación permitida para nuevos usuarios durante el registro
       allow create: if request.auth != null && request.auth.uid == userId;
+      
       // Solo administradores pueden cambiar roles o estados de otros
-      allow update: if request.auth != null && (getRole() == 'admin' || (request.auth.uid == userId && request.resource.data.status == resource.data.status && request.resource.data.role == resource.data.role));
+      // Los usuarios pueden actualizar su propio perfil siempre que no alteren su rol o estado
+      allow update: if request.auth != null && (
+        getRole() == 'admin' || 
+        (request.auth.uid == userId && 
+         request.resource.data.status == resource.data.status && 
+         request.resource.data.role == resource.data.role)
+      );
+      
       allow delete: if request.auth != null && getRole() == 'admin';
     }
   }
