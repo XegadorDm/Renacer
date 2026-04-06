@@ -2,6 +2,14 @@
 # https://firebase.google.com/docs/app-hosting/configure
 
 runConfig:
-  # Increase this value if you'd like to automatically spin up
-  # more instances in response to increased traffic.
-  maxInstances: 1
+  # Instancias mínimas para evitar "cold starts" y máximas para controlar costos.
+  minInstances: 0
+  maxInstances: 2
+  # Memoria recomendada para una aplicación Next.js con Genkit
+  memory: 512Mi
+  cpu: 1
+
+# Si decides usar secretos para la API de Resend, se configurarían así en la consola:
+# env:
+#   - variable: RESEND_API_KEY
+#     secret: RESEND_API_KEY_SECRET
