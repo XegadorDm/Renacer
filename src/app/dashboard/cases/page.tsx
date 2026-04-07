@@ -5,21 +5,18 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, RefreshCw, Loader2, Wrench } from "lucide-react";
+import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch } from "lucide-react";
 import { CasesTable } from "@/components/dashboard/cases-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, getDocs, writeBatch, doc, query, where } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
-import { subDays } from 'date-fns';
+import { doc } from 'firebase/firestore';
 import type { Case, UserProfile } from "@/lib/case-schema";
 
 export default function CasesPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
-  const { toast } = useToast();
   const searchParams = useSearchParams();
   
   const queryParam = searchParams.get('query') || '';
@@ -29,7 +26,6 @@ export default function CasesPage() {
   
   const [selectedCase, setSelectedCase] = useState<(Case & { id: string }) | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
-  const [isFixing, setIsFixing] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -37,7 +33,6 @@ export default function CasesPage() {
   }, [firestore, user]);
 
   const { data: userProfile } = useDoc<UserProfile>(userDocRef);
-  const isAdmin = userProfile?.role === 'admin';
 
   const updateFilters = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -52,49 +47,6 @@ export default function CasesPage() {
   const handleSearch = useDebouncedCallback((term: string) => updateFilters('query', term), 300);
   const handleDocSearch = useDebouncedCallback((term: string) => updateFilters('doc', term), 300);
 
-  const handleFixDates = async () => {
-    if (!firestore) return;
-    setIsFixing(true);
-    try {
-      const casesRef = collection(firestore, 'cases');
-      // Buscamos casos registrados hoy (07/04/2026) que necesitan corrección
-      const q = query(casesRef, where("createdAt", ">=", "2026-04-07"), where("createdAt", "<=", "2026-04-07\uf8ff"));
-      const snapshot = await getDocs(q);
-      const batch = writeBatch(firestore);
-      
-      // Fecha objetivo: 7 días antes de la fecha errónea
-      const targetDate = subDays(new Date("2026-04-07"), 7).toISOString();
-      
-      let count = 0;
-      snapshot.docs.forEach((docSnap) => {
-        batch.update(docSnap.ref, { createdAt: targetDate });
-        count++;
-      });
-
-      if (count > 0) {
-        await batch.commit();
-        toast({
-          title: "Fechas Corregidas",
-          description: `Se han actualizado ${count} casos registrados erróneamente el 07/04/2026.`,
-        });
-      } else {
-        toast({
-          title: "Sin casos para corregir",
-          description: "No se encontraron casos con la fecha errónea del 07/04/2026.",
-        });
-      }
-    } catch (error) {
-      console.error("Fix dates failed:", error);
-      toast({
-        variant: "destructive",
-        title: "Error de Corrección",
-        description: "No se pudieron actualizar los casos.",
-      });
-    } finally {
-      setIsFixing(false);
-    }
-  };
-
   return (
     <div className="flex justify-center w-full py-4">
         <Card className="w-full">
@@ -104,18 +56,6 @@ export default function CasesPage() {
                     <CardDescription>Busca, visualiza y gestiona los casos de la comunidad.</CardDescription>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    {isAdmin && (
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={handleFixDates}
-                            disabled={isFixing}
-                            className="text-[10px] font-bold border-accent/20 text-accent hover:bg-accent/10"
-                        >
-                            {isFixing ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Wrench className="mr-2 h-3 w-3" />}
-                            CORREGIR FECHAS (07/04)
-                        </Button>
-                    )}
                     <Button variant="outline" size="sm" onClick={() => router.back()}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Volver

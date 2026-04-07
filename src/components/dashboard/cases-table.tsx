@@ -83,37 +83,27 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     return (cases as WithId<Case>[])?.find(c => c.id === selectedCaseId) || null;
   }, [cases, selectedCaseId]);
 
-  const isFiltering = useMemo(() => query !== '' || (docQuery && docQuery !== '') || (period && period !== 'all'), [query, docQuery, period]);
-
   const filteredCases = useMemo(() => {
     if (!cases) return [];
     
     let filtered = cases;
     const now = new Date();
 
-    // Filtro de Periodo con lógica corregida según requerimiento
+    // Filtro de Periodo
     if (period && period !== 'all') {
       filtered = filtered.filter(c => {
-        // Los casos sin fecha se excluyen de cualquier filtro de periodo específico
-        if (!c.createdAt) return false; 
+        if (!c.createdAt) return false; // Solo casos con fecha real entran en filtros específicos
         
         try {
             const createdAt = parseISO(c.createdAt);
             switch (period) {
-              case '1w': // Última semana (últimos 7 días)
-                return isAfter(createdAt, subDays(now, 7));
-              case '15d': // Hace 15 días (últimos 15 días)
-                return isAfter(createdAt, subDays(now, 15));
-              case '1m': // Hace 1 mes (últimos 30 días)
-                return isAfter(createdAt, subDays(now, 30));
-              case '3m': // Hace 3 meses (últimos 90 días)
-                return isAfter(createdAt, subDays(now, 90));
-              case '6m': // Hace 6 meses (últimos 180 días)
-                return isAfter(createdAt, subDays(now, 180));
-              case '1y': // 1 año o más (más de 365 días de antigüedad)
-                return isBefore(createdAt, subDays(now, 365));
-              default: 
-                return true;
+              case '1w': return isAfter(createdAt, subDays(now, 7));
+              case '15d': return isAfter(createdAt, subDays(now, 15));
+              case '1m': return isAfter(createdAt, subDays(now, 30));
+              case '3m': return isAfter(createdAt, subDays(now, 90));
+              case '6m': return isAfter(createdAt, subDays(now, 180));
+              case '1y': return isBefore(createdAt, subDays(now, 365));
+              default: return true;
             }
         } catch (e) {
             return false;
@@ -121,7 +111,7 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
       });
     }
 
-    // Filtro por Cédula (Específico)
+    // Filtro por Cédula
     if (docQuery) {
         filtered = filtered.filter(c => c.documentId?.includes(docQuery));
     }
@@ -162,8 +152,8 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     toast({
         title: contacted ? "Llamada Registrada" : "Intento Registrado",
         description: contacted 
-          ? `Se ha marcado a ${selectedCase?.firstName} como contactado visualmente.` 
-          : `Se ha registrado el intento de llamada visualmente.`,
+          ? `Se ha marcado a ${selectedCase?.firstName} como contactado.` 
+          : `Se ha registrado el intento de llamada.`,
     });
     setIsCallModalOpen(false);
   };
@@ -215,7 +205,7 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                     <TableCell className="text-xs font-medium text-muted-foreground">{c.documentId}</TableCell>
                     <TableCell className="text-[10px] font-mono whitespace-nowrap">
                         {c.createdAt ? format(parseISO(c.createdAt), "dd/MM/yyyy HH:mm", { locale: es }) : (
-                            <span className="text-muted-foreground italic text-[9px] opacity-60">Sin fecha</span>
+                            <span className="text-muted-foreground italic text-[9px] opacity-60 font-sans">Sin fecha</span>
                         )}
                     </TableCell>
                     <TableCell className="text-xs font-semibold">{c.municipality}</TableCell>
