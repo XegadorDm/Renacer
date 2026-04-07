@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
@@ -8,6 +9,12 @@ export const metadata: Metadata = {
   title: 'Renacer',
   description:
     'Plataforma de apoyo para gestión de casos sociales y trámites gubernamentales para comunidades vulnerables del Cauca, Colombia.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Renacer',
+  },
 };
 
 export const viewport: Viewport = {
@@ -15,6 +22,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: '#388E3C',
 };
 
 export default function RootLayout({
@@ -31,6 +39,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="format-detection" content="telephone=no" />
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       <body className={cn('font-body antialiased min-h-screen bg-background')}>
         <FirebaseClientProvider>

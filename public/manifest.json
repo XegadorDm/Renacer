@@ -1,34 +1,26 @@
 
 {
-  "name": "Renacer App",
+  "name": "Renacer",
   "short_name": "Renacer",
-  "description": "Plataforma de apoyo para gestión de casos sociales y trámites gubernamentales para comunidades vulnerables del Cauca, Colombia.",
-  "start_url": "/",
+  "description": "Plataforma de gestión social y apoyo comunitario para el Cauca.",
+  "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#f5f3ef",
-  "theme_color": "#5b8c5a",
+  "background_color": "#F5F5DC",
+  "theme_color": "#388E3C",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "/icons/icon-maskable-192x192.png",
-      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/icon-maskable-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "categories": ["social", "utility"]
 }
