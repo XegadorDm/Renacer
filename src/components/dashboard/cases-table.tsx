@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
@@ -5,12 +6,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
+import { format, subDays, isBefore, isAfter, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +48,8 @@ type WithId<T> = T & { id: string };
 
 interface CasesTableProps {
   query: string;
+  docQuery?: string;
+  period?: string;
   location: string;
   onSelectCase: (caseItem: WithId<Case> | null) => void;
   selectedCaseId?: string;
@@ -52,7 +57,7 @@ interface CasesTableProps {
   setIsCallModalOpen: (open: boolean) => void;
 }
 
-export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCallModalOpen, setIsCallModalOpen }: CasesTableProps) {
+export function CasesTable({ query, docQuery, period, location, onSelectCase, selectedCaseId, isCallModalOpen, setIsCallModalOpen }: CasesTableProps) {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
   const { toast } = useToast();
@@ -75,22 +80,48 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
+  const isFiltering = useMemo(() => query !== '' || (docQuery && docQuery !== '') || (period && period !== 'all'), [query, docQuery, period]);
+
   const filteredCases = useMemo(() => {
     if (!cases) return [];
-    const searchTerm = query.toLowerCase();
-    return cases.filter(c => 
-      c && (
-        `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().includes(searchTerm) || 
-        c.caseNumber?.toLowerCase().includes(searchTerm) ||
-        c.documentId?.toLowerCase().includes(searchTerm)
-      )
-    );
-  }, [cases, query]);
+    
+    let filtered = cases;
+    const now = new Date();
 
-  const selectedCase = useMemo(() => 
-    cases?.find(c => c.id === selectedCaseId) || null, 
-    [cases, selectedCaseId]
-  );
+    // Filtro de Periodo
+    if (period && period !== 'all') {
+      filtered = filtered.filter(c => {
+        if (!c.createdAt) return false;
+        const createdAt = parseISO(c.createdAt);
+        
+        switch (period) {
+          case '1w': return isAfter(createdAt, subDays(now, 7));
+          case '15d': return isAfter(createdAt, subDays(now, 15));
+          case '1m': return isAfter(createdAt, subDays(now, 30));
+          case '3m': return isAfter(createdAt, subDays(now, 90));
+          case '6m': return isAfter(createdAt, subDays(now, 180));
+          case '1y': return isBefore(createdAt, subDays(now, 365));
+          default: return true;
+        }
+      });
+    }
+
+    // Filtro por Cédula (Específico)
+    if (docQuery) {
+        filtered = filtered.filter(c => c.documentId?.includes(docQuery));
+    }
+
+    // Filtro General (Nombre o N° de caso)
+    const searchTerm = query.toLowerCase();
+    if (searchTerm) {
+        filtered = filtered.filter(c => 
+            `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().includes(searchTerm) || 
+            c.caseNumber?.toLowerCase().includes(searchTerm)
+        );
+    }
+
+    return filtered;
+  }, [cases, query, docQuery, period]);
 
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
@@ -143,6 +174,11 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
                 <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Documento</TableHead>
+                {isFiltering && (
+                    <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest flex items-center gap-1 mt-3">
+                        <CalendarIcon className="h-3 w-3" /> Registro
+                    </TableHead>
+                )}
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">Municipio</TableHead>
                 <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Estado Local</TableHead>
                 <TableHead className="text-right font-bold pr-6 text-primary min-w-[100px] uppercase text-[10px] tracking-widest">Gestión</TableHead>
@@ -162,6 +198,11 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                     <TableCell className="font-mono text-[10px] text-muted-foreground font-semibold">{c.caseNumber}</TableCell>
                     <TableCell className="font-bold uppercase text-xs tracking-tight">{c.firstName} {c.lastName}</TableCell>
                     <TableCell className="text-xs font-medium text-muted-foreground">{c.documentId}</TableCell>
+                    {isFiltering && (
+                        <TableCell className="text-[10px] font-mono whitespace-nowrap">
+                            {c.createdAt ? format(parseISO(c.createdAt), "dd/MM/yyyy HH:mm", { locale: es }) : 'N/A'}
+                        </TableCell>
+                    )}
                     <TableCell className="text-xs font-semibold">{c.municipality}</TableCell>
                     <TableCell className="flex justify-center py-4">
                       <CaseStatusIndicator status={localStatuses[c.id] || c.status} />
@@ -202,7 +243,7 @@ export function CasesTable({ query, location, onSelectCase, selectedCaseId, isCa
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center h-48">
+                  <TableCell colSpan={isFiltering ? 8 : 7} className="text-center h-48">
                     <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
                         <AlertCircle className="h-8 w-8 opacity-20" />
                         <p className="font-medium">No se encontraron casos registrados para esta búsqueda.</p>

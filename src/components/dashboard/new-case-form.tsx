@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -123,6 +124,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                 ...values,
                 birthDate: values.birthDate.toISOString(),
                 status: caseData.status || "Sin novedad",
+                createdAt: caseData.createdAt || new Date().toISOString(),
                 members: caseData.members
             };
             setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
@@ -139,6 +141,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                 id: '', 
                 caseNumber: `CAS-${Date.now()}`,
                 status: "Sin novedad",
+                createdAt: new Date().toISOString(),
                 userId: user.uid,
                 members: { 
                     [user.uid]: 'owner'

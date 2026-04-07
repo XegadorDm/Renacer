@@ -26,6 +26,7 @@ export interface Case {
     testimony: string;
     status: CaseStatus;
     userId: string;
+    createdAt: string; // Fecha de creación del registro
     members: { [uid: string]: 'owner' | 'editor' | 'viewer' };
 }
 
