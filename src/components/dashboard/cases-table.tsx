@@ -92,7 +92,8 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     // Filtro de Periodo
     if (period && period !== 'all') {
       filtered = filtered.filter(c => {
-        if (!c.createdAt) return false; // Solo casos con fecha real entran en filtros específicos
+        // Los demás filtros solo aplican a casos que tengan createdAt válido
+        if (!c.createdAt) return false; 
         
         try {
             const createdAt = parseISO(c.createdAt);
