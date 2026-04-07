@@ -91,20 +91,29 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     let filtered = cases;
     const now = new Date();
 
-    // Filtro de Periodo
+    // Filtro de Periodo con lógica corregida según requerimiento
     if (period && period !== 'all') {
       filtered = filtered.filter(c => {
-        if (!c.createdAt) return false; // Excluir si no tiene fecha y se pide un periodo específico
+        // Los casos sin fecha se excluyen de cualquier filtro de periodo específico
+        if (!c.createdAt) return false; 
+        
         try {
             const createdAt = parseISO(c.createdAt);
             switch (period) {
-              case '1w': return isAfter(createdAt, subDays(now, 7));
-              case '15d': return isAfter(createdAt, subDays(now, 15));
-              case '1m': return isAfter(createdAt, subDays(now, 30));
-              case '3m': return isAfter(createdAt, subDays(now, 90));
-              case '6m': return isAfter(createdAt, subDays(now, 180));
-              case '1y': return isBefore(createdAt, subDays(now, 365));
-              default: return true;
+              case '1w': // Última semana (últimos 7 días)
+                return isAfter(createdAt, subDays(now, 7));
+              case '15d': // Hace 15 días (últimos 15 días)
+                return isAfter(createdAt, subDays(now, 15));
+              case '1m': // Hace 1 mes (últimos 30 días)
+                return isAfter(createdAt, subDays(now, 30));
+              case '3m': // Hace 3 meses (últimos 90 días)
+                return isAfter(createdAt, subDays(now, 90));
+              case '6m': // Hace 6 meses (últimos 180 días)
+                return isAfter(createdAt, subDays(now, 180));
+              case '1y': // 1 año o más (más de 365 días de antigüedad)
+                return isBefore(createdAt, subDays(now, 365));
+              default: 
+                return true;
             }
         } catch (e) {
             return false;
@@ -180,13 +189,11 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
                 <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Documento</TableHead>
-                {isFiltering && (
-                    <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">
-                        <div className="flex items-center gap-1">
-                          <CalendarIcon className="h-3 w-3" /> Registro
-                        </div>
-                    </TableHead>
-                )}
+                <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">
+                    <div className="flex items-center gap-1">
+                      <CalendarIcon className="h-3 w-3" /> Registro
+                    </div>
+                </TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">Municipio</TableHead>
                 <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Estado Local</TableHead>
                 <TableHead className="text-right font-bold pr-6 text-primary min-w-[100px] uppercase text-[10px] tracking-widest">Gestión</TableHead>
@@ -206,13 +213,11 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                     <TableCell className="font-mono text-[10px] text-muted-foreground font-semibold">{c.caseNumber}</TableCell>
                     <TableCell className="font-bold uppercase text-xs tracking-tight">{c.firstName} {c.lastName}</TableCell>
                     <TableCell className="text-xs font-medium text-muted-foreground">{c.documentId}</TableCell>
-                    {isFiltering && (
-                        <TableCell className="text-[10px] font-mono whitespace-nowrap">
-                            {c.createdAt ? format(parseISO(c.createdAt), "dd/MM/yyyy HH:mm", { locale: es }) : (
-                                <span className="text-muted-foreground italic">Sin fecha</span>
-                            )}
-                        </TableCell>
-                    )}
+                    <TableCell className="text-[10px] font-mono whitespace-nowrap">
+                        {c.createdAt ? format(parseISO(c.createdAt), "dd/MM/yyyy HH:mm", { locale: es }) : (
+                            <span className="text-muted-foreground italic text-[9px] opacity-60">Sin fecha</span>
+                        )}
+                    </TableCell>
                     <TableCell className="text-xs font-semibold">{c.municipality}</TableCell>
                     <TableCell className="flex justify-center py-4">
                       <CaseStatusIndicator status={localStatuses[c.id] || c.status} />
@@ -253,7 +258,7 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isFiltering ? 8 : 7} className="text-center h-48">
+                  <TableCell colSpan={8} className="text-center h-48">
                     <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
                         <AlertCircle className="h-8 w-8 opacity-20" />
                         <p className="font-medium">No se encontraron casos registrados para esta búsqueda.</p>
