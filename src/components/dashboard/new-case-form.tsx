@@ -14,7 +14,7 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { es } from 'date-fns/locale/es';
+import { es } from 'date-fns/locale';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useUser } from '@/firebase';
@@ -140,7 +140,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                 id: '', 
                 caseNumber: `CAS-${Date.now()}`,
                 status: "Sin novedad",
-                createdAt: new Date().toISOString(), // Marca de tiempo exacta del registro
+                createdAt: new Date().toISOString(), // Marca de tiempo exacta del registro ISO para filtros
                 userId: user.uid,
                 members: { 
                     [user.uid]: 'owner'

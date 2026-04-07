@@ -11,7 +11,7 @@ import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from 
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
-import { format, subDays, isBefore, isAfter, parseISO } from "date-fns";
+import { format, subDays, isBefore, isAfter, parseISO, startOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   AlertDialog,
@@ -96,14 +96,15 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
         if (!c.createdAt) return false; 
         
         try {
-            const createdAt = parseISO(c.createdAt);
+            const createdAtDate = parseISO(c.createdAt);
+            // Comparamos contra el inicio del día del periodo seleccionado para ser más inclusivos
             switch (period) {
-              case '1w': return isAfter(createdAt, subDays(now, 7));
-              case '15d': return isAfter(createdAt, subDays(now, 15));
-              case '1m': return isAfter(createdAt, subDays(now, 30));
-              case '3m': return isAfter(createdAt, subDays(now, 90));
-              case '6m': return isAfter(createdAt, subDays(now, 180));
-              case '1y': return isBefore(createdAt, subDays(now, 365));
+              case '1w': return isAfter(createdAtDate, startOfDay(subDays(now, 7)));
+              case '15d': return isAfter(createdAtDate, startOfDay(subDays(now, 15)));
+              case '1m': return isAfter(createdAtDate, startOfDay(subDays(now, 30)));
+              case '3m': return isAfter(createdAtDate, startOfDay(subDays(now, 90)));
+              case '6m': return isAfter(createdAtDate, startOfDay(subDays(now, 180)));
+              case '1y': return isBefore(createdAtDate, startOfDay(subDays(now, 365)));
               default: return true;
             }
         } catch (e) {
@@ -163,7 +164,7 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     return (
         <div className="border rounded-lg p-6 space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-md" />
+                <Skeleton className="h-14 w-full rounded-md" key={i} />
             ))}
         </div>
     )
@@ -196,7 +197,7 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                   <TableRow 
                     key={c.id} 
                     className={`hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b last:border-0 ${selectedCaseId === c.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''}`}
-                    onClick={() => onSelectCase(c)}
+                    onClick={() => onSelectCase(c as WithId<Case>)}
                   >
                     <TableCell className="pl-6">
                         <div className={`w-3 h-3 rounded-full border-2 transition-all ${selectedCaseId === c.id ? 'bg-primary border-primary scale-125' : 'border-muted-foreground'}`} />
@@ -236,7 +237,7 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                             className="text-destructive focus:text-destructive-foreground focus:bg-destructive cursor-pointer rounded-lg py-2"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setCaseToDelete(c);
+                                setCaseToDelete(c as WithId<Case>);
                                 setIsDeleteAlertOpen(true);
                             }}
                           >
