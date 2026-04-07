@@ -79,7 +79,6 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
-  // Resolvemos el objeto del caso seleccionado a partir de su ID
   const selectedCase = useMemo(() => {
     return (cases as WithId<Case>[])?.find(c => c.id === selectedCaseId) || null;
   }, [cases, selectedCaseId]);
@@ -95,17 +94,20 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     // Filtro de Periodo
     if (period && period !== 'all') {
       filtered = filtered.filter(c => {
-        if (!c.createdAt) return false;
-        const createdAt = parseISO(c.createdAt);
-        
-        switch (period) {
-          case '1w': return isAfter(createdAt, subDays(now, 7));
-          case '15d': return isAfter(createdAt, subDays(now, 15));
-          case '1m': return isAfter(createdAt, subDays(now, 30));
-          case '3m': return isAfter(createdAt, subDays(now, 90));
-          case '6m': return isAfter(createdAt, subDays(now, 180));
-          case '1y': return isBefore(createdAt, subDays(now, 365));
-          default: return true;
+        if (!c.createdAt) return false; // Excluir si no tiene fecha y se pide un periodo específico
+        try {
+            const createdAt = parseISO(c.createdAt);
+            switch (period) {
+              case '1w': return isAfter(createdAt, subDays(now, 7));
+              case '15d': return isAfter(createdAt, subDays(now, 15));
+              case '1m': return isAfter(createdAt, subDays(now, 30));
+              case '3m': return isAfter(createdAt, subDays(now, 90));
+              case '6m': return isAfter(createdAt, subDays(now, 180));
+              case '1y': return isBefore(createdAt, subDays(now, 365));
+              default: return true;
+            }
+        } catch (e) {
+            return false;
         }
       });
     }
@@ -206,7 +208,9 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                     <TableCell className="text-xs font-medium text-muted-foreground">{c.documentId}</TableCell>
                     {isFiltering && (
                         <TableCell className="text-[10px] font-mono whitespace-nowrap">
-                            {c.createdAt ? format(parseISO(c.createdAt), "dd/MM/yyyy HH:mm", { locale: es }) : 'N/A'}
+                            {c.createdAt ? format(parseISO(c.createdAt), "dd/MM/yyyy HH:mm", { locale: es }) : (
+                                <span className="text-muted-foreground italic">Sin fecha</span>
+                            )}
                         </TableCell>
                     )}
                     <TableCell className="text-xs font-semibold">{c.municipality}</TableCell>

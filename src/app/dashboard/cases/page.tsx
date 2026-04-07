@@ -1,4 +1,3 @@
-
 'use client';
 import Link from "next/link";
 import { Suspense, useState } from "react";
@@ -6,23 +5,38 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch } from "lucide-react";
+import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, RefreshCw, Loader2 } from "lucide-react";
 import { CasesTable } from "@/components/dashboard/cases-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Case } from "@/lib/case-schema";
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import type { Case, UserProfile } from "@/lib/case-schema";
 
 export default function CasesPage() {
   const router = useRouter();
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
   const searchParams = useSearchParams();
+  
   const query = searchParams.get('query') || '';
   const docQuery = searchParams.get('doc') || '';
   const period = searchParams.get('period') || 'all';
   const location = searchParams.get('location') || '';
-  const userRole = searchParams.get('role') || '';
   
   const [selectedCase, setSelectedCase] = useState<(Case & { id: string }) | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+  const isAdmin = userProfile?.role === 'admin';
 
   const updateFilters = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -37,6 +51,48 @@ export default function CasesPage() {
   const handleSearch = useDebouncedCallback((term: string) => updateFilters('query', term), 300);
   const handleDocSearch = useDebouncedCallback((term: string) => updateFilters('doc', term), 300);
 
+  const handleMigrateDates = async () => {
+    if (!firestore) return;
+    setIsMigrating(true);
+    try {
+      const casesRef = collection(firestore, 'cases');
+      const snapshot = await getDocs(casesRef);
+      const batch = writeBatch(firestore);
+      let count = 0;
+      const now = new Date().toISOString();
+
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (!data.createdAt) {
+          batch.update(docSnap.ref, { createdAt: now });
+          count++;
+        }
+      });
+
+      if (count > 0) {
+        await batch.commit();
+        toast({
+          title: "Migración de Fechas Exitosa",
+          description: `Se han actualizado ${count} casos antiguos con la fecha actual.`,
+        });
+      } else {
+        toast({
+          title: "Sin cambios",
+          description: "Todos los casos ya tienen una fecha de registro definida.",
+        });
+      }
+    } catch (error) {
+      console.error("Migration failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Error de Migración",
+        description: "No se pudieron actualizar las fechas de los casos.",
+      });
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
   return (
     <div className="flex justify-center w-full py-4">
         <Card className="w-full">
@@ -45,8 +101,24 @@ export default function CasesPage() {
                     <CardTitle className="text-2xl font-bold text-primary">Gestión de Casos {location && `- ${location}`}</CardTitle>
                     <CardDescription>Busca, visualiza y gestiona los casos de la comunidad.</CardDescription>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => router.back()}>
+                <div className="flex flex-wrap gap-2">
+                    {isAdmin && (
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={handleMigrateDates}
+                            disabled={isMigrating}
+                            className="bg-muted/50 border-primary/20 hover:bg-primary/10 text-[10px] font-bold"
+                        >
+                            {isMigrating ? (
+                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                            ) : (
+                                <RefreshCw className="mr-2 h-3 w-3" />
+                            )}
+                            NORMALIZAR FECHAS
+                        </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => router.back()}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Volver
                     </Button>
