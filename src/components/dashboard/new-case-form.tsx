@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -141,7 +140,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                 id: '', 
                 caseNumber: `CAS-${Date.now()}`,
                 status: "Sin novedad",
-                createdAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(), // Se guarda la fecha y hora exacta del registro
                 userId: user.uid,
                 members: { 
                     [user.uid]: 'owner'
