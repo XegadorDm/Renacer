@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from "react";
@@ -80,6 +79,11 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
+  // Resolvemos el objeto del caso seleccionado a partir de su ID
+  const selectedCase = useMemo(() => {
+    return (cases as WithId<Case>[])?.find(c => c.id === selectedCaseId) || null;
+  }, [cases, selectedCaseId]);
+
   const isFiltering = useMemo(() => query !== '' || (docQuery && docQuery !== '') || (period && period !== 'all'), [query, docQuery, period]);
 
   const filteredCases = useMemo(() => {
@@ -175,8 +179,10 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
                 <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Documento</TableHead>
                 {isFiltering && (
-                    <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest flex items-center gap-1 mt-3">
-                        <CalendarIcon className="h-3 w-3" /> Registro
+                    <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">
+                        <div className="flex items-center gap-1">
+                          <CalendarIcon className="h-3 w-3" /> Registro
+                        </div>
                     </TableHead>
                 )}
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">Municipio</TableHead>
