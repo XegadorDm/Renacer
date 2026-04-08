@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, Suspense } from 'react';
@@ -7,7 +6,7 @@ import type { Case } from '@/lib/case-schema';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Edit, FileText, FileDown, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, FileText, FileDown } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -35,7 +34,6 @@ function CaseDetailContent() {
     const id = params.id as string;
     const firestore = useFirestore();
 
-    // 1. Intentar obtener datos de la URL (optimización para navegación desde la tabla)
     const caseDataFromUrl = useMemo(() => {
         const dataString = searchParams.get('data');
         if (!dataString) return null;
@@ -47,7 +45,6 @@ function CaseDetailContent() {
         }
     }, [searchParams]);
 
-    // 2. Buscar en Firestore por ID (necesario para enlaces directos como el del buzón)
     const caseDocRef = useMemoFirebase(() => {
         if (!firestore || !id) return null;
         return doc(firestore, 'cases', id);
@@ -55,7 +52,6 @@ function CaseDetailContent() {
 
     const { data: caseDataFromDb, isLoading: isDbLoading } = useDoc<Case>(caseDocRef);
 
-    // Priorizar los datos obtenidos (URL o DB)
     const caseData = caseDataFromUrl || caseDataFromDb;
 
     const details = useMemo(() => {
@@ -102,7 +98,7 @@ function CaseDetailContent() {
             theme: 'striped'
         });
 
-        const lastTableY = (doc as any).lastAutoTable.finalY;
+        const lastTableY = (doc as any).lastAutoTable?.finalY || 150;
         doc.setFontSize(12);
         doc.text('Testimonio:', 14, lastTableY + 10);
         const testimonyLines = doc.splitTextToSize(caseData.testimony, 180);
@@ -165,7 +161,7 @@ function CaseDetailContent() {
                         <CaseStatusIndicator status={caseData.status} />
                     </div>
                 </div>
-            </Header>
+            </CardHeader>
             <CardContent className="pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
                     {details.map(item => (
@@ -183,11 +179,11 @@ function CaseDetailContent() {
                  <Button variant="outline" onClick={() => router.back()} className="flex-1 sm:flex-none">
                     <ArrowLeft className="mr-2 h-4 w-4" /> Volver
                 </Button>
-                <div className='hidden sm:block flex-grow' />
-                <Button onClick={handleExportPDF} className="flex-1 sm:flex-none">
+                <div className="hidden sm:block flex-grow" />
+                <Button variant="outline" onClick={handleExportPDF} className="flex-1 sm:flex-none">
                     <FileDown className="mr-2 h-4 w-4" /> PDF
                 </Button>
-                <Button onClick={handleExportExcel} className="flex-1 sm:flex-none">
+                <Button variant="outline" onClick={handleExportExcel} className="flex-1 sm:flex-none">
                     <FileDown className="mr-2 h-4 w-4" /> Excel
                 </Button>
                 <Button asChild className="flex-1 sm:flex-none">
@@ -197,7 +193,7 @@ function CaseDetailContent() {
                 </Button>
             </CardFooter>
         </Card>
-    )
+    );
 }
 
 function CaseDetailSkeleton() {
