@@ -165,7 +165,7 @@ function CaseDetailContent() {
                         <CaseStatusIndicator status={caseData.status} />
                     </div>
                 </div>
-            </CardHeader>
+            </Header>
             <CardContent className="pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8">
                     {details.map(item => (
@@ -184,10 +184,10 @@ function CaseDetailContent() {
                     <ArrowLeft className="mr-2 h-4 w-4" /> Volver
                 </Button>
                 <div className='hidden sm:block flex-grow' />
-                <Button variant="secondary" onClick={handleExportPDF} className="flex-1 sm:flex-none">
+                <Button onClick={handleExportPDF} className="flex-1 sm:flex-none">
                     <FileDown className="mr-2 h-4 w-4" /> PDF
                 </Button>
-                <Button variant="secondary" onClick={handleExportExcel} className="flex-1 sm:flex-none">
+                <Button onClick={handleExportExcel} className="flex-1 sm:flex-none">
                     <FileDown className="mr-2 h-4 w-4" /> Excel
                 </Button>
                 <Button asChild className="flex-1 sm:flex-none">
