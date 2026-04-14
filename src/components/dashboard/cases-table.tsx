@@ -8,7 +8,7 @@ import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
-import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
+import { collection, query as firestoreQuery, where, doc, Timestamp } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
 import { format, subDays, isBefore, isAfter, parseISO, startOfDay } from "date-fns";
@@ -92,12 +92,19 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     // Filtro de Periodo
     if (period && period !== 'all') {
       filtered = filtered.filter(c => {
-        // Los demás filtros solo aplican a casos que tengan createdAt válido
-        if (!c.createdAt) return false; 
+        // Soporte para Timestamp y String ISO
+        let createdAtDate: Date | null = null;
+        if (c.createdAt instanceof Timestamp) {
+            createdAtDate = c.createdAt.toDate();
+        } else if (typeof c.createdAt === 'string') {
+            createdAtDate = parseISO(c.createdAt);
+        } else if (c.createdAt && typeof (c.createdAt as any).toDate === 'function') {
+            createdAtDate = (c.createdAt as any).toDate();
+        }
+
+        if (!createdAtDate) return false; 
         
         try {
-            const createdAtDate = parseISO(c.createdAt);
-            // Comparamos contra el inicio del día del periodo seleccionado para ser más inclusivos
             switch (period) {
               case '1w': return isAfter(createdAtDate, startOfDay(subDays(now, 7)));
               case '15d': return isAfter(createdAtDate, startOfDay(subDays(now, 15)));
@@ -151,7 +158,6 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
 
-    // Actualización local para feedback inmediato (opcional ya que useCollection es real-time)
     setLocalStatuses(prev => ({
       ...prev,
       [selectedCase.id]: newStatus
@@ -212,7 +218,15 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                     <TableCell className="font-bold uppercase text-xs tracking-tight">{c.firstName} {c.lastName}</TableCell>
                     <TableCell className="text-xs font-medium text-muted-foreground">{c.documentId}</TableCell>
                     <TableCell className="text-[10px] font-mono whitespace-nowrap">
-                        {c.createdAt ? format(parseISO(c.createdAt), "dd/MM/yyyy HH:mm", { locale: es }) : (
+                        {c.createdAt ? (
+                             format(
+                                c.createdAt instanceof Timestamp ? c.createdAt.toDate() : 
+                                (typeof c.createdAt === 'string' ? parseISO(c.createdAt) : 
+                                (c.createdAt.toDate ? c.createdAt.toDate() : new Date())), 
+                                "dd/MM/yyyy HH:mm", 
+                                { locale: es }
+                            )
+                        ) : (
                             <span className="text-muted-foreground italic text-[9px] opacity-60 font-sans">Sin fecha</span>
                         )}
                     </TableCell>

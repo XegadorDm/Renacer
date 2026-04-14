@@ -18,7 +18,7 @@ import { es } from 'date-fns/locale';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, serverTimestamp } from 'firebase/firestore';
 import type { Case } from '@/lib/case-schema';
 import { useEffect, useState } from 'react';
 
@@ -123,7 +123,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                 ...values,
                 birthDate: values.birthDate.toISOString(),
                 status: caseData.status || "Sin novedad",
-                createdAt: caseData.createdAt || new Date().toISOString(),
+                createdAt: caseData.createdAt || serverTimestamp(),
                 members: caseData.members
             };
             setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
@@ -140,7 +140,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                 id: '', 
                 caseNumber: `CAS-${Date.now()}`,
                 status: "Sin novedad",
-                createdAt: new Date().toISOString(), // Marca de tiempo exacta del registro ISO para filtros
+                createdAt: serverTimestamp(), // Uso de serverTimestamp para precisión offline
                 userId: user.uid,
                 members: { 
                     [user.uid]: 'owner'

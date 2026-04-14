@@ -8,7 +8,7 @@ import {
   getFirestore,
   initializeFirestore, 
   persistentLocalCache, 
-  persistentSingleTabManager,
+  persistentMultipleTabManager,
   Firestore 
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
@@ -23,9 +23,7 @@ let authInstance: Auth;
 let firestoreInstance: Firestore;
 
 /**
- * Proveedor de Firebase optimizado para Renacer con soporte Offline.
- * Esta implementación garantiza que initializeFirestore() se llame solo una vez,
- * evitando conflictos de configuración y habilitando el almacenamiento local.
+ * Proveedor de Firebase optimizado para Renacer con soporte Offline multi-pestaña.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
@@ -40,13 +38,13 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       authInstance = getAuth(appInstance);
     }
 
-    // Inicializar Firestore con persistencia local si no existe
+    // Inicializar Firestore con persistencia local multi-pestaña si no existe
     if (!firestoreInstance) {
       try {
-        // Intentamos la inicialización personalizada con caché persistente
+        // persistentMultipleTabManager es el equivalente moderno y robusto de enableMultiTabIndexedDbPersistence
         firestoreInstance = initializeFirestore(appInstance, {
           localCache: persistentLocalCache({
-            tabManager: persistentSingleTabManager()
+            tabManager: persistentMultipleTabManager()
           })
         });
       } catch (e) {

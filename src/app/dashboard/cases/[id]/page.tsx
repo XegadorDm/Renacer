@@ -8,14 +8,14 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Edit, FileText, FileDown } from 'lucide-react';
 import Link from 'next/link';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CaseStatusIndicator } from '@/components/dashboard/case-status-indicator';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, Timestamp } from 'firebase/firestore';
 
 function DetailItem({ label, value }: { label: string, value: React.ReactNode }) {
     if (value === undefined || value === null || value === '') return null;
@@ -56,6 +56,15 @@ function CaseDetailContent() {
 
     const details = useMemo(() => {
         if (!caseData) return [];
+
+        let registrationDate = '';
+        if (caseData.createdAt) {
+            const dateObj = caseData.createdAt instanceof Timestamp ? caseData.createdAt.toDate() : 
+                           (typeof caseData.createdAt === 'string' ? parseISO(caseData.createdAt) : 
+                           (caseData.createdAt.toDate ? caseData.createdAt.toDate() : new Date()));
+            registrationDate = format(dateObj, "dd/MM/yyyy HH:mm", { locale: es });
+        }
+
         return [
             { label: 'N° de Caso', value: caseData.caseNumber },
             { label: 'ID Interno', value: caseData.internalId },
@@ -75,6 +84,7 @@ function CaseDetailContent() {
             { label: 'Discapacidad', value: caseData.disability },
             { label: '¿Es adulto mayor?', value: caseData.isElderly ? 'Sí' : 'No' },
             { label: 'Miembros del hogar', value: caseData.householdMembers },
+            { label: 'Fecha de Registro', value: registrationDate },
         ];
     }, [caseData]);
     

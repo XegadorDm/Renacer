@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,18 @@ import { es } from 'date-fns/locale';
 import type { Case } from '@/lib/case-schema';
 
 function ContactCard({ item }: { item: Case }) {
+  const formattedDate = useMemo(() => {
+    if (!item.createdAt) return 'Sin fecha';
+    try {
+        const dateObj = item.createdAt instanceof Timestamp ? item.createdAt.toDate() : 
+                       (typeof item.createdAt === 'string' ? parseISO(item.createdAt) : 
+                       (item.createdAt.toDate ? item.createdAt.toDate() : new Date()));
+        return format(dateObj, "dd/MM/yyyy", { locale: es });
+    } catch (e) {
+        return 'Fecha inválida';
+    }
+  }, [item.createdAt]);
+
   return (
     <Card className="hover:shadow-md transition-all border-primary/10 overflow-hidden group">
       <CardHeader className="pb-2 space-y-1">
@@ -40,7 +52,7 @@ function ContactCard({ item }: { item: Case }) {
         </div>
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground italic">
           <Calendar className="h-3 w-3 shrink-0" />
-          <span>Registrado: {item.createdAt ? format(parseISO(item.createdAt), "dd/MM/yyyy", { locale: es }) : 'Sin fecha'}</span>
+          <span>Registrado: {formattedDate}</span>
         </div>
       </CardContent>
       <CardFooter className="pt-2 border-t p-2 bg-muted/5">
