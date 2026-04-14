@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
@@ -143,9 +143,15 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
   };
   
   const handleRegisterNovedad = (contacted: boolean) => {
-    if (!selectedCase) return;
+    if (!selectedCase || !firestore) return;
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
+    
+    // PERSISTENCIA EN FIRESTORE
+    const caseRef = doc(firestore, 'cases', selectedCase.id);
+    updateDocumentNonBlocking(caseRef, { status: newStatus });
+
+    // Actualización local para feedback inmediato (opcional ya que useCollection es real-time)
     setLocalStatuses(prev => ({
       ...prev,
       [selectedCase.id]: newStatus
