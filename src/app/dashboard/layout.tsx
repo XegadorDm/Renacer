@@ -19,7 +19,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, Settings, Users, Loader2, Mail, ShieldCheck } from "lucide-react";
+import { Home, LogOut, Settings, Users, Loader2, Mail, ShieldCheck, PhoneCall } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { doc, collection, query, where } from "firebase/firestore";
 import { ConnectionStatus } from "@/components/dashboard/connection-status";
@@ -116,6 +116,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Casos">
                     <Link href="/dashboard/cases"><Users className={iconClasses}/><span>Casos</span></Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Usuarios Contactados">
+                    <Link href="/dashboard/contacted"><PhoneCall className={iconClasses}/><span>Contactados</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
