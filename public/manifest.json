@@ -1,13 +1,13 @@
-
 {
-  "name": "Renacer",
+  "name": "Renacer Digital",
   "short_name": "Renacer",
-  "description": "Plataforma de gestión social y apoyo comunitario para el Cauca.",
-  "start_url": "/dashboard",
+  "description": "Plataforma de apoyo para gestión de casos sociales y trámites gubernamentales para comunidades vulnerables del Cauca, Colombia.",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#F5F5DC",
   "theme_color": "#388E3C",
   "orientation": "portrait",
+  "scope": "/",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -21,6 +21,5 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "categories": ["social", "utility"]
+  ]
 }
