@@ -39,10 +39,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Validación de aprobación: true si es aprobado o legado (sin campo status)
   const isApproved = userProfile && (!userProfile.status || userProfile.status === 'approved');
 
-  // Contador de mensajes no leídos (solo si el usuario está aprobado)
   const unreadMessagesQuery = useMemoFirebase(() => {
     if (!firestore || !user || !isApproved) return null;
     return query(collection(firestore, 'mensajes'), where('read', '==', false));
@@ -57,10 +55,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [isUserLoading, user, router]);
 
-  // Validación de estado de aprobación con soporte para usuarios legados
   useEffect(() => {
     if (!isProfileLoading && userProfile) {
-      // Solo redirigir si el estado es explícitamente 'rejected' o 'pending'
       if (userProfile.status === 'rejected' || userProfile.status === 'pending') {
         router.replace('/pending-approval');
       }
@@ -90,8 +86,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   const isAdmin = userProfile?.role === 'admin';
-
-  // Estilo unificado para los iconos del sidebar
   const iconClasses = "h-5 w-5 text-black shrink-0";
 
   return (
