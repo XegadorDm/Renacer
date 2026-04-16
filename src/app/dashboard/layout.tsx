@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import {
   SidebarProvider,
   Sidebar,
@@ -25,8 +25,6 @@ import { Logo } from "@/components/icons/logo";
 import { doc } from "firebase/firestore";
 import { ConnectionStatus } from "@/components/dashboard/connection-status";
 import type { UserProfile } from "@/lib/case-schema";
-import type { Mensaje } from "@/lib/mensaje-schema";
-import { isCoreAdmin } from "@/lib/core-admins";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -41,8 +39,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Un usuario está aprobado si tiene el status 'approved' O si es un admin core (para evitar bloqueos)
-  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email);
+  // Validación de acceso estrictamente basada en el campo 'status' de Firestore
+  const isApproved = userProfile && userProfile.status === 'approved';
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -78,7 +76,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return user.email?.[0].toUpperCase() || 'U';
   }
 
-  const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(user?.email);
+  // El rol administrativo ahora también depende únicamente de la base de datos
+  const isAdmin = userProfile?.role === 'admin';
   const iconClasses = "h-5 w-5 text-black shrink-0";
 
   return (

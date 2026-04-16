@@ -1,25 +1,21 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons/logo';
-import { Loader2, ShieldAlert, LogOut, RefreshCcw, CheckCircle2 } from 'lucide-react';
+import { Loader2, ShieldAlert, LogOut, RefreshCcw } from 'lucide-react';
 import type { UserProfile } from '@/lib/case-schema';
-import { isCoreAdmin } from '@/lib/core-admins';
-import { useToast } from '@/hooks/use-toast';
 
 export default function PendingApprovalPage() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
   const router = useRouter();
   const firestore = useFirestore();
-  const { toast } = useToast();
-  const [isSelfApproving, setIsSelfApproving] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -28,31 +24,6 @@ export default function PendingApprovalPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // EFECTO DE AUTO-APROBACIÓN PARA ADMINS CORE
-  useEffect(() => {
-    if (!isUserLoading && user && isCoreAdmin(user.email) && firestore && userProfile) {
-      if (userProfile.status !== 'approved' || userProfile.role !== 'admin') {
-        setIsSelfApproving(true);
-        const userRef = doc(firestore, 'users', user.uid);
-        
-        updateDocumentNonBlocking(userRef, { 
-          status: 'approved',
-          role: 'admin'
-        });
-
-        toast({
-          title: "¡Bienvenido, Administrador Core!",
-          description: "Tu cuenta ha sido auto-aprobada automáticamente.",
-        });
-
-        // Dar un pequeño respiro para que Firestore procese el update antes de redirigir
-        setTimeout(() => {
-          router.replace('/dashboard');
-        }, 1500);
-      }
-    }
-  }, [isUserLoading, user, firestore, userProfile, router, toast]);
-
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.replace('/login');
@@ -60,10 +31,10 @@ export default function PendingApprovalPage() {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    if (userProfile && userProfile.status === 'approved' && !isSelfApproving) {
+    if (userProfile && userProfile.status === 'approved') {
       router.replace('/dashboard');
     }
-  }, [userProfile, router, isSelfApproving]);
+  }, [userProfile, router]);
 
   const handleLogout = async () => {
     if (auth) {
@@ -72,13 +43,10 @@ export default function PendingApprovalPage() {
     }
   };
 
-  if (isUserLoading || isProfileLoading || isSelfApproving) {
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-muted/30 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        {isSelfApproving && (
-          <p className="text-sm font-bold animate-pulse text-primary">Sincronizando permisos de Administrador...</p>
-        )}
       </div>
     );
   }
