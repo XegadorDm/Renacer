@@ -14,6 +14,7 @@ import { ShieldCheck, UserCog, IdCard, CheckCircle, XCircle, AlertCircle, Refres
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/lib/case-schema';
 import { cn } from '@/lib/utils';
+import { CORE_ADMIN_EMAILS, isCoreAdmin } from '@/lib/core-admins';
 
 export default function UsersManagementPage() {
   const { user: authUser } = useUser();
@@ -28,12 +29,6 @@ export default function UsersManagementPage() {
   }, [firestore]);
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
-
-  const coreEmails = [
-    'aleksimbachi@gmail.com',
-    'juancamilogiraldo@gmail.com',
-    'diegomauriciopastusano@gmail.com'
-  ];
 
   const handleUpdateStatus = (userId: string, newStatus: string) => {
     if (!firestore) return;
@@ -64,7 +59,7 @@ export default function UsersManagementPage() {
       const batch = writeBatch(firestore);
       let count = 0;
 
-      for (const email of coreEmails) {
+      for (const email of CORE_ADMIN_EMAILS) {
         const q = query(usersRef, where("email", "==", email.toLowerCase()));
         const snapshot = await getDocs(q);
         
@@ -155,7 +150,7 @@ export default function UsersManagementPage() {
   }
 
   const userProfile = users?.find(u => u.id === authUser?.uid);
-  const isAdmin = userProfile?.role === 'admin';
+  const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(authUser?.email);
 
   if (!isAdmin && users) {
       return (
@@ -168,12 +163,10 @@ export default function UsersManagementPage() {
   }
 
   const sortedUsers = [...(users || [])].sort((a, b) => {
-    // Prioridad 1: Pendientes
     if (a.status === 'pending' && b.status !== 'pending') return -1;
     if (a.status !== 'pending' && b.status === 'pending') return 1;
-    // Prioridad 2: Core Admins (visual)
-    const aIsCore = coreEmails.includes(a.email.toLowerCase());
-    const bIsCore = coreEmails.includes(b.email.toLowerCase());
+    const aIsCore = isCoreAdmin(a.email);
+    const bIsCore = isCoreAdmin(b.email);
     if (aIsCore && !bIsCore) return -1;
     if (!aIsCore && bIsCore) return 1;
     return 0;
@@ -240,21 +233,21 @@ export default function UsersManagementPage() {
               </TableHeader>
               <TableBody>
                 {sortedUsers.map((user) => {
-                  const isCoreAdmin = coreEmails.includes(user.email.toLowerCase());
+                  const isCore = isCoreAdmin(user.email);
                   return (
                     <TableRow 
                       key={user.id} 
                       className={cn(
                           "hover:bg-primary/5 transition-colors",
                           user.status === 'pending' && "bg-orange-50/50",
-                          isCoreAdmin && "bg-accent/5"
+                          isCore && "bg-accent/5"
                       )}
                     >
                       <TableCell className="pl-6 py-4">
                         <div className="flex flex-col">
                             <span className="font-bold text-sm uppercase flex items-center gap-2">
                                 {user.firstName} {user.lastName}
-                                {isCoreAdmin && <Star className="h-3 w-3 fill-accent text-accent" />}
+                                {isCore && <Star className="h-3 w-3 fill-accent text-accent" />}
                                 {user.id === authUser?.uid && <Badge variant="outline" className="text-[8px] h-4">Tú</Badge>}
                             </span>
                             <span className="text-[10px] text-muted-foreground font-mono">{user.email}</span>
@@ -333,16 +326,6 @@ export default function UsersManagementPage() {
           </div>
         </CardContent>
       </Card>
-      
-      {sortedUsers.filter(u => u.status === 'pending').length > 0 && (
-          <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-4">
-              <AlertCircle className="h-6 w-6 text-orange-500" />
-              <div>
-                  <p className="text-sm font-bold text-orange-800">Hay solicitudes pendientes de revisión</p>
-                  <p className="text-xs text-orange-700">Revisa la lista superior para activar las cuentas de los nuevos asesores.</p>
-              </div>
-          </div>
-      )}
     </div>
   );
 }

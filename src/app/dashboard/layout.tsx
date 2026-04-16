@@ -22,10 +22,11 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Home, LogOut, Settings, Users, Loader2, Mail, ShieldCheck, PhoneCall } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
-import { doc, collection, query, where } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { ConnectionStatus } from "@/components/dashboard/connection-status";
 import type { UserProfile } from "@/lib/case-schema";
 import type { Mensaje } from "@/lib/mensaje-schema";
+import { isCoreAdmin } from "@/lib/core-admins";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -40,18 +41,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Validación estricta de aprobación
-  // Si no existe el campo status (usuarios legacy) permitimos acceso según firestore.rules
-  // Pero el requerimiento pide: "Si status es 'pending' o no existe, redirigir"
-  const isApproved = userProfile && userProfile.status === 'approved';
-
-  const unreadMessagesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !isApproved) return null;
-    return query(collection(firestore, 'mensajes'), where('read', '==', false));
-  }, [firestore, user, isApproved]);
-
-  const { data: unreadMessages } = useCollection<Mensaje>(unreadMessagesQuery);
-  const unreadCount = unreadMessages?.length || 0;
+  // Un usuario está aprobado si tiene el status 'approved' O si es un admin core (para evitar bloqueos)
+  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -60,12 +51,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    if (!isProfileLoading && userProfile) {
-      if (userProfile.status !== 'approved') {
-        router.replace('/pending-approval');
-      }
+    if (!isProfileLoading && user && !isApproved) {
+      router.replace('/pending-approval');
     }
-  }, [isProfileLoading, userProfile, router]);
+  }, [isProfileLoading, user, isApproved, router]);
 
   if (isUserLoading || isProfileLoading || !user) {
     return (
@@ -89,7 +78,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return user.email?.[0].toUpperCase() || 'U';
   }
 
-  const isAdmin = userProfile?.role === 'admin';
+  const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(user?.email);
   const iconClasses = "h-5 w-5 text-black shrink-0";
 
   return (
@@ -127,11 +116,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         <div className="flex items-center gap-2">
                             <Mail className={iconClasses}/><span>Buzón</span>
                         </div>
-                        {unreadCount > 0 && (
-                            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground animate-pulse mr-2 group-data-[collapsible=icon]:hidden">
-                                {unreadCount}
-                            </div>
-                        )}
                     </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
