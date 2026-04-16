@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -274,14 +275,14 @@ export default function UsersManagementPage() {
                               user.status === 'pending' && "bg-orange-100 text-orange-700 animate-pulse border-orange-200"
                           )}
                         >
-                          {user.status === 'approved' ? 'Aprobado' : user.status === 'pending' ? 'Pendiente' : user.status === 'rejected' ? 'Rechazado' : 'Legado (Aprobado)'}
+                          {user.status === 'approved' ? 'Aprobado' : user.status === 'pending' ? 'Pendiente' : user.status === 'rejected' ? 'Rechazado' : 'Legado'}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Select 
                           defaultValue={user.role} 
                           onValueChange={(val) => handleRoleChange(user.id, val)}
-                          disabled={user.id === authUser?.uid || (user.status && user.status !== 'approved')}
+                          disabled={user.id === authUser?.uid}
                         >
                           <SelectTrigger className="w-[140px] h-8 text-[10px] font-bold border-primary/10">
                             <SelectValue />

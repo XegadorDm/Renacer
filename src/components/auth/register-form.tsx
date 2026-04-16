@@ -67,19 +67,21 @@ export function RegisterForm() {
       
       const userDocRef = doc(firestore, 'users', user.uid);
       
+      // Se guarda obligatoriamente el status como 'pending'
       await setDoc(userDocRef, { 
         ...userData, 
         id: user.uid,
-        status: 'pending', // Estado inicial
+        status: 'pending', 
         createdAt: new Date().toISOString(),
       });
 
       toast({
-        title: '¡Solicitud Recibida!',
-        description: 'Tu solicitud ha sido recibida exitosamente. Uno de nuestros asesores revisará tu información y se pondrá en contacto contigo a la brevedad posible. Gracias por confiar en Renacer.',
+        title: 'Solicitud Recibida',
+        description: 'Tu cuenta ha sido creada y está pendiente de aprobación por un administrador.',
       });
 
-      router.push('/dashboard');
+      // Redirigir inmediatamente a la página de espera
+      router.push('/pending-approval');
 
     } catch (error: any) {
       console.error('Error during registration:', error);

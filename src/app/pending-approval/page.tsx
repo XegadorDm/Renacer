@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect } from 'react';
@@ -30,8 +31,8 @@ export default function PendingApprovalPage() {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    // Si el usuario es aprobado o legado (sin status), redirigir al dashboard
-    if (userProfile && (userProfile.status === 'approved' || !userProfile.status)) {
+    // Si el usuario es aprobado, redirigir al dashboard
+    if (userProfile && userProfile.status === 'approved') {
       router.replace('/dashboard');
     }
   }, [userProfile, router]);
@@ -58,11 +59,11 @@ export default function PendingApprovalPage() {
           <div className="mx-auto mb-4 p-3 bg-primary/10 rounded-full w-fit">
             <Logo className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-headline">Estado de tu Cuenta</CardTitle>
+          <CardTitle className="text-2xl font-headline">Acceso Restringido</CardTitle>
           <CardDescription>
             {userProfile?.status === 'rejected' 
-              ? "Tu solicitud no ha sido aprobada." 
-              : "Estamos revisando tu información de registro."}
+              ? "Tu solicitud ha sido rechazada." 
+              : "Tu cuenta está pendiente de aprobación administrativa."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6 text-center">
@@ -70,24 +71,24 @@ export default function PendingApprovalPage() {
             <div className="p-4 bg-destructive/10 text-destructive rounded-xl border border-destructive/20 space-y-2">
               <ShieldAlert className="h-8 w-8 mx-auto" />
               <p className="text-sm font-medium">
-                Lo sentimos, tu solicitud ha sido rechazada por un administrador. Si crees que esto es un error, contacta con soporte técnico.
+                Lo sentimos, tu solicitud de registro ha sido rechazada. Contacta con el equipo administrativo para más información.
               </p>
             </div>
           ) : (
             <div className="p-4 bg-primary/5 text-foreground rounded-xl border border-primary/10 space-y-4">
               <RefreshCcw className="h-8 w-8 mx-auto text-primary animate-spin-slow" />
               <p className="text-sm">
-                Tu cuenta está <strong>pendiente de aprobación</strong> por un administrador. Te notificaremos cuando sea activada.
+                Un administrador debe revisar y aprobar tu cuenta antes de que puedas acceder al sistema.
               </p>
               <p className="text-[10px] text-muted-foreground italic">
-                Refresca esta página periódicamente para verificar el estado.
+                Refresca esta página una vez que seas notificado de tu aprobación.
               </p>
             </div>
           )}
           
           <div className="flex flex-col gap-2">
             <Button variant="outline" onClick={() => window.location.reload()} className="w-full font-bold">
-               VERIFICAR NUEVAMENTE
+               VERIFICAR ESTADO
             </Button>
             <Button variant="ghost" onClick={handleLogout} className="w-full text-muted-foreground hover:text-destructive">
                <LogOut className="mr-2 h-4 w-4" /> CERRAR SESIÓN

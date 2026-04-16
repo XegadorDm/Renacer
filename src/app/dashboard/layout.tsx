@@ -1,3 +1,4 @@
+
 'use client';
 import type { ReactNode } from "react";
 import { useEffect } from "react";
@@ -39,7 +40,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  const isApproved = userProfile && (!userProfile.status || userProfile.status === 'approved');
+  // Validación estricta de aprobación
+  // Si no existe el campo status (usuarios legacy) permitimos acceso según firestore.rules
+  // Pero el requerimiento pide: "Si status es 'pending' o no existe, redirigir"
+  const isApproved = userProfile && userProfile.status === 'approved';
 
   const unreadMessagesQuery = useMemoFirebase(() => {
     if (!firestore || !user || !isApproved) return null;
@@ -57,7 +61,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isProfileLoading && userProfile) {
-      if (userProfile.status === 'rejected' || userProfile.status === 'pending') {
+      if (userProfile.status !== 'approved') {
         router.replace('/pending-approval');
       }
     }
