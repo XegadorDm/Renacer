@@ -11,7 +11,7 @@ import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, update
 import { collection, query as firestoreQuery, where, doc, Timestamp } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
-import { format, subDays, isBefore, isAfter, parseISO, startOfDay } from "date-fns";
+import { format, subDays, isBefore, isAfter, parseISO, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   AlertDialog,
@@ -49,6 +49,8 @@ interface CasesTableProps {
   query: string;
   docQuery?: string;
   period?: string;
+  startDate?: string;
+  endDate?: string;
   location: string;
   onSelectCase: (caseItem: WithId<Case> | null) => void;
   selectedCaseId?: string;
@@ -56,7 +58,18 @@ interface CasesTableProps {
   setIsCallModalOpen: (open: boolean) => void;
 }
 
-export function CasesTable({ query, docQuery, period, location, onSelectCase, selectedCaseId, isCallModalOpen, setIsCallModalOpen }: CasesTableProps) {
+export function CasesTable({ 
+  query, 
+  docQuery, 
+  period, 
+  startDate, 
+  endDate, 
+  location, 
+  onSelectCase, 
+  selectedCaseId, 
+  isCallModalOpen, 
+  setIsCallModalOpen 
+}: CasesTableProps) {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
   const { toast } = useToast();
@@ -89,43 +102,59 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     let filtered = cases;
     const now = new Date();
 
-    // Filtro de Periodo
+    // 1. Filtro de Periodo Rápido
     if (period && period !== 'all') {
       filtered = filtered.filter(c => {
-        // Soporte para Timestamp y String ISO
         let createdAtDate: Date | null = null;
         if (c.createdAt instanceof Timestamp) {
             createdAtDate = c.createdAt.toDate();
         } else if (typeof c.createdAt === 'string') {
             createdAtDate = parseISO(c.createdAt);
-        } else if (c.createdAt && typeof (c.createdAt as any).toDate === 'function') {
-            createdAtDate = (c.createdAt as any).toDate();
         }
 
         if (!createdAtDate) return false; 
         
-        try {
-            switch (period) {
-              case '1w': return isAfter(createdAtDate, startOfDay(subDays(now, 7)));
-              case '15d': return isAfter(createdAtDate, startOfDay(subDays(now, 15)));
-              case '1m': return isAfter(createdAtDate, startOfDay(subDays(now, 30)));
-              case '3m': return isAfter(createdAtDate, startOfDay(subDays(now, 90)));
-              case '6m': return isAfter(createdAtDate, startOfDay(subDays(now, 180)));
-              case '1y': return isBefore(createdAtDate, startOfDay(subDays(now, 365)));
-              default: return true;
-            }
-        } catch (e) {
-            return false;
+        switch (period) {
+          case '1w': return isAfter(createdAtDate, startOfDay(subDays(now, 7)));
+          case '15d': return isAfter(createdAtDate, startOfDay(subDays(now, 15)));
+          case '1m': return isAfter(createdAtDate, startOfDay(subDays(now, 30)));
+          case '6m': return isAfter(createdAtDate, startOfDay(subDays(now, 180)));
+          default: return true;
         }
       });
     }
 
-    // Filtro por Cédula
+    // 2. Filtro de Rango de Fechas Específico (REQ-003)
+    if (startDate || endDate) {
+      filtered = filtered.filter(c => {
+        let createdAtDate: Date | null = null;
+        if (c.createdAt instanceof Timestamp) {
+            createdAtDate = c.createdAt.toDate();
+        } else if (typeof c.createdAt === 'string') {
+            createdAtDate = parseISO(c.createdAt);
+        }
+
+        if (!createdAtDate) return false;
+
+        let match = true;
+        if (startDate) {
+          const from = startOfDay(parseISO(startDate));
+          match = match && (isAfter(createdAtDate, from) || createdAtDate.getTime() === from.getTime());
+        }
+        if (endDate) {
+          const to = endOfDay(parseISO(endDate));
+          match = match && (isBefore(createdAtDate, to) || createdAtDate.getTime() === to.getTime());
+        }
+        return match;
+      });
+    }
+
+    // 3. Filtro por Cédula
     if (docQuery) {
         filtered = filtered.filter(c => c.documentId?.includes(docQuery));
     }
 
-    // Filtro General (Nombre o N° de caso)
+    // 4. Filtro General (Nombre o N° de caso)
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(c => 
@@ -135,7 +164,7 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
     }
 
     return filtered;
-  }, [cases, query, docQuery, period]);
+  }, [cases, query, docQuery, period, startDate, endDate]);
 
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
@@ -154,7 +183,6 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
     
-    // PERSISTENCIA EN FIRESTORE
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
 
@@ -273,7 +301,7 @@ export function CasesTable({ query, docQuery, period, location, onSelectCase, se
                   <TableCell colSpan={8} className="text-center h-48">
                     <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
                         <AlertCircle className="h-8 w-8 opacity-20" />
-                        <p className="font-medium">No se encontraron casos registrados para esta búsqueda.</p>
+                        <p className="font-medium">No se encontraron casos registrados para este rango.</p>
                     </div>
                   </TableCell>
                 </TableRow>
