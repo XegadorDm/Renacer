@@ -7,11 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
-import { collection, query as firestoreQuery, where, doc, Timestamp } from "firebase/firestore";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from "@/firebase";
+import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
-import { format, subDays, isBefore, isAfter, parseISO, startOfDay, endOfDay } from "date-fns";
+import { format, subDays, parseISO, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   AlertDialog,
@@ -40,7 +40,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { useMemoFirebase } from "@/firebase/provider";
 import { Badge } from "@/components/ui/badge";
 
 type WithId<T> = T & { id: string };
@@ -80,15 +79,46 @@ export function CasesTable({
   
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
+  // CONSULTA OPTIMIZADA (REQ-003): Filtrado en servidor para ubicación y fechas
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     const casesCollection = collection(firestore, 'cases');
-    let queryConstraints = [];
-    if (location) {
-      queryConstraints.push(where("municipality", "==", location));
+    const constraints: any[] = [];
+
+    // 1. Filtro por municipio (Servidor)
+    if (location && location !== 'all') {
+      constraints.push(where("municipality", "==", location));
     }
-    return queryConstraints.length > 0 ? firestoreQuery(casesCollection, ...queryConstraints) : casesCollection;
-  }, [firestore, authUser, location]);
+
+    // 2. Cálculo de rango de fechas dinámico (Servidor)
+    let finalStartDate = startDate;
+    if (!finalStartDate && period && period !== 'all') {
+        const now = new Date();
+        switch (period) {
+            case '1w': finalStartDate = format(subDays(now, 7), 'yyyy-MM-dd'); break;
+            case '15d': finalStartDate = format(subDays(now, 15), 'yyyy-MM-dd'); break;
+            case '1m': finalStartDate = format(subDays(now, 30), 'yyyy-MM-dd'); break;
+            case '6m': finalStartDate = format(subDays(now, 180), 'yyyy-MM-dd'); break;
+        }
+    }
+
+    if (finalStartDate) {
+      const start = Timestamp.fromDate(startOfDay(parseISO(finalStartDate)));
+      constraints.push(where("createdAt", ">=", start));
+    }
+
+    if (endDate) {
+      const end = Timestamp.fromDate(endOfDay(parseISO(endDate)));
+      constraints.push(where("createdAt", "<=", end));
+    }
+
+    // Ordenamiento necesario para combinar filtros de rango y para usabilidad
+    if (finalStartDate || endDate || (location && location !== 'all')) {
+        constraints.push(orderBy("createdAt", "desc"));
+    }
+
+    return constraints.length > 0 ? firestoreQuery(casesCollection, ...constraints) : casesCollection;
+  }, [firestore, authUser, location, startDate, endDate, period]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
@@ -96,65 +126,13 @@ export function CasesTable({
     return (cases as WithId<Case>[])?.find(c => c.id === selectedCaseId) || null;
   }, [cases, selectedCaseId]);
 
+  // FILTRADO COMPLEMENTARIO (Cliente): Búsquedas textuales y parciales
   const filteredCases = useMemo(() => {
     if (!cases) return [];
     
     let filtered = cases;
-    const now = new Date();
 
-    // 1. Filtro de Periodo Rápido
-    if (period && period !== 'all') {
-      filtered = filtered.filter(c => {
-        let createdAtDate: Date | null = null;
-        if (c.createdAt instanceof Timestamp) {
-            createdAtDate = c.createdAt.toDate();
-        } else if (typeof c.createdAt === 'string') {
-            createdAtDate = parseISO(c.createdAt);
-        }
-
-        if (!createdAtDate) return false; 
-        
-        switch (period) {
-          case '1w': return isAfter(createdAtDate, startOfDay(subDays(now, 7)));
-          case '15d': return isAfter(createdAtDate, startOfDay(subDays(now, 15)));
-          case '1m': return isAfter(createdAtDate, startOfDay(subDays(now, 30)));
-          case '6m': return isAfter(createdAtDate, startOfDay(subDays(now, 180)));
-          default: return true;
-        }
-      });
-    }
-
-    // 2. Filtro de Rango de Fechas Específico (REQ-003)
-    if (startDate || endDate) {
-      filtered = filtered.filter(c => {
-        let createdAtDate: Date | null = null;
-        if (c.createdAt instanceof Timestamp) {
-            createdAtDate = c.createdAt.toDate();
-        } else if (typeof c.createdAt === 'string') {
-            createdAtDate = parseISO(c.createdAt);
-        }
-
-        if (!createdAtDate) return false;
-
-        let match = true;
-        if (startDate) {
-          const from = startOfDay(parseISO(startDate));
-          match = match && (isAfter(createdAtDate, from) || createdAtDate.getTime() === from.getTime());
-        }
-        if (endDate) {
-          const to = endOfDay(parseISO(endDate));
-          match = match && (isBefore(createdAtDate, to) || createdAtDate.getTime() === to.getTime());
-        }
-        return match;
-      });
-    }
-
-    // 3. Filtro por Cédula
-    if (docQuery) {
-        filtered = filtered.filter(c => c.documentId?.includes(docQuery));
-    }
-
-    // 4. Filtro General (Nombre o N° de caso)
+    // 1. Búsqueda General (Nombre o N° de caso) - Complementario
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(c => 
@@ -163,8 +141,13 @@ export function CasesTable({
         );
     }
 
+    // 2. Búsqueda por Cédula - Complementario
+    if (docQuery) {
+        filtered = filtered.filter(c => c.documentId?.includes(docQuery));
+    }
+
     return filtered;
-  }, [cases, query, docQuery, period, startDate, endDate]);
+  }, [cases, query, docQuery]);
 
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
