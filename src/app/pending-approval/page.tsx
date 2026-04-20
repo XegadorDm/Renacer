@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/icons/logo';
 import { Loader2, ShieldAlert, LogOut, RefreshCcw } from 'lucide-react';
 import type { UserProfile } from '@/lib/case-schema';
+import { isCoreAdmin } from '@/lib/core-admins';
 
 export default function PendingApprovalPage() {
   const { user, isUserLoading } = useUser();
@@ -31,10 +32,11 @@ export default function PendingApprovalPage() {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    if (userProfile && userProfile.status === 'approved') {
+    const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email);
+    if (isApproved) {
       router.replace('/dashboard');
     }
-  }, [userProfile, router]);
+  }, [userProfile, user, router]);
 
   const handleLogout = async () => {
     if (auth) {

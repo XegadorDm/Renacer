@@ -25,6 +25,7 @@ import { Logo } from "@/components/icons/logo";
 import { doc } from "firebase/firestore";
 import { ConnectionStatus } from "@/components/dashboard/connection-status";
 import type { UserProfile } from "@/lib/case-schema";
+import { isCoreAdmin } from "@/lib/core-admins";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -39,8 +40,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Validación de acceso estrictamente basada en el campo 'status' de Firestore
-  const isApproved = userProfile && userProfile.status === 'approved';
+  // Validación de acceso: aprobados en DB o administradores core del proyecto
+  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -76,8 +77,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return user.email?.[0].toUpperCase() || 'U';
   }
 
-  // El rol administrativo ahora también depende únicamente de la base de datos
-  const isAdmin = userProfile?.role === 'admin';
+  // El rol administrativo depende de la DB o del correo core
+  const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(user?.email);
   const iconClasses = "h-5 w-5 text-black shrink-0";
 
   return (
