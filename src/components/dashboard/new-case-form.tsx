@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm } from 'react-hook-form';
@@ -17,8 +18,8 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import type { Case } from '@/lib/case-schema';
 import { useEffect, useState } from 'react';
 
@@ -30,8 +31,7 @@ const formSchema = z.object({
     .min(1, 'El apellido es requerido.')
     .regex(/^[a-zA-Z\s]+$/, 'El apellido solo puede contener letras y espacios.'),
   documentId: z.string()
-    .min(5, 'Documento de identidad es requerido.')
-    .regex(/^[0-9]+$/, 'El documento solo puede contener números.'),
+    .min(5, 'Documento de identidad es requerido.'),
   internalId: z.string().optional(),
   ethnicGroup: z.string().min(1, 'Grupo étnico es requerido.'),
   maritalStatus: z.string().min(1, 'Estado civil es requerido.'),
@@ -117,42 +117,43 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     setIsSubmitting(true);
     
     try {
-        if (isEditMode && caseData) {
-            const caseDocRef = doc(firestore, 'cases', caseData.id);
-            const updatedData = {
-                ...values,
-                birthDate: values.birthDate.toISOString(),
-                status: caseData.status || "Sin novedad",
-                createdAt: caseData.createdAt || serverTimestamp(),
-                members: caseData.members
-            };
-            setDocumentNonBlocking(caseDocRef, updatedData, { merge: true });
-            toast({
-                title: "Caso Actualizado",
-                description: `El caso para ${values.firstName} ${values.lastName} ha sido actualizado.`,
-            });
-            router.push(`/dashboard/cases/${caseData.id}`);
-        } else {
-            const casesCollection = collection(firestore, 'cases');
-            const newCaseData = {
-                ...values,
-                birthDate: values.birthDate.toISOString(),
-                id: '', 
-                caseNumber: `CAS-${Date.now()}`,
-                status: "Sin novedad",
-                createdAt: serverTimestamp(), // Uso de serverTimestamp para precisión offline
-                userId: user.uid,
-                members: { 
-                    [user.uid]: 'owner'
-                }
-            };
-            addDocumentNonBlocking(casesCollection, newCaseData);
-            toast({
-                title: "Caso Guardado Exitosamente",
-                description: `El caso para ${values.firstName} ${values.lastName} ha sido creado.`,
-            });
-            router.push(`/dashboard/cases?location=${values.municipality}`);
-        }
+        const normalizedCedula = values.documentId.replace(/\D/g, '');
+        const caseId = isEditMode ? caseData.id : `CAS-${Date.now()}`;
+        const caseNumber = isEditMode ? caseData.caseNumber : `CAS-${Date.now()}`;
+        const status = isEditMode ? caseData.status : "Sin novedad";
+
+        // 1. Guardar en la colección principal
+        const caseDocRef = doc(firestore, 'cases', caseId);
+        const fullData = {
+            ...values,
+            birthDate: values.birthDate.toISOString(),
+            id: caseId,
+            caseNumber,
+            status,
+            createdAt: isEditMode ? caseData.createdAt : serverTimestamp(),
+            userId: user.uid,
+            members: { [user.uid]: 'owner' }
+        };
+        setDocumentNonBlocking(caseDocRef, fullData, { merge: true });
+
+        // 2. Sincronizar con la colección pública segura
+        const publicDocRef = doc(firestore, 'publicCaseStatus', normalizedCedula);
+        const publicData = {
+            documentId: normalizedCedula,
+            caseNumber,
+            status,
+            municipality: values.municipality,
+            createdAt: isEditMode ? caseData.createdAt : serverTimestamp(),
+            updatedAt: serverTimestamp()
+        };
+        setDocumentNonBlocking(publicDocRef, publicData, { merge: true });
+
+        toast({
+            title: isEditMode ? "Caso Actualizado" : "Caso Guardado Exitosamente",
+            description: `Se han sincronizado los datos para ${values.firstName}.`,
+        });
+        router.push(isEditMode ? `/dashboard/cases/${caseData.id}` : `/dashboard/cases?location=${values.municipality}`);
+
     } catch (e) {
         toast({
             variant: "destructive",
@@ -167,7 +168,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
   const formFields = [
     { name: 'firstName', label: 'Nombres', component: Input, placeholder: 'Nombres completos' },
     { name: 'lastName', label: 'Apellidos', component: Input, placeholder: 'Apellidos completos' },
-    { name: 'documentId', label: 'Documento de identidad', component: Input, placeholder: 'Número de documento' },
+    { name: 'documentId', label: 'Documento de identidad', component: Input, placeholder: 'Ej: 2.425.268' },
     { name: 'internalId', label: 'ID Interno', component: Input, props: { disabled: true } },
     { name: 'ethnicGroup', label: 'Grupo étnico', component: Select, options: ['Indígena', 'Afrocolombiano', 'Raizal', 'Palenquero', 'Gitano', 'Mestizo', 'Ninguno'] },
     { name: 'maritalStatus', label: 'Estado civil', component: Select, options: ['Soltero/a', 'Casado/a', 'Unión libre', 'Viudo/a', 'Separado/a'] },

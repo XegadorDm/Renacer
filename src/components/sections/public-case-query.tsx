@@ -1,24 +1,26 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, limit, Timestamp } from 'firebase/firestore';
+import { doc, getDoc, Timestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Search, Loader2, CheckCircle2, AlertCircle, Calendar, MapPin, Hash } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CaseStatusIndicator } from '@/components/dashboard/case-status-indicator';
-import type { Case } from '@/lib/case-schema';
+import type { PublicCaseStatus } from '@/lib/case-schema';
 
 export function PublicCaseQuery() {
   const firestore = useFirestore();
   const [cedula, setCedula] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<Case | null>(null);
+  const [result, setResult] = useState<PublicCaseStatus | null>(null);
   const [searched, setSearched] = useState(false);
+
+  const normalizeCedula = (val: string) => val.replace(/\D/g, '');
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,15 +31,18 @@ export function PublicCaseQuery() {
     setResult(null);
 
     try {
-      const casesRef = collection(firestore, 'cases');
-      const q = query(casesRef, where("documentId", "==", cedula.trim()), limit(1));
-      const querySnapshot = await getDocs(q);
+      const normalized = normalizeCedula(cedula);
+      if (!normalized) throw new Error("Cédula inválida");
 
-      if (!querySnapshot.empty) {
-        setResult(querySnapshot.docs[0].data() as Case);
+      // Consultamos la colección pública segura directamente por el ID del documento (la cédula normalizada)
+      const docRef = doc(firestore, 'publicCaseStatus', normalized);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        setResult(docSnap.data() as PublicCaseStatus);
       }
     } catch (error) {
-      console.error("Error consultando caso:", error);
+      console.error("Error consultando estado público:", error);
     } finally {
       setLoading(false);
     }
@@ -147,8 +152,8 @@ export function PublicCaseQuery() {
                   <div className="space-y-2">
                     <h3 className="text-xl font-bold">No se encontró el caso</h3>
                     <p className="text-muted-foreground max-w-md mx-auto">
-                      No se encontró un registro asociado a la cédula <strong>{cedula}</strong>. 
-                      Puede enviar una solicitud en el formulario de contacto más abajo para que un asesor revise su situación.
+                      No se encontró un registro asociado a la identificación ingresada. 
+                      Verifica el número o envía una solicitud en el formulario de contacto más abajo.
                     </p>
                   </div>
                 </div>

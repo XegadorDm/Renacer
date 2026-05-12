@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
@@ -7,8 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from "@/firebase";
-import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy } from "firebase/firestore";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useMemoFirebase } from "@/firebase";
+import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
 import { format, subDays, parseISO, startOfDay, endOfDay } from "date-fns";
@@ -79,18 +80,15 @@ export function CasesTable({
   
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
-  // CONSULTA OPTIMIZADA (REQ-003): Filtrado en servidor para ubicación y fechas
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser) return null;
     const casesCollection = collection(firestore, 'cases');
     const constraints: any[] = [];
 
-    // 1. Filtro por municipio (Servidor)
     if (location && location !== 'all') {
       constraints.push(where("municipality", "==", location));
     }
 
-    // 2. Cálculo de rango de fechas dinámico (Servidor)
     let finalStartDate = startDate;
     if (!finalStartDate && period && period !== 'all') {
         const now = new Date();
@@ -112,7 +110,6 @@ export function CasesTable({
       constraints.push(where("createdAt", "<=", end));
     }
 
-    // Ordenamiento necesario para combinar filtros de rango y para usabilidad
     if (finalStartDate || endDate || (location && location !== 'all')) {
         constraints.push(orderBy("createdAt", "desc"));
     }
@@ -126,13 +123,11 @@ export function CasesTable({
     return (cases as WithId<Case>[])?.find(c => c.id === selectedCaseId) || null;
   }, [cases, selectedCaseId]);
 
-  // FILTRADO COMPLEMENTARIO (Cliente): Búsquedas textuales y parciales
   const filteredCases = useMemo(() => {
     if (!cases) return [];
     
     let filtered = cases;
 
-    // 1. Búsqueda General (Nombre o N° de caso) - Complementario
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(c => 
@@ -141,7 +136,6 @@ export function CasesTable({
         );
     }
 
-    // 2. Búsqueda por Cédula - Complementario
     if (docQuery) {
         filtered = filtered.filter(c => c.documentId?.includes(docQuery));
     }
@@ -153,9 +147,17 @@ export function CasesTable({
     if (!caseToDelete || !firestore) return;
     const caseDocRef = doc(firestore, 'cases', caseToDelete.id);
     deleteDocumentNonBlocking(caseDocRef);
+
+    // También eliminamos de la vista pública si existe
+    const normalized = caseToDelete.documentId.replace(/\D/g, '');
+    if (normalized) {
+        const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
+        deleteDocumentNonBlocking(publicDocRef);
+    }
+
     toast({
         title: "Caso Eliminado",
-        description: `El caso N° ${caseToDelete.caseNumber} ha sido eliminado.`,
+        description: `El registro y su vista pública han sido eliminados.`,
     });
     setIsDeleteAlertOpen(false);
     setCaseToDelete(null);
@@ -166,8 +168,19 @@ export function CasesTable({
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
     
+    // 1. Actualizar caso principal
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
+
+    // 2. Actualizar vista pública obligatoria
+    const normalized = selectedCase.documentId.replace(/\D/g, '');
+    if (normalized) {
+        const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
+        setDocumentNonBlocking(publicDocRef, { 
+            status: newStatus,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+    }
 
     setLocalStatuses(prev => ({
       ...prev,
@@ -176,9 +189,7 @@ export function CasesTable({
 
     toast({
         title: contacted ? "Llamada Registrada" : "Intento Registrado",
-        description: contacted 
-          ? `Se ha marcado a ${selectedCase?.firstName} como contactado.` 
-          : `Se ha registrado el intento de llamada.`,
+        description: `Se actualizó el estado a ${newStatus} en la base pública.`,
     });
     setIsCallModalOpen(false);
   };

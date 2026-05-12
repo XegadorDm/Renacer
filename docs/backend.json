@@ -2,7 +2,6 @@
 {
   "entities": {
     "Case": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Case",
       "type": "object",
       "description": "Represents a social case for displaced and vulnerable people.",
@@ -12,64 +11,24 @@
         "firstName": { "type": "string" },
         "lastName": { "type": "string" },
         "documentId": { "type": "string" },
-        "internalId": { "type": "string" },
-        "ethnicGroup": { "type": "string" },
-        "maritalStatus": { "type": "string" },
-        "gender": { "type": "string" },
-        "birthDate": { "type": "string", "format": "date-time" },
-        "address": { "type": "string" },
-        "locality": { "type": "string" },
         "municipality": { "type": "string" },
-        "department": { "type": "string" },
-        "phone1": { "type": "string" },
-        "phone2": { "type": "string" },
-        "displacementType": { "type": "string" },
-        "disability": { "type": "string" },
-        "age": { "type": "number" },
-        "isElderly": { "type": "boolean" },
-        "peopleCount": { "type": "number" },
-        "testimony": { "type": "string" },
-        "status": { "type": "string", "enum": ["Sin novedad", "CONTACTADO", "NO CONTACTADO"] },
-        "userId": { "type": "string" },
-        "members": { "type": "object" }
-      },
-      "required": ["id", "caseNumber", "firstName", "lastName", "documentId", "ethnicGroup", "maritalStatus", "gender", "birthDate", "address", "municipality", "department", "phone1", "displacementType", "age", "isElderly", "peopleCount", "testimony", "status"]
-    },
-    "Mensaje": {
-      "title": "Mensaje",
-      "type": "object",
-      "description": "Public contact message received from the landing page.",
-      "properties": {
-        "nombre": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "cedula": { "type": "string" },
-        "asunto": { "type": "string" },
-        "mensaje": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "linkedCase": {
-          "type": "object",
-          "properties": {
-            "id": { "type": "string" },
-            "caseNumber": { "type": "string" }
-          }
-        }
-      },
-      "required": ["nombre", "email", "cedula", "mensaje", "createdAt"]
-    },
-    "User": {
-      "title": "User",
-      "type": "object",
-      "description": "System user profile including roles and approval status.",
-      "properties": {
-        "id": { "type": "string" },
-        "firstName": { "type": "string" },
-        "lastName": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "role": { "type": "string", "enum": ["admin", "case-worker"] },
-        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "status": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "PublicCaseStatus": {
+      "title": "PublicCaseStatus",
+      "type": "object",
+      "description": "Secure public view of case progress.",
+      "properties": {
+        "documentId": { "type": "string", "description": "Normalized ID number (only digits)." },
+        "caseNumber": { "type": "string" },
+        "status": { "type": "string" },
+        "municipality": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "email", "role", "status"]
+      "required": ["documentId", "caseNumber", "status", "municipality"]
     }
   },
   "auth": {
@@ -78,15 +37,11 @@
   "firestore": {
     "/cases/{caseId}": {
       "schema": "Case",
-      "description": "Stores case data."
+      "description": "Full private case data."
     },
-    "/mensajes/{mensajeId}": {
-      "schema": "Mensaje",
-      "description": "Stores contact messages."
-    },
-    "/users/{userId}": {
-      "schema": "User",
-      "description": "Stores user profile and roles."
+    "/publicCaseStatus/{documentId}": {
+      "schema": "PublicCaseStatus",
+      "description": "Limited public access for status checks."
     }
   }
 }

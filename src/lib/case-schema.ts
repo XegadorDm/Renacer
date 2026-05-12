@@ -7,7 +7,7 @@ export interface Case {
     caseNumber: string;
     firstName: string;
     lastName: string;
-    documentId: string;
+    documentId: string; // Cédula tal como se ingresa
     internalId?: string;
     ethnicGroup: string;
     maritalStatus: string;
@@ -26,8 +26,17 @@ export interface Case {
     testimony: string;
     status: CaseStatus;
     userId: string;
-    createdAt: string; // Fecha de creación del registro
+    createdAt: any; 
     members: { [uid: string]: 'owner' | 'editor' | 'viewer' };
+}
+
+export interface PublicCaseStatus {
+    documentId: string; // Cédula normalizada (solo números)
+    caseNumber: string;
+    status: CaseStatus;
+    municipality: string;
+    createdAt: any;
+    updatedAt: any;
 }
 
 export interface UserProfile {
