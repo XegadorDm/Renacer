@@ -137,7 +137,11 @@ export function CasesTable({
     }
 
     if (docQuery) {
-        filtered = filtered.filter(c => c.documentId?.includes(docQuery));
+        const normalizedSearch = docQuery.replace(/\D/g, '');
+        filtered = filtered.filter(c => {
+            const normalizedDoc = (c.documentId || "").replace(/\D/g, '');
+            return normalizedDoc.includes(normalizedSearch);
+        });
     }
 
     return filtered;
