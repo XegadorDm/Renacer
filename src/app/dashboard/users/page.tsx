@@ -3,16 +3,16 @@
 
 import { useState } from 'react';
 import { useFirestore, useCollection, useUser, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, getDocs, writeBatch, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, getDocs, writeBatch, where, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, UserCog, IdCard, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2, Crown, Star } from 'lucide-react';
+import { ShieldCheck, UserCog, IdCard, CheckCircle, XCircle, AlertCircle, RefreshCw, Loader2, Crown, Star, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { UserProfile } from '@/lib/case-schema';
+import type { UserProfile, Case } from '@/lib/case-schema';
 import { cn } from '@/lib/utils';
 import { CORE_ADMIN_EMAILS, isCoreAdmin } from '@/lib/core-admins';
 
@@ -22,6 +22,7 @@ export default function UsersManagementPage() {
   const { toast } = useToast();
   const [isMigrating, setIsMigrating] = useState(false);
   const [isSyncingAdmins, setIsSyncingAdmins] = useState(false);
+  const [isMigratingPublic, setIsMigratingPublic] = useState(false);
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -137,6 +138,57 @@ export default function UsersManagementPage() {
     }
   };
 
+  const handleMigratePublicStatus = async () => {
+    if (!firestore) return;
+    setIsMigratingPublic(true);
+    try {
+      const casesRef = collection(firestore, 'cases');
+      const snapshot = await getDocs(casesRef);
+      const batch = writeBatch(firestore);
+      let count = 0;
+
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data() as Case;
+        const normalized = (data.documentId || "").replace(/\D/g, '');
+        
+        if (normalized) {
+          const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
+          batch.set(publicDocRef, {
+            documentId: normalized,
+            caseNumber: data.caseNumber,
+            status: data.status,
+            municipality: data.municipality,
+            createdAt: data.createdAt,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+          count++;
+        }
+      });
+
+      if (count > 0) {
+        await batch.commit();
+        toast({
+          title: "Sincronización Completada",
+          description: `Se han actualizado ${count} registros en la vista pública.`,
+        });
+      } else {
+        toast({
+          title: "Sin cambios",
+          description: "No se encontraron casos para sincronizar.",
+        });
+      }
+    } catch (error) {
+      console.error("Migration failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Error de Migración",
+        description: "No se pudo sincronizar la vista pública.",
+      });
+    } finally {
+      setIsMigratingPublic(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6 py-4">
@@ -196,6 +248,20 @@ export default function UsersManagementPage() {
               <Crown className="mr-2 h-3 w-3" />
             )}
             SINCRONIZAR ADMINS CORE
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleMigratePublicStatus}
+            disabled={isMigratingPublic}
+            className="bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary text-[10px] font-bold"
+          >
+            {isMigratingPublic ? (
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            ) : (
+              <Globe className="mr-2 h-3 w-3" />
+            )}
+            SINCRONIZAR VISTA PÚBLICA
           </Button>
           <Button 
             variant="outline" 
