@@ -136,11 +136,13 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         };
         setDocumentNonBlocking(caseDocRef, fullData, { merge: true });
 
-        // 2. Sincronizar con la colección pública segura
+        // 2. Sincronizar con la colección pública segura enriquecida
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalizedCedula);
         const publicData = {
             documentId: normalizedCedula,
             caseNumber,
+            firstName: values.firstName,
+            lastName: values.lastName,
             status,
             municipality: values.municipality,
             createdAt: isEditMode ? caseData.createdAt : serverTimestamp(),

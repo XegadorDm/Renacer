@@ -26,26 +26,27 @@ service cloud.firestore {
       }
       
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      // Validar si el documento existe antes de intentar leerlo para evitar errores de permisos
       return exists(userPath) && (
         !("status" in get(userPath).data) || 
         get(userPath).data.status == 'approved'
       );
     }
 
-    // Reglas para la colección pública segura
+    // Reglas para la vista pública segura
     match /publicCaseStatus/{documentId} {
-      // Cualquier persona puede leer un estado público individual si conoce la cédula normalizada
       allow get: if true;
-      // Nadie puede listar o extraer masivamente la base pública
       allow list: if false;
-      // Solo personal aprobado puede escribir aquí
       allow write: if request.auth != null && isApproved();
     }
 
+    // Trazabilidad de consultas públicas
+    match /publicCaseQueries/{queryId} {
+      allow create: if true; // Cualquier persona puede registrar su consulta
+      allow read, list, update, delete: if request.auth != null && isApproved(); // Solo personal puede auditar
+    }
+
     match /cases/{caseId} {
-      // Acceso PRIVADO: Requiere estar aprobado (o ser admin core)
-      allow read: if request.auth != null && isApproved();
+      allow read: if request.auth != null && (isApproved() || isCoreAdmin());
       allow delete: if request.auth != null && (isCoreAdmin() || (isApproved() && getRole() == 'admin'));
       allow create, update: if request.auth != null && (isCoreAdmin() || (isApproved() && (getRole() == 'admin' || getRole() == 'case-worker')));
 

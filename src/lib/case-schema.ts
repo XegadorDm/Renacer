@@ -33,6 +33,8 @@ export interface Case {
 export interface PublicCaseStatus {
     documentId: string; // Cédula normalizada (solo números)
     caseNumber: string;
+    firstName: string;
+    lastName: string;
     status: CaseStatus;
     municipality: string;
     createdAt: any;

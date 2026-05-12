@@ -152,7 +152,6 @@ export function CasesTable({
     const caseDocRef = doc(firestore, 'cases', caseToDelete.id);
     deleteDocumentNonBlocking(caseDocRef);
 
-    // También eliminamos de la vista pública si existe
     const normalized = caseToDelete.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
@@ -176,12 +175,14 @@ export function CasesTable({
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
 
-    // 2. Actualizar vista pública obligatoria
+    // 2. Actualizar vista pública obligatoria con nombres enriquecidos
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
         setDocumentNonBlocking(publicDocRef, { 
             status: newStatus,
+            firstName: selectedCase.firstName,
+            lastName: selectedCase.lastName,
             updatedAt: serverTimestamp()
         }, { merge: true });
     }

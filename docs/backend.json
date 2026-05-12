@@ -23,12 +23,26 @@
       "properties": {
         "documentId": { "type": "string", "description": "Normalized ID number (only digits)." },
         "caseNumber": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
         "status": { "type": "string" },
         "municipality": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["documentId", "caseNumber", "status", "municipality"]
+      "required": ["documentId", "caseNumber", "status", "municipality", "firstName", "lastName"]
+    },
+    "PublicCaseQueryLog": {
+      "title": "PublicCaseQueryLog",
+      "type": "object",
+      "description": "Audit log for public case status queries.",
+      "properties": {
+        "documentId": { "type": "string" },
+        "caseNumber": { "type": "string" },
+        "statusAtQuery": { "type": "string" },
+        "consultedAt": { "type": "string", "format": "date-time" },
+        "result": { "type": "string", "enum": ["found", "not_found"] }
+      }
     }
   },
   "auth": {
@@ -42,6 +56,10 @@
     "/publicCaseStatus/{documentId}": {
       "schema": "PublicCaseStatus",
       "description": "Limited public access for status checks."
+    },
+    "/publicCaseQueries/{queryId}": {
+      "schema": "PublicCaseQueryLog",
+      "description": "Traceability log for public queries."
     }
   }
 }

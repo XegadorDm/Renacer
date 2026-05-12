@@ -156,6 +156,8 @@ export default function UsersManagementPage() {
           batch.set(publicDocRef, {
             documentId: normalized,
             caseNumber: data.caseNumber,
+            firstName: data.firstName,
+            lastName: data.lastName,
             status: data.status,
             municipality: data.municipality,
             createdAt: data.createdAt,
@@ -169,7 +171,7 @@ export default function UsersManagementPage() {
         await batch.commit();
         toast({
           title: "Sincronización Completada",
-          description: `Se han actualizado ${count} registros en la vista pública.`,
+          description: `Se han actualizado ${count} registros en la vista pública con datos enriquecidos.`,
         });
       } else {
         toast({
