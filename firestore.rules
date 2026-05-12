@@ -16,11 +16,16 @@ service cloud.firestore {
       return !("status" in userData) || userData.status == 'approved';
     }
 
-    // Reglas para la colección de casos: Acceso privado para personal aprobado
+    // Reglas para la colección de casos
     match /cases/{caseId} {
+      // Acceso privado para personal aprobado
       allow read: if request.auth != null && isApproved();
       allow delete: if request.auth != null && isApproved() && getRole() == 'admin';
       allow create, update: if request.auth != null && isApproved() && (getRole() == 'admin' || getRole() == 'case-worker');
+
+      // REQ-007: Permitir consulta pública filtrada por cédula (documentId)
+      // Solo se permite listar si se filtra por un documentId específico y el límite es 1
+      allow list: if request.query.limit <= 1 && request.query.filters.documentId != null;
 
       match /novedades/{novedadId} {
         allow read: if request.auth != null && isApproved();
@@ -38,21 +43,14 @@ service cloud.firestore {
 
     // Reglas para perfiles de usuario
     match /users/{userId} {
-      // Cualquier usuario autenticado puede leer perfiles (necesario para verificar su propio estado)
       allow read: if request.auth != null;
-      
-      // Creación permitida para nuevos usuarios durante el registro
       allow create: if request.auth != null && request.auth.uid == userId;
-      
-      // Actualización de roles/estados: solo administradores
-      // O los usuarios pueden actualizar su propio perfil básico (nombre/apellido) sin tocar rol/estado
       allow update: if request.auth != null && (
         getRole() == 'admin' || 
         (request.auth.uid == userId && 
          request.resource.data.status == resource.data.status && 
          request.resource.data.role == resource.data.role)
       );
-      
       allow delete: if request.auth != null && getRole() == 'admin';
     }
   }

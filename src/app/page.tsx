@@ -4,6 +4,7 @@ import { Hero } from "@/components/sections/hero";
 import { About } from "@/components/sections/about";
 import { Testimonials } from "@/components/sections/testimonials";
 import { Contact } from "@/components/sections/contact";
+import { PublicCaseQuery } from "@/components/sections/public-case-query";
 
 export default function Home() {
   return (
@@ -12,6 +13,7 @@ export default function Home() {
       <main className="flex-grow">
         <Hero />
         <About />
+        <PublicCaseQuery />
         <Testimonials />
         <Contact />
       </main>
