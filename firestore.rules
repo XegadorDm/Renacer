@@ -2,56 +2,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- FUNCIÓN DE AUTENTICACIÓN BÁSICA ---
-    function isAuthenticated() {
-      return request.auth != null;
+    match /users/{userId} {
+      allow read, write: if request.auth != null;
     }
 
-    // --- REGLAS SIMPLIFICADAS (ACCESO TOTAL DASHBOARD) ---
-    // Cualquier usuario que logre entrar al dashboard (autenticado) puede gestionar la info.
-
-    // Colección de Casos (REQ-006, REQ-008)
     match /cases/{caseId} {
-      allow read, write: if isAuthenticated();
-
-      // Subcolección de novedades
+      allow read, write, list: if request.auth != null;
       match /novedades/{novedadId} {
-        allow read, write: if isAuthenticated();
+        allow read, write: if request.auth != null;
       }
     }
 
-    // Colección de Usuarios: Gestión de perfil propio y visualización de equipo
-    match /users/{userId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // Vista Pública Segura (REQ-007): Lectura por ID para ciudadanos, escritura para asesores
     match /publicCaseStatus/{documentId} {
-      allow get: if true; 
+      allow get: if true;
       allow list: if false;
-      allow write: if isAuthenticated();
+      allow write: if request.auth != null;
     }
 
-    // Auditoría de Consultas Públicas
     match /publicCaseQueries/{queryId} {
-      allow create: if true; 
-      allow read: if isAuthenticated(); 
+      allow create: if true;
+      allow read, list: if request.auth != null;
     }
 
-    // Notificaciones y Mensajes
     match /notifications/{notificationId} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if request.auth != null;
     }
 
     match /mensajes/{mensajeId} {
       allow create: if true;
-      allow read, write: if isAuthenticated();
+      allow read, list, write: if request.auth != null;
     }
-    
-    // Lista de correos autorizados (si existe)
+
     match /authorized_emails/{id} {
       allow read: if true;
-      allow write: if isAuthenticated();
+      allow write: if request.auth != null;
     }
   }
 }
