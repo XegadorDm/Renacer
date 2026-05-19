@@ -1,4 +1,3 @@
-
 'use client';
 import Link from "next/link";
 import { Suspense, useState, useMemo } from "react";
@@ -42,7 +41,7 @@ export default function CasesPage() {
   // Asegurar que la aprobación esté confirmada antes de permitir el renderizado de la tabla
   const isApproved = useMemo(() => {
     if (!user) return false;
-    if (isCoreAdmin(user.email)) return true;
+    if (isCoreAdmin(user.email, user.uid)) return true;
     return userProfile?.status === 'approved';
   }, [user, userProfile]);
 

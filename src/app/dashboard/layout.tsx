@@ -1,4 +1,3 @@
-
 'use client';
 import type { ReactNode } from "react";
 import { useEffect } from "react";
@@ -41,18 +40,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
   // Validación de acceso: aprobados en DB o administradores core del proyecto
-  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email);
+  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email, user?.uid);
 
   // Auto-aprobación Crítica para Administradores Core
   useEffect(() => {
-    if (user && isCoreAdmin(user.email) && firestore && !isProfileLoading) {
-      // Si el perfil no existe, no está aprobado o no es admin, forzamos la sincronización
+    if (user && isCoreAdmin(user.email, user.uid) && firestore && !isProfileLoading) {
+      // Si el perfil no existe o no tiene los datos correctos, forzamos la sincronización
       if (!userProfile || userProfile.status !== 'approved' || userProfile.role !== 'admin') {
         const userRef = doc(firestore, 'users', user.uid);
         setDoc(userRef, {
           id: user.uid,
           email: user.email,
-          firstName: userProfile?.firstName || 'Administrador',
+          firstName: userProfile?.firstName || 'Admin',
           lastName: userProfile?.lastName || 'Core',
           role: 'admin',
           status: 'approved',
@@ -69,7 +68,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    // Si no está cargando el perfil, ya sabemos si el usuario está aprobado o es core admin
     if (!isProfileLoading && user && !isApproved) {
       router.replace('/pending-approval');
     }
@@ -97,7 +95,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return user.email?.[0].toUpperCase() || 'U';
   }
 
-  const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(user?.email);
+  const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(user?.email, user?.uid);
   const iconClasses = "h-5 w-5 text-black shrink-0";
 
   return (

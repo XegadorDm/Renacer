@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from "react";
@@ -6,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon, CloudOff, CloudRain, Cloud } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon, Cloud } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
@@ -86,7 +85,7 @@ export function CasesTable({
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
-    // CRITICAL: No intentar la consulta si el usuario no está aprobado para evitar FirebaseError
+    // CRITICAL: Gate the query until permissions are confirmed to prevent insufficient permissions error
     if (!firestore || !authUser || !isApproved) return null;
     
     const casesCollection = collection(firestore, 'cases');

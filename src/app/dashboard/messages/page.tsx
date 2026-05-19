@@ -29,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { isCoreAdmin } from '@/lib/core-admins';
 
 function CaseContactDetails({ caseData }: { caseData: Case }) {
   const firestore = useFirestore();
@@ -246,9 +247,9 @@ export default function MessagesPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  const isApproved = userProfile && (!userProfile.status || userProfile.status === 'approved');
+  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email, user?.uid);
 
-  // 2. Solo crear las consultas si el usuario está aprobado
+  // 2. Solo crear las consultas si el usuario está aprobado para evitar insuficiente permisos
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !user || !isApproved) return null;
     return query(collection(firestore, 'mensajes'), orderBy('createdAt', 'desc'));
@@ -321,6 +322,16 @@ export default function MessagesPage() {
         </div>
       </div>
     );
+  }
+
+  if (!isApproved) {
+      return (
+          <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+              <AlertCircle className="h-12 w-12 text-destructive" />
+              <h2 className="text-xl font-bold">Acceso Denegado</h2>
+              <p className="text-muted-foreground">No tienes permisos para ver el buzón de mensajes.</p>
+          </div>
+      )
   }
 
   return (
