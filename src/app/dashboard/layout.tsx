@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Home, LogOut, Settings, Users, Loader2, Mail, ShieldCheck, PhoneCall } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
-import { doc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { ConnectionStatus } from "@/components/dashboard/connection-status";
 import type { UserProfile } from "@/lib/case-schema";
 import { isCoreAdmin } from "@/lib/core-admins";
@@ -42,6 +42,24 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   // Validación de acceso: aprobados en DB o administradores core del proyecto
   const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email);
+
+  // Auto-aprobación para administradores core
+  useEffect(() => {
+    if (user && isCoreAdmin(user.email) && firestore && !isProfileLoading) {
+      if (!userProfile || userProfile.status !== 'approved' || userProfile.role !== 'admin') {
+        const userRef = doc(firestore, 'users', user.uid);
+        setDoc(userRef, {
+          id: user.uid,
+          email: user.email,
+          firstName: userProfile?.firstName || 'Admin',
+          lastName: userProfile?.lastName || 'Core',
+          role: 'admin',
+          status: 'approved',
+          createdAt: userProfile?.createdAt || new Date().toISOString()
+        }, { merge: true });
+      }
+    }
+  }, [user, userProfile, isProfileLoading, firestore]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -77,7 +95,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return user.email?.[0].toUpperCase() || 'U';
   }
 
-  // El rol administrativo depende de la DB o del correo core
   const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(user?.email);
   const iconClasses = "h-5 w-5 text-black shrink-0";
 

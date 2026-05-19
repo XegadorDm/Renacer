@@ -11,9 +11,11 @@
         "firstName": { "type": "string" },
         "lastName": { "type": "string" },
         "documentId": { "type": "string" },
+        "internalId": { "type": "string" },
         "municipality": { "type": "string" },
         "status": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "object" },
+        "userId": { "type": "string" }
       }
     },
     "PublicCaseStatus": {
@@ -21,27 +23,14 @@
       "type": "object",
       "description": "Secure public view of case progress.",
       "properties": {
-        "documentId": { "type": "string", "description": "Normalized ID number (only digits)." },
+        "documentId": { "type": "string" },
         "caseNumber": { "type": "string" },
         "firstName": { "type": "string" },
         "lastName": { "type": "string" },
         "status": { "type": "string" },
         "municipality": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "updatedAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["documentId", "caseNumber", "status", "municipality", "firstName", "lastName"]
-    },
-    "PublicCaseQueryLog": {
-      "title": "PublicCaseQueryLog",
-      "type": "object",
-      "description": "Audit log for public case status queries.",
-      "properties": {
-        "documentId": { "type": "string" },
-        "caseNumber": { "type": "string" },
-        "statusAtQuery": { "type": "string" },
-        "consultedAt": { "type": "string", "format": "date-time" },
-        "result": { "type": "string", "enum": ["found", "not_found"] }
+        "createdAt": { "type": "object" },
+        "updatedAt": { "type": "object" }
       }
     },
     "Notification": {
@@ -53,10 +42,9 @@
         "userId": { "type": "string" },
         "caseId": { "type": "string" },
         "message": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string" },
         "read": { "type": "boolean" }
-      },
-      "required": ["userId", "caseId", "message", "createdAt", "read"]
+      }
     },
     "UserProfile": {
       "title": "UserProfile",
@@ -69,7 +57,10 @@
         "email": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "case-worker"] },
         "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "documentType": { "type": "string" },
+        "documentNumber": { "type": "string" },
+        "gender": { "type": "string" },
+        "createdAt": { "type": "string" }
       }
     }
   },
@@ -83,27 +74,19 @@
     },
     "/cases/{caseId}/novedades/{novedadId}": {
       "schema": "object",
-      "description": "History of interactions and calls for a specific case."
+      "description": "History of interactions and calls."
     },
     "/publicCaseStatus/{documentId}": {
       "schema": "PublicCaseStatus",
       "description": "Limited public access for status checks."
     },
-    "/publicCaseQueries/{queryId}": {
-      "schema": "PublicCaseQueryLog",
-      "description": "Traceability log for public queries."
-    },
     "/notifications/{notificationId}": {
       "schema": "Notification",
-      "description": "Internal notifications for case management updates."
+      "description": "Internal notifications."
     },
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "User profiles and permissions."
-    },
-    "/mensajes/{mensajeId}": {
-      "schema": "object",
-      "description": "Citizen inquiries from the contact form."
     }
   }
 }
