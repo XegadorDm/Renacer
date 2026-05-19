@@ -10,8 +10,7 @@ service cloud.firestore {
     }
 
     // Bypass directo para líderes del proyecto (Admin Core)
-    // Prioridad 1: UID (Inmutable y seguro)
-    // Prioridad 2: Email (Para nuevos accesos de líderes)
+    // Se valida UID y Email de forma atómica para evitar errores de evaluación
     function isCoreAdmin() {
       return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -51,13 +50,17 @@ service cloud.firestore {
 
     // Colección de Casos (REQ-006, REQ-008)
     match /cases/{caseId} {
-      allow get, list: if isApproved();
-      allow create, update: if isApproved();
+      allow get: if isApproved();
+      allow list: if isApproved();
+      allow create: if isApproved();
+      allow update: if isApproved();
       allow delete: if isAdmin();
 
       // Trazabilidad de llamadas
       match /novedades/{novedadId} {
-        allow read, list, create: if isApproved();
+        allow read: if isApproved();
+        allow list: if isApproved();
+        allow create: if isApproved();
       }
     }
 
@@ -71,7 +74,8 @@ service cloud.firestore {
     // Auditoría de Consultas Públicas (REQ-007)
     match /publicCaseQueries/{queryId} {
       allow create: if true;
-      allow read, list: if isApproved();
+      allow read: if isApproved();
+      allow list: if isApproved();
     }
 
     // Notificaciones Internas (REQ-008)
@@ -85,7 +89,10 @@ service cloud.firestore {
     // Mensajes de contacto ciudadanos
     match /mensajes/{mensajeId} {
       allow create: if true;
-      allow read, list, update, delete: if isApproved();
+      allow read: if isApproved();
+      allow list: if isApproved();
+      allow update: if isApproved();
+      allow delete: if isAdmin();
     }
   }
 }

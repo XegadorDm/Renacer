@@ -1,7 +1,7 @@
 
 'use client';
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useMemo } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,8 +39,12 @@ export default function CasesPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Determinar aprobación para pasar a la tabla y evitar peticiones prematuras
-  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email);
+  // Asegurar que la aprobación esté confirmada antes de permitir el renderizado de la tabla
+  const isApproved = useMemo(() => {
+    if (!user) return false;
+    if (isCoreAdmin(user.email)) return true;
+    return userProfile?.status === 'approved';
+  }, [user, userProfile]);
 
   const updateFilters = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
