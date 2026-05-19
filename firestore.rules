@@ -51,7 +51,7 @@ service cloud.firestore {
 
     // Colección de Casos (REQ-006, REQ-008)
     match /cases/{caseId} {
-      allow read, list: if isApproved();
+      allow get, list: if isApproved();
       allow create, update: if isApproved();
       allow delete: if isAdmin();
 

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
@@ -56,6 +57,8 @@ interface CasesTableProps {
   selectedCaseId?: string;
   isCallModalOpen: boolean;
   setIsCallModalOpen: (open: boolean) => void;
+  isApproved: boolean;
+  isProfileLoading: boolean;
 }
 
 export function CasesTable({ 
@@ -68,7 +71,9 @@ export function CasesTable({
   onSelectCase, 
   selectedCaseId, 
   isCallModalOpen, 
-  setIsCallModalOpen 
+  setIsCallModalOpen,
+  isApproved,
+  isProfileLoading
 }: CasesTableProps) {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
@@ -81,7 +86,9 @@ export function CasesTable({
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
+    // CRITICAL: No intentar la consulta si el usuario no está aprobado para evitar FirebaseError
+    if (!firestore || !authUser || !isApproved) return null;
+    
     const casesCollection = collection(firestore, 'cases');
     const constraints: any[] = [];
 
@@ -115,7 +122,7 @@ export function CasesTable({
     }
 
     return constraints.length > 0 ? firestoreQuery(casesCollection, ...constraints) : casesCollection;
-  }, [firestore, authUser, location, startDate, endDate, period]);
+  }, [firestore, authUser, location, startDate, endDate, period, isApproved]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
@@ -214,7 +221,7 @@ export function CasesTable({
     setIsCallModalOpen(false);
   };
 
-  if (isLoading) {
+  if (isLoading || isProfileLoading) {
     return (
         <div className="border rounded-lg p-6 space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (

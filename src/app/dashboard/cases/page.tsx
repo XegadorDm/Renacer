@@ -1,3 +1,4 @@
+
 'use client';
 import Link from "next/link";
 import { Suspense, useState } from "react";
@@ -13,6 +14,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Case, UserProfile } from "@/lib/case-schema";
 import { Label } from "@/components/ui/label";
+import { isCoreAdmin } from "@/lib/core-admins";
 
 export default function CasesPage() {
   const router = useRouter();
@@ -35,7 +37,10 @@ export default function CasesPage() {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
+  // Determinar aprobación para pasar a la tabla y evitar peticiones prematuras
+  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email);
 
   const updateFilters = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -174,6 +179,8 @@ export default function CasesPage() {
                         selectedCaseId={selectedCase?.id}
                         isCallModalOpen={isCallModalOpen}
                         setIsCallModalOpen={setIsCallModalOpen}
+                        isApproved={isApproved}
+                        isProfileLoading={isProfileLoading}
                     />
                 </Suspense>
             </CardContent>

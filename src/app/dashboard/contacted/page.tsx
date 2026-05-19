@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, useUser, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc, Timestamp, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ import type { Case, Novedad, UserProfile } from '@/lib/case-schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { isCoreAdmin } from '@/lib/core-admins';
 
 function HistoryModal({ caseId, open, onOpenChange }: { caseId: string, open: boolean, onOpenChange: (open: boolean) => void }) {
   const firestore = useFirestore();
@@ -87,18 +89,6 @@ function ContactCard({ item, onRetry, onShowHistory }: { item: Case & { id: stri
 
   const totalAttempts = novedades?.length || 0;
 
-  const formattedRegDate = useMemo(() => {
-    if (!item.createdAt) return 'Sin fecha';
-    try {
-        const dateObj = item.createdAt instanceof Timestamp ? item.createdAt.toDate() : 
-                       (typeof item.createdAt === 'string' ? parseISO(item.createdAt) : 
-                       (item.createdAt.toDate ? item.createdAt.toDate() : new Date()));
-        return format(dateObj, "dd/MM/yyyy", { locale: es });
-    } catch (e) {
-        return 'Fecha inválida';
-    }
-  }, [item.createdAt]);
-
   return (
     <Card className="hover:shadow-md transition-all border-primary/10 overflow-hidden group">
       <CardHeader className="pb-2 space-y-1">
@@ -161,12 +151,22 @@ export default function ContactedUsersPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCallOpen, setIsCallOpen] = useState(false);
 
-  const casesQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'cases');
-  }, [firestore]);
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return doc(firestore, 'users', authUser.uid);
+  }, [firestore, authUser]);
 
-  const { data: cases, isLoading } = useCollection<Case>(casesQuery);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
+  // Asegurar aprobación antes de listar
+  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(authUser?.email);
+
+  const casesQuery = useMemoFirebase(() => {
+    if (!firestore || !isApproved) return null;
+    return collection(firestore, 'cases');
+  }, [firestore, isApproved]);
+
+  const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);
 
   const contactedCases = useMemo(() => {
     return (cases || []).filter(c => c.status === 'CONTACTADO');
@@ -181,11 +181,9 @@ export default function ContactedUsersPage() {
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
     
-    // 1. Actualizar caso principal
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
 
-    // 2. Registrar Trazabilidad (REQ-008: Historial)
     const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
     addDocumentNonBlocking(novedadesRef, {
         mensaje: contacted ? "Llamada efectiva realizada (reintento)" : "Intento de llamada sin éxito (reintento)",
@@ -194,7 +192,6 @@ export default function ContactedUsersPage() {
         createdBy: authUser.uid
     });
 
-    // 3. Crear Notificación Interna (REQ-008)
     const notificationsRef = collection(firestore, 'notifications');
     addDocumentNonBlocking(notificationsRef, {
         userId: authUser.uid,
@@ -204,7 +201,6 @@ export default function ContactedUsersPage() {
         read: false
     });
 
-    // 4. Actualizar vista pública segura (REQ-007)
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
@@ -221,7 +217,7 @@ export default function ContactedUsersPage() {
     setIsCallOpen(false);
   };
 
-  if (isLoading) {
+  if (isCasesLoading || isProfileLoading) {
     return (
       <div className="space-y-6 py-4">
         <div className="space-y-2">
