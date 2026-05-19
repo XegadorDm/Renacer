@@ -2,20 +2,19 @@
 
 import { useMemo, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, Timestamp, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PhoneCall, IdCard, MapPin, Calendar, Eye, PhoneOff, CheckCircle2, AlertCircle, History, PhoneForwarded, User, Clock, ChevronRight, XCircle, Phone } from 'lucide-react';
+import { PhoneCall, IdCard, MapPin, Eye, PhoneOff, CheckCircle2, History, PhoneForwarded, User, XCircle, Phone } from 'lucide-react';
 import Link from 'next/link';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { Case, Novedad, UserProfile } from '@/lib/case-schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { isCoreAdmin } from '@/lib/core-admins';
 
 function HistoryModal({ caseId, open, onOpenChange }: { caseId: string, open: boolean, onOpenChange: (open: boolean) => void }) {
   const firestore = useFirestore();
@@ -56,7 +55,7 @@ function HistoryModal({ caseId, open, onOpenChange }: { caseId: string, open: bo
                   <p className="font-medium text-foreground/80 italic">"{nov.mensaje}"</p>
                   <div className="mt-2 pt-2 border-t flex items-center gap-1 text-[9px] text-muted-foreground">
                     <User className="h-3 w-3" />
-                    <span>ID Asesor: {nov.createdBy.substring(0, 8)}</span>
+                    <span>Asesor: {nov.createdBy.substring(0, 8)}</span>
                   </div>
                 </div>
               ))}
@@ -150,25 +149,10 @@ export default function ContactedUsersPage() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCallOpen, setIsCallOpen] = useState(false);
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return doc(firestore, 'users', authUser.uid);
-  }, [firestore, authUser]);
-
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
-
-  // CRITICAL: Gate the approval status check to avoid premature queries
-  const isApproved = useMemo(() => {
-    if (!authUser) return false;
-    if (isCoreAdmin(authUser.email, authUser.uid)) return true;
-    return userProfile?.status === 'approved';
-  }, [authUser, userProfile]);
-
   const casesQuery = useMemoFirebase(() => {
-    // Prevent query if profile is still loading or user is not approved
-    if (!firestore || isProfileLoading || !isApproved) return null;
+    if (!firestore || !authUser) return null;
     return collection(firestore, 'cases');
-  }, [firestore, isApproved, isProfileLoading]);
+  }, [firestore, authUser]);
 
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);
 
@@ -196,15 +180,6 @@ export default function ContactedUsersPage() {
         createdBy: authUser.uid
     });
 
-    const notificationsRef = collection(firestore, 'notifications');
-    addDocumentNonBlocking(notificationsRef, {
-        userId: authUser.uid,
-        caseId: selectedCase.id,
-        message: `Se registró un nuevo intento de contacto (${newStatus}) para ${selectedCase.firstName}`,
-        createdAt: new Date().toISOString(),
-        read: false
-    });
-
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
@@ -221,13 +196,10 @@ export default function ContactedUsersPage() {
     setIsCallOpen(false);
   };
 
-  if (isCasesLoading || isProfileLoading) {
+  if (isCasesLoading) {
     return (
       <div className="space-y-6 py-4">
-        <div className="space-y-2">
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-4 w-96" />
-        </div>
+        <Skeleton className="h-10 w-64" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {[1, 2].map(i => (
             <div key={i} className="space-y-4">

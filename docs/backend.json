@@ -32,21 +32,6 @@
         "birthDate": { "type": "string", "format": "date-time" }
       }
     },
-    "PublicCaseStatus": {
-      "title": "PublicCaseStatus",
-      "type": "object",
-      "description": "Espejo simplificado del caso para consulta pública segura.",
-      "properties": {
-        "documentId": { "type": "string" },
-        "caseNumber": { "type": "string" },
-        "firstName": { "type": "string" },
-        "lastName": { "type": "string" },
-        "status": { "type": "string" },
-        "municipality": { "type": "string" },
-        "createdAt": { "type": "object" },
-        "updatedAt": { "type": "object" }
-      }
-    },
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
@@ -57,35 +42,7 @@
         "lastName": { "type": "string" },
         "email": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "case-worker"] },
-        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-        "createdAt": { "type": "string" }
-      }
-    },
-    "Novedad": {
-      "title": "Novedad",
-      "type": "object",
-      "description": "Registro de actividad o seguimiento de un caso.",
-      "properties": {
-        "id": { "type": "string" },
-        "mensaje": { "type": "string" },
-        "tipo": { "type": "string", "enum": ["llamada", "nota", "sistema"] },
-        "createdAt": { "type": "string" },
-        "createdBy": { "type": "string" }
-      }
-    },
-    "Mensaje": {
-      "title": "Mensaje",
-      "type": "object",
-      "description": "Mensaje recibido desde el formulario de contacto externo.",
-      "properties": {
-        "id": { "type": "string" },
-        "nombre": { "type": "string" },
-        "email": { "type": "string" },
-        "cedula": { "type": "string" },
-        "asunto": { "type": "string" },
-        "mensaje": { "type": "string" },
-        "read": { "type": "boolean" },
-        "resolved": { "type": "boolean" },
+        "status": { "type": "string" },
         "createdAt": { "type": "string" }
       }
     }
@@ -98,21 +55,9 @@
       "schema": "Case",
       "description": "Colección privada de caracterizaciones sociales."
     },
-    "/cases/{caseId}/novedades/{novedadId}": {
-      "schema": "Novedad",
-      "description": "Historial de seguimiento de un caso."
-    },
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "Gestión de personal interno."
-    },
-    "/publicCaseStatus/{documentId}": {
-      "schema": "PublicCaseStatus",
-      "description": "Índice público para consulta ciudadana por cédula."
-    },
-    "/mensajes/{mensajeId}": {
-      "schema": "Mensaje",
-      "description": "Buzón de consultas ciudadanas."
     }
   }
 }

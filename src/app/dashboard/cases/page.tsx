@@ -1,24 +1,21 @@
 'use client';
 import Link from "next/link";
-import { Suspense, useState, useMemo } from "react";
+import { Suspense, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX, Loader2, CloudOff, AlertCircle } from "lucide-react";
+import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX, Loader2, CloudOff } from "lucide-react";
 import { CasesTable } from "@/components/dashboard/cases-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { Case, UserProfile } from "@/lib/case-schema";
+import { useUser } from '@/firebase';
+import type { Case } from "@/lib/case-schema";
 import { Label } from "@/components/ui/label";
-import { isCoreAdmin } from "@/lib/core-admins";
 
 export default function CasesPage() {
   const router = useRouter();
   const { user } = useUser();
-  const firestore = useFirestore();
   const searchParams = useSearchParams();
   
   const queryParam = searchParams.get('query') || '';
@@ -31,21 +28,6 @@ export default function CasesPage() {
   
   const [selectedCase, setSelectedCase] = useState<(Case & { id: string }) | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
-
-  // Obtener el perfil para verificar aprobación antes de cualquier consulta de casos
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
-
-  // Determinamos aprobación: Admin Core o estado 'approved' en DB
-  const isApproved = useMemo(() => {
-    if (!user) return false;
-    if (isCoreAdmin(user.email, user.uid)) return true;
-    return userProfile?.status === 'approved';
-  }, [user, userProfile]);
 
   const updateFilters = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -74,31 +56,6 @@ export default function CasesPage() {
   const handleSearch = useDebouncedCallback((term: string) => updateFilters('query', term), 300);
   const handleDocSearch = useDebouncedCallback((term: string) => updateFilters('doc', term), 300);
 
-  if (isProfileLoading) {
-    return (
-        <div className="flex flex-col items-center justify-center p-20 gap-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Verificando credenciales de acceso...</p>
-        </div>
-    )
-  }
-
-  // Si no está aprobado tras cargar el perfil, mostramos aviso preventivo
-  if (!isApproved && !isProfileLoading) {
-    return (
-        <div className="flex flex-col items-center justify-center p-20 gap-4 text-center">
-            <AlertCircle className="h-12 w-12 text-destructive" />
-            <h2 className="text-xl font-bold">Acceso Denegado</h2>
-            <p className="text-muted-foreground max-w-md">
-                Su cuenta está pendiente de aprobación administrativa. No tiene permisos para listar la base de datos de casos sociales.
-            </p>
-            <Button variant="outline" onClick={() => router.replace('/dashboard')}>
-                Volver al Inicio
-            </Button>
-        </div>
-    )
-  }
-
   return (
     <div className="flex justify-center w-full py-4">
         <Card className="w-full">
@@ -112,7 +69,6 @@ export default function CasesPage() {
                       variant={offlineOnly ? "destructive" : "outline"} 
                       size="sm" 
                       onClick={toggleOfflineFilter}
-                      className={offlineOnly ? "animate-pulse" : ""}
                     >
                         <CloudOff className="mr-2 h-4 w-4" />
                         {offlineOnly ? "Viendo Solo Offline" : "Ver Pendientes Sync"}
@@ -131,7 +87,7 @@ export default function CasesPage() {
                 <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-lg border border-primary/20">
                     <Button 
                         onClick={() => setIsCallModalOpen(true)}
-                        disabled={!selectedCase || !isApproved}
+                        disabled={!selectedCase}
                         className="bg-primary hover:bg-primary/90 text-white font-bold h-12 px-6"
                     >
                         <Phone className="mr-2 h-5 w-5" />
@@ -229,8 +185,6 @@ export default function CasesPage() {
                         selectedCaseId={selectedCase?.id}
                         isCallModalOpen={isCallModalOpen}
                         setIsCallModalOpen={setIsCallModalOpen}
-                        isApproved={isApproved}
-                        isProfileLoading={isProfileLoading}
                     />
                 </Suspense>
             </CardContent>

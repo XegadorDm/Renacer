@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon, Cloud, CloudOff, Loader2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Cloud, CloudOff, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
-import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
 import { format, subDays, parseISO, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -28,7 +27,6 @@ import {
   DropdownMenuTrigger, 
   DropdownMenuContent, 
   DropdownMenuItem, 
-  DropdownMenuLabel, 
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { 
@@ -36,7 +34,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -57,8 +54,6 @@ interface CasesTableProps {
   selectedCaseId?: string;
   isCallModalOpen: boolean;
   setIsCallModalOpen: (open: boolean) => void;
-  isApproved: boolean;
-  isProfileLoading: boolean;
 }
 
 export function CasesTable({ 
@@ -72,9 +67,7 @@ export function CasesTable({
   onSelectCase, 
   selectedCaseId, 
   isCallModalOpen, 
-  setIsCallModalOpen,
-  isApproved,
-  isProfileLoading
+  setIsCallModalOpen
 }: CasesTableProps) {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
@@ -86,9 +79,7 @@ export function CasesTable({
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
-    // CRITICAL: Gate the query until profile is loaded and approval is confirmed.
-    // If we trigger 'list' prematurely, Firestore rules will deny the global request.
-    if (!firestore || !authUser || isProfileLoading || !isApproved) return null;
+    if (!firestore || !authUser) return null;
     
     const casesCollection = collection(firestore, 'cases');
     const constraints: any[] = [];
@@ -120,7 +111,7 @@ export function CasesTable({
     constraints.push(orderBy("createdAt", "desc"));
 
     return firestoreQuery(casesCollection, ...constraints);
-  }, [firestore, authUser, location, startDate, endDate, period, isApproved, isProfileLoading]);
+  }, [firestore, authUser, location, startDate, endDate, period]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
@@ -169,7 +160,7 @@ export function CasesTable({
 
     toast({
         title: "Caso Eliminado",
-        description: `El registro ha sido borrado y se sincronizará.`,
+        description: `El registro ha sido borrado.`,
     });
     setIsDeleteAlertOpen(false);
     setCaseToDelete(null);
@@ -206,16 +197,16 @@ export function CasesTable({
 
     toast({
         title: "Registro Exitoso",
-        description: `La gestión se ha guardado localmente (REQ-006).`,
+        description: `La gestión se ha guardado correctamente.`,
     });
     setIsCallModalOpen(false);
   };
 
-  if (isLoading || isProfileLoading) {
+  if (isLoading) {
     return (
         <div className="border rounded-lg p-6 space-y-4 flex flex-col items-center justify-center min-h-[300px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground italic">Consultando base de datos de casos segura...</p>
+            <p className="text-sm text-muted-foreground italic">Cargando base de datos de casos...</p>
         </div>
     )
   }
@@ -228,12 +219,12 @@ export function CasesTable({
             <TableHeader>
               <TableRow className="bg-muted/40">
                 <TableHead className="w-[60px]"></TableHead>
-                <TableHead className="font-bold text-primary uppercase text-[10px] tracking-widest">Sincronización</TableHead>
+                <TableHead className="font-bold text-primary uppercase text-[10px] tracking-widest">Estado</TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
                 <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Documento</TableHead>
                 <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">Registro</TableHead>
-                <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Estado Local</TableHead>
+                <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Seguimiento</TableHead>
                 <TableHead className="text-right font-bold pr-6 text-primary uppercase text-[10px] tracking-widest">Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -253,16 +244,16 @@ export function CasesTable({
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 animate-pulse">
+                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
                                 <CloudOff className="h-3 w-3 mr-1" /> Offline
                               </Badge>
                             </TooltipTrigger>
-                            <TooltipContent><p>Pendiente de sincronizar (REQ-006)</p></TooltipContent>
+                            <TooltipContent><p>Pendiente de sincronizar</p></TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
                         <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          <Cloud className="h-3 w-3 mr-1" /> Sincronizado
+                          <Cloud className="h-3 w-3 mr-1" /> OK
                         </Badge>
                       )}
                     </TableCell>
@@ -365,7 +356,7 @@ export function CasesTable({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción es permanente y afectará la base de datos central y la vista pública.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción es permanente y afectará la base de datos central.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>CANCELAR</AlertDialogCancel>
