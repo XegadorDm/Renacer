@@ -15,20 +15,18 @@ service cloud.firestore {
     }
 
     function getRole() {
-      let userDoc = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(userDoc) ? get(userDoc).data.role : 'none';
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
+        : 'none';
     }
 
     function isApproved() {
-      // Bypass para administradores core
-      if (isCoreAdmin()) {
-        return true;
-      }
-      
-      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
-      return exists(userPath) && (
-        !("status" in get(userPath).data) || 
-        get(userPath).data.status == 'approved'
+      return isCoreAdmin() || (
+        request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          !("status" in get(/databases/$(database)/documents/users/$(request.auth.uid)).data) || 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
+        )
       );
     }
 
@@ -91,6 +89,7 @@ service cloud.firestore {
       allow read: if request.auth != null
         && isApproved()
         && (
+          isCoreAdmin() ||
           getRole() == 'admin' ||
           resource.data.userId == request.auth.uid
         );
@@ -102,7 +101,7 @@ service cloud.firestore {
 
       allow delete: if request.auth != null
         && isApproved()
-        && getRole() == 'admin';
+        && (isCoreAdmin() || getRole() == 'admin');
     }
   }
 }
