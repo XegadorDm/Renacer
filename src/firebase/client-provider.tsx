@@ -4,54 +4,33 @@ import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { getApps, initializeApp, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { 
-  getFirestore,
-  initializeFirestore, 
-  persistentLocalCache, 
-  persistentMultipleTabManager,
-  Firestore 
-} from 'firebase/firestore';
+import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
-// Singletons para asegurar que Firebase se inicialice exactamente una vez en el cliente
 let appInstance: FirebaseApp;
 let authInstance: Auth;
 let firestoreInstance: Firestore;
 
 /**
- * Proveedor de Firebase optimizado para Renacer con soporte Offline multi-pestaña.
+ * Proveedor de Firebase simplificado para máxima compatibilidad y estabilidad.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // Inicializar Firebase App si no existe
     if (!appInstance) {
       const existingApps = getApps();
       appInstance = existingApps.length === 0 ? initializeApp(firebaseConfig) : getApp();
     }
 
-    // Inicializar Auth si no existe
     if (!authInstance) {
       authInstance = getAuth(appInstance);
     }
 
-    // Inicializar Firestore con persistencia local multi-pestaña si no existe
     if (!firestoreInstance) {
-      try {
-        // persistentMultipleTabManager es el equivalente moderno y robusto de enableMultiTabIndexedDbPersistence
-        firestoreInstance = initializeFirestore(appInstance, {
-          localCache: persistentLocalCache({
-            tabManager: persistentMultipleTabManager()
-          })
-        });
-      } catch (e) {
-        // Si ya ha sido inicializado (común en desarrollo con Hot Reload), 
-        // recuperamos la instancia existente sin lanzar error.
-        firestoreInstance = getFirestore(appInstance);
-      }
+      firestoreInstance = getFirestore(appInstance);
     }
 
     return {

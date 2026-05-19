@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, WifiOff } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -114,7 +114,6 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     };
 
     setIsSubmitting(true);
-    const isOnline = navigator.onLine;
     
     try {
         const normalizedCedula = values.documentId.replace(/\D/g, '');
@@ -134,10 +133,8 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             members: { [user.uid]: 'owner' }
         };
         
-        // Guardado no bloqueante (Soporte Offline nativo)
         setDocumentNonBlocking(caseDocRef, fullData, { merge: true });
 
-        // Actualización de la vista pública (REQ-007)
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalizedCedula);
         const publicData = {
             documentId: normalizedCedula,
@@ -152,12 +149,8 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         setDocumentNonBlocking(publicDocRef, publicData, { merge: true });
 
         toast({
-            title: isOnline 
-              ? (isEditMode ? "Caso Actualizado" : "Caso Guardado Exitosamente")
-              : "Guardado en Modo Offline",
-            description: isOnline 
-              ? `Se han sincronizado los datos para ${values.firstName}.`
-              : "Los datos se guardaron localmente y se sincronizarán al recuperar internet.",
+            title: isEditMode ? "Caso Actualizado" : "Caso Guardado Exitosamente",
+            description: `Se han guardado los datos para ${values.firstName}.`,
         });
         
         router.push(isEditMode ? `/dashboard/cases/${caseData.id}` : `/dashboard/cases?location=${values.municipality}`);
@@ -197,12 +190,6 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 md:space-y-10">
-        {!navigator.onLine && (
-            <div className="bg-orange-50 border border-orange-200 p-3 rounded-lg flex items-center gap-3 text-orange-700 animate-pulse">
-                <WifiOff className="h-5 w-5" />
-                <p className="text-xs font-bold uppercase tracking-tight">Estás trabajando sin conexión. El registro se guardará localmente.</p>
-            </div>
-        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 md:gap-y-6">
           {formFields.map((fieldConfig) => (
             <FormField

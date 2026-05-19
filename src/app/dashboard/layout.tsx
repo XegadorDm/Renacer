@@ -19,10 +19,9 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, Settings, Users, Loader2, Mail, ShieldCheck, PhoneCall } from "lucide-react";
+import { Home, LogOut, Settings, Users, Loader2, Mail, PhoneCall } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { doc, setDoc } from "firebase/firestore";
-import { ConnectionStatus } from "@/components/dashboard/connection-status";
 import type { UserProfile } from "@/lib/case-schema";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -38,7 +37,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Auto-aprobación automática para todos los usuarios registrados
+  // Asegurar que el perfil del usuario exista para evitar errores de permisos
   useEffect(() => {
     if (user && firestore && !isProfileLoading && !userProfile) {
       const userRef = doc(firestore, 'users', user.uid);
@@ -140,13 +139,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         <SidebarInset className="flex-1 overflow-hidden">
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 py-2">
             <SidebarTrigger />
-            
-            <div className="ml-2 hidden sm:block">
-              <ConnectionStatus />
-            </div>
-
             <div className="flex-1" />
-            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="overflow-hidden rounded-full h-9 w-9">

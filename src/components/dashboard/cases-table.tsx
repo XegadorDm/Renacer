@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Cloud, CloudOff, Loader2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
@@ -37,10 +37,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
+type WithId<T> = T & { id: string };
 
 interface CasesTableProps {
   query: string;
@@ -49,7 +47,6 @@ interface CasesTableProps {
   startDate?: string;
   endDate?: string;
   location: string;
-  offlineOnly?: boolean;
   onSelectCase: (caseItem: WithId<Case> | null) => void;
   selectedCaseId?: string;
   isCallModalOpen: boolean;
@@ -63,7 +60,6 @@ export function CasesTable({
   startDate, 
   endDate, 
   location, 
-  offlineOnly,
   onSelectCase, 
   selectedCaseId, 
   isCallModalOpen, 
@@ -124,10 +120,6 @@ export function CasesTable({
     
     let filtered = cases;
 
-    if (offlineOnly) {
-      filtered = filtered.filter(c => c._hasPendingWrites === true);
-    }
-
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(c => 
@@ -145,7 +137,7 @@ export function CasesTable({
     }
 
     return filtered;
-  }, [cases, query, docQuery, offlineOnly]);
+  }, [cases, query, docQuery]);
 
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
@@ -219,7 +211,6 @@ export function CasesTable({
             <TableHeader>
               <TableRow className="bg-muted/40">
                 <TableHead className="w-[60px]"></TableHead>
-                <TableHead className="font-bold text-primary uppercase text-[10px] tracking-widest">Estado</TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
                 <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Documento</TableHead>
@@ -238,24 +229,6 @@ export function CasesTable({
                   >
                     <TableCell className="pl-6">
                         <div className={`w-3 h-3 rounded-full border-2 ${selectedCaseId === c.id ? 'bg-primary border-primary' : 'border-muted-foreground'}`} />
-                    </TableCell>
-                    <TableCell>
-                      {c._hasPendingWrites ? (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                                <CloudOff className="h-3 w-3 mr-1" /> Offline
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent><p>Pendiente de sincronizar</p></TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ) : (
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          <Cloud className="h-3 w-3 mr-1" /> OK
-                        </Badge>
-                      )}
                     </TableCell>
                     <TableCell className="font-mono text-[10px] text-muted-foreground">{c.caseNumber}</TableCell>
                     <TableCell className="font-bold uppercase text-xs">{c.firstName} {c.lastName}</TableCell>
@@ -306,7 +279,7 @@ export function CasesTable({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center h-48 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center h-48 text-muted-foreground">
                     No se encontraron registros.
                   </TableCell>
                 </TableRow>
