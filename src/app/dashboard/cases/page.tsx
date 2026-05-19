@@ -5,7 +5,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX, Loader2 } from "lucide-react";
+import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX, Loader2, CloudOff } from "lucide-react";
 import { CasesTable } from "@/components/dashboard/cases-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,6 +14,7 @@ import { doc } from 'firebase/firestore';
 import type { Case, UserProfile } from "@/lib/case-schema";
 import { Label } from "@/components/ui/label";
 import { isCoreAdmin } from "@/lib/core-admins";
+import { Badge } from "@/components/ui/badge";
 
 export default function CasesPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function CasesPage() {
   const location = searchParams.get('location') || '';
   const startDate = searchParams.get('from') || '';
   const endDate = searchParams.get('to') || '';
+  const offlineOnly = searchParams.get('offline') === 'true';
   
   const [selectedCase, setSelectedCase] = useState<(Case & { id: string }) | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
@@ -56,6 +58,16 @@ export default function CasesPage() {
     router.replace(`/dashboard/cases?${params.toString()}`);
   };
 
+  const toggleOfflineFilter = () => {
+    const params = new URLSearchParams(searchParams);
+    if (offlineOnly) {
+      params.delete('offline');
+    } else {
+      params.set('offline', 'true');
+    }
+    router.replace(`/dashboard/cases?${params.toString()}`);
+  };
+
   const clearFilters = () => {
     router.replace('/dashboard/cases');
   };
@@ -81,6 +93,15 @@ export default function CasesPage() {
                     <CardDescription>Busca, visualiza y gestiona los casos de la comunidad.</CardDescription>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                    <Button 
+                      variant={offlineOnly ? "destructive" : "outline"} 
+                      size="sm" 
+                      onClick={toggleOfflineFilter}
+                      className={offlineOnly ? "animate-pulse" : ""}
+                    >
+                        <CloudOff className="mr-2 h-4 w-4" />
+                        {offlineOnly ? "Viendo Solo Offline" : "Ver Pendientes Sync"}
+                    </Button>
                     <Button variant="outline" size="sm" onClick={clearFilters}>
                         <FilterX className="mr-2 h-4 w-4" />
                         Limpiar Filtros
@@ -188,6 +209,7 @@ export default function CasesPage() {
                         startDate={startDate}
                         endDate={endDate}
                         location={location} 
+                        offlineOnly={offlineOnly}
                         onSelectCase={setSelectedCase}
                         selectedCaseId={selectedCase?.id}
                         isCallModalOpen={isCallModalOpen}

@@ -20,7 +20,10 @@ service cloud.firestore {
 
     // Verifica si el usuario tiene un perfil aprobado en la colección 'users'
     function isApproved() {
+      // Prioridad 1: Líderes del proyecto
       if (isCoreAdmin()) { return true; }
+      
+      // Prioridad 2: Usuarios con documento físico aprobado
       return isAuthenticated() && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';

@@ -10,7 +10,9 @@ export const CORE_ADMIN_UIDS = [
 
 export function isCoreAdmin(email?: string | null, uid?: string | null) {
   if (!email && !uid) return false;
-  const emailMatch = email && CORE_ADMIN_EMAILS.includes(email.toLowerCase());
-  const uidMatch = uid && CORE_ADMIN_UIDS.includes(uid);
+  
+  const emailMatch = email ? CORE_ADMIN_EMAILS.includes(email.toLowerCase()) : false;
+  const uidMatch = uid ? CORE_ADMIN_UIDS.includes(uid) : false;
+  
   return !!(emailMatch || uidMatch);
 }

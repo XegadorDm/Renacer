@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon, Cloud } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon, Cloud, CloudOff } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
@@ -52,6 +52,7 @@ interface CasesTableProps {
   startDate?: string;
   endDate?: string;
   location: string;
+  offlineOnly?: boolean;
   onSelectCase: (caseItem: WithId<Case> | null) => void;
   selectedCaseId?: string;
   isCallModalOpen: boolean;
@@ -67,6 +68,7 @@ export function CasesTable({
   startDate, 
   endDate, 
   location, 
+  offlineOnly,
   onSelectCase, 
   selectedCaseId, 
   isCallModalOpen, 
@@ -85,8 +87,7 @@ export function CasesTable({
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
-    // CRITICAL: Gate the query until permissions are confirmed AND profile loading is finished
-    // This prevents the "Missing or insufficient permissions" error during initial load/auto-approval
+    // CRITICAL GATING: Evita "Missing or insufficient permissions" esperando al perfil
     if (!firestore || !authUser || isProfileLoading || !isApproved) return null;
     
     const casesCollection = collection(firestore, 'cases');
@@ -101,7 +102,6 @@ export function CasesTable({
         const now = new Date();
         switch (period) {
             case '1w': finalStartDate = format(subDays(now, 7), 'yyyy-MM-dd'); break;
-            case '15d': finalStartDate = format(subDays(now, 15), 'yyyy-MM-dd'); break;
             case '1m': finalStartDate = format(subDays(now, 30), 'yyyy-MM-dd'); break;
             case '6m': finalStartDate = format(subDays(now, 180), 'yyyy-MM-dd'); break;
         }
@@ -117,12 +117,10 @@ export function CasesTable({
       constraints.push(where("createdAt", "<=", end));
     }
 
-    // Si hay filtros de rango, ordenar es obligatorio para que Firestore use el índice compuesto
-    if (finalStartDate || endDate || (location && location !== 'all')) {
-        constraints.push(orderBy("createdAt", "desc"));
-    }
+    // Ordenamiento por defecto para que la lista sea coherente
+    constraints.push(orderBy("createdAt", "desc"));
 
-    return constraints.length > 0 ? firestoreQuery(casesCollection, ...constraints) : casesCollection;
+    return constraints.length > 0 ? firestoreQuery(casesCollection, ...constraints) : firestoreQuery(casesCollection, orderBy("createdAt", "desc"));
   }, [firestore, authUser, location, startDate, endDate, period, isApproved, isProfileLoading]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
@@ -135,6 +133,11 @@ export function CasesTable({
     if (!cases) return [];
     
     let filtered = cases;
+
+    // Filtro Offline (REQ-006)
+    if (offlineOnly) {
+      filtered = filtered.filter(c => c._hasPendingWrites === true);
+    }
 
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
@@ -153,7 +156,7 @@ export function CasesTable({
     }
 
     return filtered;
-  }, [cases, query, docQuery]);
+  }, [cases, query, docQuery, offlineOnly]);
 
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
@@ -168,7 +171,7 @@ export function CasesTable({
 
     toast({
         title: "Caso Eliminado",
-        description: `El registro y su vista pública han sido eliminados.`,
+        description: `El registro ha sido eliminado localmente y se sincronizará.`,
     });
     setIsDeleteAlertOpen(false);
     setCaseToDelete(null);
@@ -190,22 +193,11 @@ export function CasesTable({
         createdBy: authUser.uid
     });
 
-    const notificationsRef = collection(firestore, 'notifications');
-    addDocumentNonBlocking(notificationsRef, {
-        userId: authUser.uid,
-        caseId: selectedCase.id,
-        message: `Se registró un intento de contacto (${newStatus}) para el caso ${selectedCase.caseNumber}`,
-        createdAt: new Date().toISOString(),
-        read: false
-    });
-
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
         setDocumentNonBlocking(publicDocRef, { 
             status: newStatus,
-            firstName: selectedCase.firstName,
-            lastName: selectedCase.lastName,
             updatedAt: serverTimestamp()
         }, { merge: true });
     }
@@ -216,8 +208,8 @@ export function CasesTable({
     }));
 
     toast({
-        title: contacted ? "Llamada Registrada" : "Intento Registrado",
-        description: `Se actualizó el historial y la base pública del caso.`,
+        title: "Registro Exitoso",
+        description: `La novedad se ha guardado y se sincronizará automáticamente.`,
     });
     setIsCallModalOpen(false);
   };
@@ -235,22 +227,18 @@ export function CasesTable({
   return (
     <>
       <div className="border rounded-xl overflow-hidden bg-card shadow-lg border-primary/10">
-        <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-primary/20">
+        <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-muted/40 hover:bg-muted/40">
+              <TableRow className="bg-muted/40">
                 <TableHead className="w-[60px]"></TableHead>
+                <TableHead className="font-bold text-primary uppercase text-[10px] tracking-widest">Estado Sync</TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
                 <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Documento</TableHead>
-                <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">
-                    <div className="flex items-center gap-1">
-                      <CalendarIcon className="h-3 w-3" /> Registro
-                    </div>
-                </TableHead>
-                <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">Municipio</TableHead>
+                <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">Registro</TableHead>
                 <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Estado Local</TableHead>
-                <TableHead className="text-right font-bold pr-6 text-primary min-w-[100px] uppercase text-[10px] tracking-widest">Gestión</TableHead>
+                <TableHead className="text-right font-bold pr-6 text-primary uppercase text-[10px] tracking-widest">Gestión</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -258,33 +246,34 @@ export function CasesTable({
                 filteredCases.map((c) => (
                   <TableRow 
                     key={c.id} 
-                    className={`hover:bg-primary/5 transition-all duration-200 cursor-pointer border-b last:border-0 ${selectedCaseId === c.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''}`}
+                    className={`hover:bg-primary/5 transition-all cursor-pointer ${selectedCaseId === c.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''}`}
                     onClick={() => onSelectCase(c as WithId<Case>)}
                   >
                     <TableCell className="pl-6">
-                        <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full border-2 transition-all ${selectedCaseId === c.id ? 'bg-primary border-primary scale-125' : 'border-muted-foreground'}`} />
-                            {c._hasPendingWrites && (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <div className="relative flex items-center justify-center">
-                                                <Cloud className="h-4 w-4 text-accent animate-pulse" />
-                                                <span className="absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full border border-white" />
-                                            </div>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p className="text-[10px] font-bold">Pendiente de sincronizar con el servidor (Modo Offline)</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            )}
-                        </div>
+                        <div className={`w-3 h-3 rounded-full border-2 ${selectedCaseId === c.id ? 'bg-primary border-primary' : 'border-muted-foreground'}`} />
                     </TableCell>
-                    <TableCell className="font-mono text-[10px] text-muted-foreground font-semibold">{c.caseNumber}</TableCell>
-                    <TableCell className="font-bold uppercase text-xs tracking-tight">{c.firstName} {c.lastName}</TableCell>
+                    <TableCell>
+                      {c._hasPendingWrites ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 animate-pulse">
+                                <CloudOff className="h-3 w-3 mr-1" /> Offline
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Pendiente de sincronizar con el servidor</p></TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <Cloud className="h-3 w-3 mr-1" /> Sincronizado
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-mono text-[10px] text-muted-foreground">{c.caseNumber}</TableCell>
+                    <TableCell className="font-bold uppercase text-xs">{c.firstName} {c.lastName}</TableCell>
                     <TableCell className="text-xs font-medium text-muted-foreground">{c.documentId}</TableCell>
-                    <TableCell className="text-[10px] font-mono whitespace-nowrap">
+                    <TableCell className="text-[10px] font-mono">
                         {c.createdAt ? (
                              format(
                                 c.createdAt instanceof Timestamp ? c.createdAt.toDate() : 
@@ -293,42 +282,35 @@ export function CasesTable({
                                 "dd/MM/yyyy HH:mm", 
                                 { locale: es }
                             )
-                        ) : (
-                            <span className="text-muted-foreground italic text-[9px] opacity-60 font-sans">Sin fecha</span>
-                        )}
+                        ) : 'Sin fecha'}
                     </TableCell>
-                    <TableCell className="text-xs font-semibold">{c.municipality}</TableCell>
                     <TableCell className="flex justify-center py-4">
                       <CaseStatusIndicator status={localStatuses[c.id] || c.status} />
                     </TableCell>
                     <TableCell className="text-right pr-6">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="hover:bg-primary/10 rounded-full h-9 w-9">
-                            <MoreHorizontal className="h-5 w-5" />
-                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 p-2 rounded-xl shadow-2xl border-primary/20">
-                          <DropdownMenuLabel className="text-[10px] font-bold uppercase text-muted-foreground tracking-tighter mb-1">Acciones Disponibles</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => router.push(`/dashboard/cases/${c.id}`)} className="cursor-pointer rounded-lg py-2">
-                             <Eye className="mr-3 h-4 w-4 text-primary" /> <span className="text-sm font-medium">Ver Detalles</span>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/cases/${c.id}`)}>
+                             <Eye className="mr-2 h-4 w-4 text-primary" /> Ver Detalles
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild className="cursor-pointer rounded-lg py-2">
+                          <DropdownMenuItem asChild>
                               <Link href={`/dashboard/cases/${c.id}/edit`}>
-                                <Edit className="mr-3 h-4 w-4 text-primary" /> <span className="text-sm font-medium">Editar Datos</span>
+                                <Edit className="mr-2 h-4 w-4 text-primary" /> Editar
                               </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator className="my-1" />
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem 
-                            className="text-destructive focus:text-destructive-foreground focus:bg-destructive cursor-pointer rounded-lg py-2"
+                            className="text-destructive"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 setCaseToDelete(c as WithId<Case>);
                                 setIsDeleteAlertOpen(true);
                             }}
                           >
-                            <Trash2 className="mr-3 h-4 w-4" /> <span className="text-sm font-bold">Eliminar Caso</span>
+                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -337,11 +319,8 @@ export function CasesTable({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center h-48">
-                    <div className="flex flex-col items-center justify-center text-muted-foreground gap-2">
-                        <AlertCircle className="h-8 w-8 opacity-20" />
-                        <p className="font-medium">No se encontraron casos registrados para este rango.</p>
-                    </div>
+                  <TableCell colSpan={8} className="text-center h-48 text-muted-foreground">
+                    No se encontraron registros.
                   </TableCell>
                 </TableRow>
               )}
@@ -351,100 +330,50 @@ export function CasesTable({
       </div>
 
       <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+        <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden shadow-2xl">
             <DialogHeader className="p-6 bg-primary text-primary-foreground">
                 <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
                     <Phone className="h-7 w-7 animate-bounce" />
                     Llamar al Usuario
                 </DialogTitle>
-                <DialogDescription className="text-primary-foreground/80 mt-1">
-                    Gestión de contacto directo con el beneficiario.
-                </DialogDescription>
             </DialogHeader>
 
-            <div className="p-6 space-y-6 bg-background">
-                {selectedCase ? (
+            <div className="p-6 space-y-6">
+                {selectedCase && (
                     <div className="space-y-4">
                         <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-xl border border-primary/10">
-                            <div className="bg-primary/10 p-3 rounded-full border border-primary/20">
-                                <User className="h-10 w-10 text-primary" />
-                            </div>
+                            <User className="h-10 w-10 text-primary bg-primary/10 p-2 rounded-full" />
                             <div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Beneficiario</p>
-                                <p className="text-xl font-bold text-foreground leading-tight">{selectedCase.firstName} {selectedCase.lastName}</p>
+                                <p className="text-[10px] text-muted-foreground uppercase font-black">Beneficiario</p>
+                                <p className="text-xl font-bold">{selectedCase.firstName} {selectedCase.lastName}</p>
                             </div>
                         </div>
 
-                        <div className="p-5 bg-accent/5 border border-accent/20 rounded-xl space-y-4">
-                            <p className="text-[10px] text-accent uppercase font-black tracking-widest text-center">Números Autorizados</p>
-                            
-                            <div className="grid gap-3">
-                                <div className="flex flex-col items-center justify-center bg-background p-4 rounded-lg border shadow-sm ring-1 ring-primary/5">
-                                    <span className="text-3xl font-mono font-black tracking-[0.2em] text-primary mb-1">
-                                        {selectedCase.phone1 || 'SIN NÚMERO'}
-                                    </span>
-                                    <Badge variant="outline" className="bg-primary/5 text-[9px] uppercase font-bold px-3">Línea Principal</Badge>
-                                </div>
-                                
-                                {selectedCase.phone2 && (
-                                    <div className="flex flex-col items-center justify-center bg-background p-3 rounded-lg border border-dashed shadow-sm">
-                                        <span className="text-xl font-mono font-bold tracking-widest text-muted-foreground mb-1">
-                                            {selectedCase.phone2}
-                                        </span>
-                                        <Badge variant="outline" className="text-[8px] uppercase">Línea Alternativa</Badge>
-                                    </div>
-                                )}
-                            </div>
+                        <div className="p-5 bg-accent/5 border border-accent/20 rounded-xl text-center">
+                            <p className="text-[10px] text-accent uppercase font-black mb-3">Línea Principal</p>
+                            <span className="text-3xl font-mono font-black text-primary tracking-widest">{selectedCase.phone1}</span>
                         </div>
-                    </div>
-                ) : (
-                    <div className="text-center p-10 text-muted-foreground">
-                        No hay un caso seleccionado.
                     </div>
                 )}
             </div>
 
-            <DialogFooter className="flex flex-col sm:flex-row gap-2 p-6 bg-muted/20 border-t">
-                <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="w-full sm:flex-1 order-3 sm:order-1 font-bold">
-                    CANCELAR
-                </Button>
-                <Button 
-                    variant="destructive" 
-                    onClick={() => handleRegisterNovedad(false)}
-                    disabled={!selectedCase}
-                    className="w-full sm:flex-1 order-2 font-bold shadow-lg"
-                >
-                    <XCircle className="mr-2 h-4 w-4" />
-                    NO CONTACTO
-                </Button>
-                <Button 
-                    variant="default" 
-                    onClick={() => handleRegisterNovedad(true)}
-                    disabled={!selectedCase}
-                    className="w-full sm:flex-1 order-1 bg-primary hover:bg-primary/90 text-white font-bold shadow-lg"
-                >
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    CONTACTADO
-                </Button>
+            <DialogFooter className="flex gap-2 p-6 bg-muted/20 border-t">
+                <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="flex-1">CANCELAR</Button>
+                <Button variant="destructive" onClick={() => handleRegisterNovedad(false)} className="flex-1">FALLIDO</Button>
+                <Button variant="default" onClick={() => handleRegisterNovedad(true)} className="flex-1 bg-green-600 hover:bg-green-700">EXITOSO</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-        <AlertDialogContent className="rounded-2xl max-w-[90vw] sm:max-w-md">
+        <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive flex items-center gap-2">
-                <Trash2 className="h-5 w-5" /> ¿Confirmar eliminación?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm">
-              Esta acción eliminará de forma permanente el registro de <strong>{caseToDelete?.firstName} {caseToDelete?.lastName}</strong>. Esta operación no se puede deshacer.
-            </AlertDialogDescription>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción es permanente y afectará tanto la base privada como la vista pública.</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel className="rounded-xl font-bold">CANCELAR</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-xl font-bold shadow-lg">
-              SÍ, ELIMINAR
-            </AlertDialogAction>
+          <AlertDialogFooter>
+            <AlertDialogCancel>CANCELAR</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">SÍ, ELIMINAR</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
