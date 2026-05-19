@@ -4,17 +4,20 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Función para identificar administradores core del proyecto (Bypass de seguridad)
+    // Se añade el UID de Aleks Imbachi detectado en los logs para mayor robustez
     function isCoreAdmin() {
-      return request.auth != null && 
-             request.auth.token.email != null && 
-             (request.auth.token.email.lower() == 'aleksimbachi@gmail.com' ||
-              request.auth.token.email.lower() == 'juancamilogiraldo@gmail.com' ||
-              request.auth.token.email.lower() == 'diegomauriciopastusano@gmail.com');
+      return request.auth != null && (
+        request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
+        (request.auth.token.email != null && 
+         (request.auth.token.email.lower() == 'aleksimbachi@gmail.com' ||
+          request.auth.token.email.lower() == 'juancamilogiraldo@gmail.com' ||
+          request.auth.token.email.lower() == 'diegomauriciopastusano@gmail.com'))
+      );
     }
 
     // Obtener el rol del usuario desde su perfil en Firestore
     function getRole() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
         ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
         : 'none';
     }
@@ -45,7 +48,7 @@ service cloud.firestore {
 
     // Reglas para la colección principal de Casos (REQ-003, REQ-008)
     match /cases/{caseId} {
-      allow read: if request.auth != null && (isCoreAdmin() || isApproved());
+      allow read: if request.auth != null && isApproved();
       allow delete: if request.auth != null && (isCoreAdmin() || (isApproved() && getRole() == 'admin'));
       allow create, update: if request.auth != null && (isCoreAdmin() || (isApproved() && (getRole() == 'admin' || getRole() == 'case-worker')));
 
@@ -78,26 +81,14 @@ service cloud.firestore {
 
     // Notificaciones Internas para seguimiento (REQ-008)
     match /notifications/{notificationId} {
-      allow create: if request.auth != null
-        && isApproved()
-        && request.resource.data.userId == request.auth.uid;
-
-      allow read: if request.auth != null
-        && isApproved()
-        && (
-          isCoreAdmin() ||
-          getRole() == 'admin' ||
-          resource.data.userId == request.auth.uid
-        );
-
-      allow update: if request.auth != null
-        && isApproved()
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
-
-      allow delete: if request.auth != null
-        && isApproved()
-        && (isCoreAdmin() || getRole() == 'admin');
+      allow create: if request.auth != null && isApproved();
+      allow read: if request.auth != null && (
+        isCoreAdmin() || 
+        getRole() == 'admin' || 
+        resource.data.userId == request.auth.uid
+      );
+      allow update: if request.auth != null && isApproved() && resource.data.userId == request.auth.uid;
+      allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
     }
   }
 }

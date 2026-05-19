@@ -57,6 +57,20 @@
         "read": { "type": "boolean" }
       },
       "required": ["userId", "caseId", "message", "createdAt", "read"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Extended user profile data stored in Firestore.",
+      "properties": {
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "case-worker"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -66,6 +80,10 @@
     "/cases/{caseId}": {
       "schema": "Case",
       "description": "Full private case data."
+    },
+    "/cases/{caseId}/novedades/{novedadId}": {
+      "schema": "object",
+      "description": "History of interactions and calls for a specific case."
     },
     "/publicCaseStatus/{documentId}": {
       "schema": "PublicCaseStatus",
@@ -78,6 +96,14 @@
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "Internal notifications for case management updates."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and permissions."
+    },
+    "/mensajes/{mensajeId}": {
+      "schema": "object",
+      "description": "Citizen inquiries from the contact form."
     }
   }
 }
