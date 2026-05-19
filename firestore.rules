@@ -10,7 +10,8 @@ service cloud.firestore {
     }
 
     // Bypass directo para líderes del proyecto (Admin Core)
-    // Se evalúa por UID primero para máxima seguridad y luego por Email
+    // Prioridad 1: UID (Inmutable y seguro)
+    // Prioridad 2: Email (Para nuevos accesos de líderes)
     function isCoreAdmin() {
       return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -20,17 +21,12 @@ service cloud.firestore {
       );
     }
 
-    // Obtener datos del perfil de usuario de forma segura
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
     // Verificar si el usuario tiene estado aprobado en la DB
     function isApproved() {
       return isCoreAdmin() || (
         isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        getUserData().status == 'approved'
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
       );
     }
 
@@ -39,7 +35,7 @@ service cloud.firestore {
       return isCoreAdmin() || (
         isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        getUserData().role == 'admin'
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }
 

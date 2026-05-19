@@ -29,7 +29,8 @@
         "displacementType": { "type": "string" },
         "disability": { "type": "string" },
         "isElderly": { "type": "boolean" },
-        "householdMembers": { "type": "number" }
+        "householdMembers": { "type": "number" },
+        "birthDate": { "type": "string", "format": "date-time" }
       }
     },
     "PublicCaseStatus": {

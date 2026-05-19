@@ -45,9 +45,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   // Auto-aprobación Crítica para Administradores Core
   useEffect(() => {
-    if (user && isCoreAdmin(user.email) && firestore) {
+    if (user && isCoreAdmin(user.email) && firestore && !isProfileLoading) {
       // Si el perfil no existe, no está aprobado o no es admin, forzamos la sincronización
-      if (!isProfileLoading && (!userProfile || userProfile.status !== 'approved' || userProfile.role !== 'admin')) {
+      if (!userProfile || userProfile.status !== 'approved' || userProfile.role !== 'admin') {
         const userRef = doc(firestore, 'users', user.uid);
         setDoc(userRef, {
           id: user.uid,
@@ -57,7 +57,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           role: 'admin',
           status: 'approved',
           createdAt: userProfile?.createdAt || new Date().toISOString()
-        }, { merge: true });
+        }, { merge: true }).catch(err => console.error("Error auto-approving admin:", err));
       }
     }
   }, [user, userProfile, isProfileLoading, firestore]);
