@@ -14,7 +14,6 @@ import { doc } from 'firebase/firestore';
 import type { Case, UserProfile } from "@/lib/case-schema";
 import { Label } from "@/components/ui/label";
 import { isCoreAdmin } from "@/lib/core-admins";
-import { Badge } from "@/components/ui/badge";
 
 export default function CasesPage() {
   const router = useRouter();
@@ -33,6 +32,7 @@ export default function CasesPage() {
   const [selectedCase, setSelectedCase] = useState<(Case & { id: string }) | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
 
+  // CRITICAL: Obtener el perfil para verificar aprobación antes de cualquier consulta de casos
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -40,8 +40,7 @@ export default function CasesPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Gating crítico: Solo permitimos la aprobación si el perfil terminó de cargar 
-  // o si es un administrador core identificado por UID/Email.
+  // Determinamos aprobación: Admin Core o estado 'approved' en DB
   const isApproved = useMemo(() => {
     if (!user) return false;
     if (isCoreAdmin(user.email, user.uid)) return true;
@@ -79,7 +78,7 @@ export default function CasesPage() {
     return (
         <div className="flex flex-col items-center justify-center p-20 gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Verificando permisos de acceso...</p>
+            <p className="text-sm text-muted-foreground">Verificando credenciales de acceso...</p>
         </div>
     )
   }
@@ -116,7 +115,7 @@ export default function CasesPage() {
                 <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-muted/30 rounded-lg border border-primary/20">
                     <Button 
                         onClick={() => setIsCallModalOpen(true)}
-                        disabled={!selectedCase}
+                        disabled={!selectedCase || !isApproved}
                         className="bg-primary hover:bg-primary/90 text-white font-bold h-12 px-6"
                     >
                         <Phone className="mr-2 h-5 w-5" />
@@ -124,7 +123,7 @@ export default function CasesPage() {
                     </Button>
                     {!selectedCase && (
                         <p className="text-sm text-muted-foreground italic">
-                            * Selecciona un caso en la tabla para habilitar la llamada.
+                            * Selecciona un caso en la tabla para habilitar la gestión.
                         </p>
                     )}
                 </div>

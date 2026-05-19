@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from "react";
@@ -88,6 +87,7 @@ export function CasesTable({
 
   const casesQuery = useMemoFirebase(() => {
     // CRITICAL: No ejecutar consulta hasta que el perfil esté cargado Y aprobado
+    // Esto evita el error de permisos durante la carga inicial del dashboard
     if (!firestore || !authUser || isProfileLoading || !isApproved) return null;
     
     const casesCollection = collection(firestore, 'cases');
@@ -117,7 +117,6 @@ export function CasesTable({
       constraints.push(where("createdAt", "<=", end));
     }
 
-    // Ordenamiento robusto
     constraints.push(orderBy("createdAt", "desc"));
 
     return firestoreQuery(casesCollection, ...constraints);
@@ -170,7 +169,7 @@ export function CasesTable({
 
     toast({
         title: "Caso Eliminado",
-        description: `El registro ha sido eliminado localmente y se sincronizará.`,
+        description: `El registro ha sido borrado y se sincronizará.`,
     });
     setIsDeleteAlertOpen(false);
     setCaseToDelete(null);
@@ -207,7 +206,7 @@ export function CasesTable({
 
     toast({
         title: "Registro Exitoso",
-        description: `La novedad se ha guardado localmente.`,
+        description: `La gestión se ha guardado localmente (REQ-006).`,
     });
     setIsCallModalOpen(false);
   };
@@ -216,7 +215,7 @@ export function CasesTable({
     return (
         <div className="border rounded-lg p-6 space-y-4 flex flex-col items-center justify-center min-h-[300px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground italic">Verificando permisos y cargando datos...</p>
+            <p className="text-sm text-muted-foreground italic">Verificando permisos y cargando datos seguros...</p>
         </div>
     )
   }
@@ -229,13 +228,13 @@ export function CasesTable({
             <TableHeader>
               <TableRow className="bg-muted/40">
                 <TableHead className="w-[60px]"></TableHead>
-                <TableHead className="font-bold text-primary uppercase text-[10px] tracking-widest">Estado Sync</TableHead>
+                <TableHead className="font-bold text-primary uppercase text-[10px] tracking-widest">Sincronización</TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
                 <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Documento</TableHead>
                 <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">Registro</TableHead>
                 <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Estado Local</TableHead>
-                <TableHead className="text-right font-bold pr-6 text-primary uppercase text-[10px] tracking-widest">Gestión</TableHead>
+                <TableHead className="text-right font-bold pr-6 text-primary uppercase text-[10px] tracking-widest">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -258,7 +257,7 @@ export function CasesTable({
                                 <CloudOff className="h-3 w-3 mr-1" /> Offline
                               </Badge>
                             </TooltipTrigger>
-                            <TooltipContent><p>Pendiente de sincronizar</p></TooltipContent>
+                            <TooltipContent><p>Pendiente de sincronizar (REQ-006)</p></TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (
@@ -331,7 +330,7 @@ export function CasesTable({
             <DialogHeader className="p-6 bg-primary text-primary-foreground">
                 <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
                     <Phone className="h-7 w-7 animate-bounce" />
-                    Llamar al Usuario
+                    Gestión de Llamada
                 </DialogTitle>
             </DialogHeader>
 
@@ -347,7 +346,7 @@ export function CasesTable({
                         </div>
 
                         <div className="p-5 bg-accent/5 border border-accent/20 rounded-xl text-center">
-                            <p className="text-[10px] text-accent uppercase font-black mb-3">Línea Principal</p>
+                            <p className="text-[10px] text-accent uppercase font-black mb-3">Línea de Contacto</p>
                             <span className="text-3xl font-mono font-black text-primary tracking-widest">{selectedCase.phone1}</span>
                         </div>
                     </div>
@@ -366,7 +365,7 @@ export function CasesTable({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción es permanente y afectará tanto la base privada como la vista pública.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción es permanente y afectará la base de datos central y la vista pública.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>CANCELAR</AlertDialogCancel>
