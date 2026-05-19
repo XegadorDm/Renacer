@@ -48,6 +48,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       // Si el perfil no existe o no tiene los datos correctos, forzamos la sincronización
       if (!userProfile || userProfile.status !== 'approved' || userProfile.role !== 'admin') {
         const userRef = doc(firestore, 'users', user.uid);
+        console.log("[RENACER] Auto-aprobando administrador core:", user.email);
         setDoc(userRef, {
           id: user.uid,
           email: user.email,
@@ -68,7 +69,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    if (!isProfileLoading && user && !isApproved) {
+    // Solo redirigimos si NO es administrador core y no está aprobado tras terminar la carga
+    if (!isProfileLoading && user && !isApproved && !isCoreAdmin(user.email, user.uid)) {
       router.replace('/pending-approval');
     }
   }, [isProfileLoading, user, isApproved, router]);
@@ -76,7 +78,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   if (isUserLoading || isProfileLoading || !user) {
     return (
         <div className="flex items-center justify-center min-h-screen">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-sm font-medium text-muted-foreground animate-pulse">Cargando perfil seguro...</p>
+            </div>
         </div>
     )
   }

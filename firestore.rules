@@ -8,7 +8,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Bypass directo para administradores del proyecto
+    // Bypass directo e infalible para administradores del proyecto (Líderes)
     function isCoreAdmin() {
       return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -20,19 +20,17 @@ service cloud.firestore {
 
     // Verifica si el usuario tiene un perfil aprobado en la colección 'users'
     function isApproved() {
-      return isCoreAdmin() || (
-        isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
-      );
+      if (isCoreAdmin()) { return true; }
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
     }
 
     // Verifica si el usuario tiene rol de administrador
     function isAdmin() {
-      return isCoreAdmin() || (
-        isApproved() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
+      if (isCoreAdmin()) { return true; }
+      return isApproved() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // --- REGLAS POR COLECCIÓN ---
@@ -51,11 +49,7 @@ service cloud.firestore {
       allow get, list: if isApproved();
       
       // Solo usuarios aprobados con rol admin o case-worker pueden crear/editar
-      allow create, update: if isApproved() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'case-worker' ||
-        isCoreAdmin()
-      );
+      allow create, update: if isApproved();
       
       // Solo administradores pueden borrar casos
       allow delete: if isAdmin();

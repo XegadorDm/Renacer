@@ -105,6 +105,7 @@
       "type": "object",
       "description": "Mensaje de contacto enviado por un ciudadano.",
       "properties": {
+        "id": { "type": "string" },
         "nombre": { "type": "string" },
         "email": { "type": "string" },
         "cedula": { "type": "string" },

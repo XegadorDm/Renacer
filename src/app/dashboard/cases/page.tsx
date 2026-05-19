@@ -5,7 +5,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX } from "lucide-react";
+import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX, Loader2 } from "lucide-react";
 import { CasesTable } from "@/components/dashboard/cases-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -38,7 +38,8 @@ export default function CasesPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Asegurar que la aprobación esté confirmada antes de permitir el renderizado de la tabla
+  // Gating crítico: Solo permitimos la aprobación si el perfil terminó de cargar 
+  // o si es un administrador core identificado por UID/Email.
   const isApproved = useMemo(() => {
     if (!user) return false;
     if (isCoreAdmin(user.email, user.uid)) return true;
@@ -61,6 +62,15 @@ export default function CasesPage() {
 
   const handleSearch = useDebouncedCallback((term: string) => updateFilters('query', term), 300);
   const handleDocSearch = useDebouncedCallback((term: string) => updateFilters('doc', term), 300);
+
+  if (isProfileLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center p-20 gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Verificando permisos de acceso...</p>
+        </div>
+    )
+  }
 
   return (
     <div className="flex justify-center w-full py-4">
@@ -170,7 +180,7 @@ export default function CasesPage() {
                     </Button>
                 </div>
                 
-                <Suspense fallback={<div className="p-8 text-center">Cargando casos...</div>}>
+                <Suspense fallback={<div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" /> Cargando casos...</div>}>
                     <CasesTable 
                         query={queryParam} 
                         docQuery={docQuery}
