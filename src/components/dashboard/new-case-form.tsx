@@ -133,8 +133,11 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             userId: user.uid,
             members: { [user.uid]: 'owner' }
         };
+        
+        // Guardado no bloqueante (Soporte Offline nativo)
         setDocumentNonBlocking(caseDocRef, fullData, { merge: true });
 
+        // Actualización de la vista pública (REQ-007)
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalizedCedula);
         const publicData = {
             documentId: normalizedCedula,
@@ -156,6 +159,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
               ? `Se han sincronizado los datos para ${values.firstName}.`
               : "Los datos se guardaron localmente y se sincronizarán al recuperar internet.",
         });
+        
         router.push(isEditMode ? `/dashboard/cases/${caseData.id}` : `/dashboard/cases?location=${values.municipality}`);
 
     } catch (e) {
