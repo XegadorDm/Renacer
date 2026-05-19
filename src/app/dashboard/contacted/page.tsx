@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -158,13 +157,18 @@ export default function ContactedUsersPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Asegurar aprobación antes de listar
-  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(authUser?.email);
+  // CRITICAL: Gate the approval status check to avoid premature queries
+  const isApproved = useMemo(() => {
+    if (!authUser) return false;
+    if (isCoreAdmin(authUser.email, authUser.uid)) return true;
+    return userProfile?.status === 'approved';
+  }, [authUser, userProfile]);
 
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore || !isApproved) return null;
+    // Prevent query if profile is still loading or user is not approved
+    if (!firestore || isProfileLoading || !isApproved) return null;
     return collection(firestore, 'cases');
-  }, [firestore, isApproved]);
+  }, [firestore, isApproved, isProfileLoading]);
 
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);
 

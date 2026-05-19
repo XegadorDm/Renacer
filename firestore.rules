@@ -8,7 +8,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Bypass directo por UID y Email para administradores core
+    // Bypass directo para administradores del proyecto
     function isCoreAdmin() {
       return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -18,7 +18,7 @@ service cloud.firestore {
       );
     }
 
-    // Verificar si el usuario tiene estado aprobado
+    // Verifica si el usuario tiene un perfil aprobado en la colección 'users'
     function isApproved() {
       return isCoreAdmin() || (
         isAuthenticated() && 
@@ -27,11 +27,10 @@ service cloud.firestore {
       );
     }
 
-    // Verificar si el usuario tiene rol de administrador
+    // Verifica si el usuario tiene rol de administrador
     function isAdmin() {
       return isCoreAdmin() || (
-        isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        isApproved() && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
       );
     }
@@ -48,13 +47,20 @@ service cloud.firestore {
 
     // Colección de Casos (REQ-006, REQ-008)
     match /cases/{caseId} {
-      allow get: if isApproved();
-      allow list: if isApproved();
-      allow create: if isApproved();
-      allow update: if isApproved();
+      // Solo usuarios aprobados pueden ver o listar casos
+      allow get, list: if isApproved();
+      
+      // Solo usuarios aprobados con rol admin o case-worker pueden crear/editar
+      allow create, update: if isApproved() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'case-worker' ||
+        isCoreAdmin()
+      );
+      
+      // Solo administradores pueden borrar casos
       allow delete: if isAdmin();
 
-      // Trazabilidad de llamadas
+      // Trazabilidad de novedades
       match /novedades/{novedadId} {
         allow read, list, create: if isApproved();
       }
@@ -62,15 +68,15 @@ service cloud.firestore {
 
     // Vista Pública Segura (REQ-007)
     match /publicCaseStatus/{documentId} {
-      allow get: if true; // Lectura individual permitida por cédula
+      allow get: if true; // Lectura individual permitida por cédula para ciudadanos
       allow list: if false; // Prohibido listar todos los casos públicamente
-      allow write: if isApproved();
+      allow write: if isApproved(); // Solo internos aprobados escriben el espejo
     }
 
     // Auditoría de Consultas Públicas (REQ-007)
     match /publicCaseQueries/{queryId} {
-      allow create: if true;
-      allow read, list: if isApproved();
+      allow create: if true; // Público puede registrar que consultó
+      allow read, list: if isApproved(); // Solo internos ven auditoría
     }
 
     // Notificaciones Internas (REQ-008)

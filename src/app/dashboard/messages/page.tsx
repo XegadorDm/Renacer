@@ -247,18 +247,22 @@ export default function MessagesPage() {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email, user?.uid);
+  const isApproved = useMemo(() => {
+    if (!user) return false;
+    if (isCoreAdmin(user.email, user.uid)) return true;
+    return userProfile?.status === 'approved';
+  }, [user, userProfile]);
 
-  // 2. Solo crear las consultas si el usuario está aprobado para evitar insuficiente permisos
+  // 2. Gate queries until profile is ready to avoid Insufficient Permissions errors
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !isApproved) return null;
+    if (!firestore || !user || isProfileLoading || !isApproved) return null;
     return query(collection(firestore, 'mensajes'), orderBy('createdAt', 'desc'));
-  }, [firestore, user, isApproved]);
+  }, [firestore, user, isApproved, isProfileLoading]);
 
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !isApproved) return null;
+    if (!firestore || !user || isProfileLoading || !isApproved) return null;
     return collection(firestore, 'cases');
-  }, [firestore, user, isApproved]);
+  }, [firestore, user, isApproved, isProfileLoading]);
 
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Mensaje>(messagesQuery);
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);

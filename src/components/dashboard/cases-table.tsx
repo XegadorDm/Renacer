@@ -85,8 +85,9 @@ export function CasesTable({
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
-    // CRITICAL: Gate the query until permissions are confirmed to prevent insufficient permissions error
-    if (!firestore || !authUser || !isApproved) return null;
+    // CRITICAL: Gate the query until permissions are confirmed AND profile loading is finished
+    // This prevents the "Missing or insufficient permissions" error during initial load/auto-approval
+    if (!firestore || !authUser || isProfileLoading || !isApproved) return null;
     
     const casesCollection = collection(firestore, 'cases');
     const constraints: any[] = [];
@@ -116,12 +117,13 @@ export function CasesTable({
       constraints.push(where("createdAt", "<=", end));
     }
 
+    // Si hay filtros de rango, ordenar es obligatorio para que Firestore use el índice compuesto
     if (finalStartDate || endDate || (location && location !== 'all')) {
         constraints.push(orderBy("createdAt", "desc"));
     }
 
     return constraints.length > 0 ? firestoreQuery(casesCollection, ...constraints) : casesCollection;
-  }, [firestore, authUser, location, startDate, endDate, period, isApproved]);
+  }, [firestore, authUser, location, startDate, endDate, period, isApproved, isProfileLoading]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
