@@ -1,15 +1,16 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Función para identificar administradores core (Líderes del proyecto)
     function isCoreAdmin() {
-      let coreEmails = ['aleksimbachi@gmail.com', 'juancamilogiraldo@gmail.com', 'diegomauriciopastusano@gmail.com'];
-      let coreUids = ['gKSHtlJQt8aVOQZPTXCTEqmYENA3']; // UID de Aleks Imbachi
       return request.auth != null && (
-        request.auth.uid in coreUids ||
-        (request.auth.token.email != null && request.auth.token.email.lower() in coreEmails)
+        request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
+        (request.auth.token.email != null && (
+          request.auth.token.email.lower() == 'aleksimbachi@gmail.com' ||
+          request.auth.token.email.lower() == 'juancamilogiraldo@gmail.com' ||
+          request.auth.token.email.lower() == 'diegomauriciopastusano@gmail.com'
+        ))
       );
     }
 
@@ -61,17 +62,20 @@ service cloud.firestore {
       allow read, list: if request.auth != null && isApproved();
     }
 
-    // Notificaciones Internas
+    // Notificaciones Internas (REQ-008)
     match /notifications/{notificationId} {
-      allow create: if request.auth != null && (
-        isCoreAdmin() || (
-          isApproved() && 
-          request.resource.data.userId == request.auth.uid &&
-          request.resource.data.read == false
-        )
-      );
-      allow read, list: if request.auth != null && (isCoreAdmin() || getRole() == 'admin' || resource.data.userId == request.auth.uid);
-      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && isApproved()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.read == false;
+
+      allow read: if request.auth != null 
+        && (isCoreAdmin() || getRole() == 'admin' || resource.data.userId == request.auth.uid);
+
+      allow update: if request.auth != null 
+        && resource.data.userId == request.auth.uid 
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
+
       allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
     }
 
