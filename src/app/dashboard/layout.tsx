@@ -38,7 +38,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Aseguramos que el documento del usuario exista para que la app no falle
+  // Aseguramos que el documento del usuario exista sin bloqueos de estado
   useEffect(() => {
     if (user && firestore && !isProfileLoading && !userProfile) {
       const userRef = doc(firestore, 'users', user.uid);
@@ -48,7 +48,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         firstName: 'Usuario',
         lastName: 'Renacer',
         role: 'case-worker',
-        status: 'approved',
+        status: 'approved', // Auto-aprobación para eliminar bloqueos
         createdAt: new Date().toISOString()
       }, { merge: true }).catch(err => console.error("Error auto-creating user:", err));
     }

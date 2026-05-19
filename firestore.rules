@@ -2,61 +2,52 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- FUNCIONES DE SEGURIDAD SIMPLIFICADAS ---
-
+    // --- FUNCIÓN DE AUTENTICACIÓN BÁSICA ---
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Administrador Core (Bypass)
-    function isCoreAdmin() {
-      return isAuthenticated() && (
-        request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
-        request.auth.token.email == 'aleksimbachi@gmail.com' ||
-        request.auth.token.email == 'juancamilogiraldo@gmail.com' ||
-        request.auth.token.email == 'diegomauriciopastusano@gmail.com'
-      );
-    }
+    // --- REGLAS SIMPLIFICADAS (ACCESO TOTAL DASHBOARD) ---
 
-    // --- REGLAS POR COLECCIÓN ---
-
-    // Colección de Usuarios: Acceso total para gestión interna
-    match /users/{userId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    // Colección de Casos: ACCESO TOTAL para cualquier usuario del dashboard (REQ-006 compatible)
+    // Colección de Casos: Acceso libre para cualquier usuario autenticado
     match /cases/{caseId} {
       allow read, write: if isAuthenticated();
 
+      // Subcolección de novedades (REQ-008)
       match /novedades/{novedadId} {
         allow read, write: if isAuthenticated();
       }
     }
 
-    // Vista Pública Segura (REQ-007): Solo lectura por ID para ciudadanos
+    // Colección de Usuarios: Acceso para gestión de perfil
+    match /users/{userId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Vista Pública Segura (REQ-007): Lectura por ID para ciudadanos, escritura para asesores
     match /publicCaseStatus/{documentId} {
       allow get: if true; 
       allow list: if false;
       allow write: if isAuthenticated();
     }
 
-    // Auditoría y Notificaciones
+    // Auditoría de Consultas Públicas
     match /publicCaseQueries/{queryId} {
       allow create: if true; 
       allow read, list: if isAuthenticated(); 
     }
 
+    // Notificaciones y Mensajes
     match /notifications/{notificationId} {
       allow read, write: if isAuthenticated();
     }
 
-    // Buzón de Mensajes (REQ-008)
     match /mensajes/{mensajeId} {
       allow create: if true;
       allow read, list, write: if isAuthenticated();
     }
     
+    // Lista de correos autorizados
     match /authorized_emails/{id} {
       allow read: if true;
       allow write: if isAuthenticated();

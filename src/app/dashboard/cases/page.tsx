@@ -56,6 +56,8 @@ export default function CasesPage() {
   const handleSearch = useDebouncedCallback((term: string) => updateFilters('query', term), 300);
   const handleDocSearch = useDebouncedCallback((term: string) => updateFilters('doc', term), 300);
 
+  if (!user) return null;
+
   return (
     <div className="flex justify-center w-full py-4">
         <Card className="w-full">
