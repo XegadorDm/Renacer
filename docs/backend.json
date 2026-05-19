@@ -43,6 +43,20 @@
         "consultedAt": { "type": "string", "format": "date-time" },
         "result": { "type": "string", "enum": ["found", "not_found"] }
       }
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "Internal notification for users regarding case updates.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "caseId": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["userId", "caseId", "message", "createdAt", "read"]
     }
   },
   "auth": {
@@ -60,6 +74,10 @@
     "/publicCaseQueries/{queryId}": {
       "schema": "PublicCaseQueryLog",
       "description": "Traceability log for public queries."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Internal notifications for case management updates."
     }
   }
 }

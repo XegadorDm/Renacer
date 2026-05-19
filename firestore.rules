@@ -73,5 +73,12 @@ service cloud.firestore {
       );
       allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
     }
+
+    // Reglas para Notificaciones Internas (REQ-008)
+    match /notifications/{notificationId} {
+      allow create: if request.auth != null && (isApproved() || isCoreAdmin());
+      allow read, update: if request.auth != null && (request.auth.uid == resource.data.userId || isCoreAdmin());
+      allow delete: if request.auth != null && isCoreAdmin();
+    }
   }
 }
