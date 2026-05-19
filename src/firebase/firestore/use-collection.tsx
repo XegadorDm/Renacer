@@ -62,10 +62,10 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: true es vital para REQ-006 para detectar cuando un doc se sincroniza
+    // includeMetadataChanges: false para evitar renders adicionales por cambios de sincronización local
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      { includeMetadataChanges: true },
+      { includeMetadataChanges: false },
       (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
         for (const doc of snapshot.docs) {
