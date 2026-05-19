@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -8,8 +9,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Bypass directo e infalible para administradores del proyecto (Líderes)
-    // Se evalúa por UID o por Email.
+    // Bypass prioritario para administradores core del proyecto
     function isCoreAdmin() {
       return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -19,10 +19,8 @@ service cloud.firestore {
       );
     }
 
-    // Verifica si el usuario tiene un perfil aprobado en la colección 'users'
+    // Verifica aprobación de forma segura (sin fallar si el doc no existe)
     function isApproved() {
-      // Prioridad 1: Líderes del proyecto (Bypass sin lectura de DB)
-      // Prioridad 2: Usuarios con documento físico aprobado
       return isCoreAdmin() || (
         isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
@@ -30,7 +28,7 @@ service cloud.firestore {
       );
     }
 
-    // Verifica si el usuario tiene rol de administrador
+    // Verifica rol de administrador
     function isAdmin() {
       return isCoreAdmin() || (
         isAuthenticated() && 
@@ -52,13 +50,8 @@ service cloud.firestore {
 
     // Colección de Casos (REQ-006, REQ-008)
     match /cases/{caseId} {
-      // Solo usuarios aprobados pueden ver o listar casos
       allow get, list: if isApproved();
-      
-      // Solo usuarios aprobados pueden crear/editar
       allow create, update: if isApproved();
-      
-      // Solo administradores pueden borrar casos
       allow delete: if isAdmin();
 
       // Trazabilidad de novedades
@@ -69,15 +62,15 @@ service cloud.firestore {
 
     // Vista Pública Segura (REQ-007)
     match /publicCaseStatus/{documentId} {
-      allow get: if true; // Lectura individual permitida por cédula para ciudadanos
-      allow list: if false; // Prohibido listar todos los casos públicamente
-      allow write: if isApproved(); // Solo internos aprobados escriben el espejo
+      allow get: if true; // Lectura individual por cédula
+      allow list: if false; // Prohibido listar todos
+      allow write: if isApproved(); // Solo internos aprobados escriben
     }
 
     // Auditoría de Consultas Públicas (REQ-007)
     match /publicCaseQueries/{queryId} {
-      allow create: if true; // Público puede registrar que consultó
-      allow read, list: if isApproved(); // Solo internos ven auditoría
+      allow create: if true; 
+      allow read, list: if isApproved(); 
     }
 
     // Notificaciones Internas (REQ-008)

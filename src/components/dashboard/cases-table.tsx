@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
@@ -5,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon, Cloud, CloudOff } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon, Cloud, CloudOff, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
@@ -83,11 +84,10 @@ export function CasesTable({
 
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
-  
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
-    // CRITICAL GATING: Evita "Missing or insufficient permissions" esperando al perfil
+    // CRITICAL: No ejecutar consulta hasta que el perfil esté cargado Y aprobado
     if (!firestore || !authUser || isProfileLoading || !isApproved) return null;
     
     const casesCollection = collection(firestore, 'cases');
@@ -117,10 +117,10 @@ export function CasesTable({
       constraints.push(where("createdAt", "<=", end));
     }
 
-    // Ordenamiento por defecto para que la lista sea coherente
+    // Ordenamiento robusto
     constraints.push(orderBy("createdAt", "desc"));
 
-    return constraints.length > 0 ? firestoreQuery(casesCollection, ...constraints) : firestoreQuery(casesCollection, orderBy("createdAt", "desc"));
+    return firestoreQuery(casesCollection, ...constraints);
   }, [firestore, authUser, location, startDate, endDate, period, isApproved, isProfileLoading]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
@@ -134,7 +134,6 @@ export function CasesTable({
     
     let filtered = cases;
 
-    // Filtro Offline (REQ-006)
     if (offlineOnly) {
       filtered = filtered.filter(c => c._hasPendingWrites === true);
     }
@@ -181,7 +180,6 @@ export function CasesTable({
     if (!selectedCase || !firestore || !authUser) return;
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
-    
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
 
@@ -209,17 +207,16 @@ export function CasesTable({
 
     toast({
         title: "Registro Exitoso",
-        description: `La novedad se ha guardado y se sincronizará automáticamente.`,
+        description: `La novedad se ha guardado localmente.`,
     });
     setIsCallModalOpen(false);
   };
 
   if (isLoading || isProfileLoading) {
     return (
-        <div className="border rounded-lg p-6 space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton className="h-14 w-full rounded-md" key={i} />
-            ))}
+        <div className="border rounded-lg p-6 space-y-4 flex flex-col items-center justify-center min-h-[300px]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-sm text-muted-foreground italic">Verificando permisos y cargando datos...</p>
         </div>
     )
   }
@@ -261,7 +258,7 @@ export function CasesTable({
                                 <CloudOff className="h-3 w-3 mr-1" /> Offline
                               </Badge>
                             </TooltipTrigger>
-                            <TooltipContent><p>Pendiente de sincronizar con el servidor</p></TooltipContent>
+                            <TooltipContent><p>Pendiente de sincronizar</p></TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       ) : (

@@ -1,3 +1,4 @@
+
 'use client';
 import type { ReactNode } from "react";
 import { useEffect } from "react";
@@ -45,10 +46,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   // Auto-aprobación Crítica para Administradores Core
   useEffect(() => {
     if (user && isCoreAdmin(user.email, user.uid) && firestore && !isProfileLoading) {
-      // Si el perfil no existe o no tiene los datos correctos, forzamos la sincronización
+      // Si el perfil no existe o no tiene los datos correctos, forzamos la sincronización inmediata
       if (!userProfile || userProfile.status !== 'approved' || userProfile.role !== 'admin') {
         const userRef = doc(firestore, 'users', user.uid);
-        console.log("[RENACER] Auto-aprobando administrador core:", user.email);
+        console.log("[RENACER] Sincronizando perfil de administrador core:", user.email);
         setDoc(userRef, {
           id: user.uid,
           email: user.email,
@@ -69,8 +70,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    // Solo redirigimos si NO es administrador core y no está aprobado tras terminar la carga
-    if (!isProfileLoading && user && !isApproved && !isCoreAdmin(user.email, user.uid)) {
+    // Redirección si no tiene permisos tras cargar el perfil
+    if (!isProfileLoading && user && !isApproved) {
       router.replace('/pending-approval');
     }
   }, [isProfileLoading, user, isApproved, router]);
