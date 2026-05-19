@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Wifi, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 /**
  * Componente que muestra visualmente si el usuario tiene conexión a internet.
@@ -11,12 +12,20 @@ import { cn } from '@/lib/utils';
  */
 export function ConnectionStatus() {
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     // Inicializar estado
     setIsOnline(navigator.onLine);
 
-    const handleOnline = () => setIsOnline(true);
+    const handleOnline = () => {
+      setIsOnline(true);
+      toast({
+        title: "Conexión restaurada",
+        description: "Sincronizando registros pendientes con el servidor...",
+      });
+    };
+    
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
@@ -26,7 +35,7 @@ export function ConnectionStatus() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [toast]);
 
   return (
     <Badge 

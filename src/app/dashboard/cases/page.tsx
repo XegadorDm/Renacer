@@ -1,6 +1,6 @@
 'use client';
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useState, useMemo } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,13 +9,16 @@ import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSea
 import { CasesTable } from "@/components/dashboard/cases-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import type { Case } from "@/lib/case-schema";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { collection } from "firebase/firestore";
 
 export default function CasesPage() {
   const router = useRouter();
   const { user } = useUser();
+  const firestore = useFirestore();
   const searchParams = useSearchParams();
   
   const queryParam = searchParams.get('query') || '';
@@ -28,6 +31,19 @@ export default function CasesPage() {
   
   const [selectedCase, setSelectedCase] = useState<(Case & { id: string }) | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+
+  // Consulta ligera para contar pendientes sync en tiempo real
+  const baseCasesQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return collection(firestore, 'cases');
+  }, [firestore, user]);
+
+  const { data: allCases } = useCollection<Case>(baseCasesQuery);
+
+  const pendingCount = useMemo(() => {
+    if (!allCases) return 0;
+    return allCases.filter(c => c._hasPendingWrites === true).length;
+  }, [allCases]);
 
   const updateFilters = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams);
@@ -71,9 +87,15 @@ export default function CasesPage() {
                       variant={offlineOnly ? "destructive" : "outline"} 
                       size="sm" 
                       onClick={toggleOfflineFilter}
+                      className="relative"
                     >
                         <CloudOff className="mr-2 h-4 w-4" />
-                        {offlineOnly ? "Pendientes Sync" : "Ver Pendientes Sync"}
+                        {offlineOnly ? "Viendo Pendientes" : "Ver Pendientes Sync"}
+                        {pendingCount > 0 && (
+                          <Badge className="ml-2 bg-orange-600 hover:bg-orange-700 animate-pulse">
+                            {pendingCount}
+                          </Badge>
+                        )}
                     </Button>
                     <Button variant="outline" size="sm" onClick={clearFilters}>
                         <FilterX className="mr-2 h-4 w-4" />

@@ -148,9 +148,13 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         };
         setDocumentNonBlocking(publicDocRef, publicData, { merge: true });
 
+        const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
         toast({
-            title: isEditMode ? "Caso Actualizado" : "Caso Guardado Exitosamente",
-            description: `Se han guardado los datos para ${values.firstName}.`,
+            title: isEditMode ? "Caso Actualizado" : "Caso Guardado",
+            description: isOnline 
+              ? `Se han guardado y sincronizado los datos para ${values.firstName}.` 
+              : `Datos de ${values.firstName} guardados localmente. Se sincronizarán automáticamente al recuperar la conexión.`,
         });
         
         router.push(isEditMode ? `/dashboard/cases/${caseData.id}` : `/dashboard/cases?location=${values.municipality}`);

@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
 import type { Case } from "@/lib/case-schema";
 import { format, subDays, parseISO, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
-type WithId<T> = T & { id: string };
+type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
 
 interface CasesTableProps {
   query: string;
@@ -47,6 +48,7 @@ interface CasesTableProps {
   startDate?: string;
   endDate?: string;
   location: string;
+  offlineOnly?: boolean;
   onSelectCase: (caseItem: WithId<Case> | null) => void;
   selectedCaseId?: string;
   isCallModalOpen: boolean;
@@ -60,6 +62,7 @@ export function CasesTable({
   startDate, 
   endDate, 
   location, 
+  offlineOnly,
   onSelectCase, 
   selectedCaseId, 
   isCallModalOpen, 
@@ -118,7 +121,7 @@ export function CasesTable({
   const filteredCases = useMemo(() => {
     if (!cases) return [];
     
-    let filtered = cases;
+    let filtered = cases as WithId<Case>[];
 
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
@@ -136,8 +139,12 @@ export function CasesTable({
         });
     }
 
+    if (offlineOnly) {
+      filtered = filtered.filter(c => c._hasPendingWrites === true);
+    }
+
     return filtered;
-  }, [cases, query, docQuery]);
+  }, [cases, query, docQuery, offlineOnly]);
 
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
@@ -213,7 +220,7 @@ export function CasesTable({
                 <TableHead className="w-[60px]"></TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
-                <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Documento</TableHead>
+                <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Estado Sync</TableHead>
                 <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">Registro</TableHead>
                 <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Seguimiento</TableHead>
                 <TableHead className="text-right font-bold pr-6 text-primary uppercase text-[10px] tracking-widest">Acciones</TableHead>
@@ -232,7 +239,17 @@ export function CasesTable({
                     </TableCell>
                     <TableCell className="font-mono text-[10px] text-muted-foreground">{c.caseNumber}</TableCell>
                     <TableCell className="font-bold uppercase text-xs">{c.firstName} {c.lastName}</TableCell>
-                    <TableCell className="text-xs font-medium text-muted-foreground">{c.documentId}</TableCell>
+                    <TableCell>
+                        {c._hasPendingWrites ? (
+                          <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-[9px] font-bold py-0 h-5">
+                            <CloudUpload className="mr-1 h-3 w-3" /> PENDIENTE SYNC
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-[9px] font-bold py-0 h-5">
+                            <CheckCircle2 className="mr-1 h-3 w-3" /> SINCRONIZADO
+                          </Badge>
+                        )}
+                    </TableCell>
                     <TableCell className="text-[10px] font-mono">
                         {c.createdAt ? (
                              format(
