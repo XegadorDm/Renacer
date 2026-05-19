@@ -4,7 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Función para identificar administradores core (Líderes del proyecto)
-    // Se usa bypass por UID directo para Aleksi Imbachi para evitar bloqueos por email
+    // Bypass directo por UID para garantizar acceso total inmediato
     function isCoreAdmin() {
       return request.auth != null && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -19,21 +19,20 @@ service cloud.firestore {
       );
     }
 
-    // Obtener el rol del usuario desde Firestore
-    function getRole() {
-      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
-        : 'none';
-    }
-
-    // Verificar si el usuario está aprobado
-    // Los admins core siempre están aprobados por bypass
+    // Verificar si el usuario está aprobado administrativamente
     function isApproved() {
       return isCoreAdmin() || (
         request.auth != null &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
       );
+    }
+
+    // Obtener el rol del usuario de forma segura
+    function getRole() {
+      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
+        : 'none';
     }
 
     // Colección de Usuarios
@@ -47,9 +46,11 @@ service cloud.firestore {
     // Colección de Casos
     match /cases/{caseId} {
       allow read, list: if request.auth != null && isApproved();
-      allow create, update: if request.auth != null && isApproved();
+      allow create: if request.auth != null && isApproved();
+      allow update: if request.auth != null && isApproved();
       allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
 
+      // Trazabilidad de llamadas (REQ-008)
       match /novedades/{novedadId} {
         allow read, list, create: if request.auth != null && isApproved();
       }
