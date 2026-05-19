@@ -185,6 +185,7 @@ export function CasesTable({
     });
 
     // 3. Crear Notificación Interna (REQ-008: Notificación)
+    // Usamos el UID del usuario actual para asegurar que se registre en su buzón personal
     const notificationsRef = collection(firestore, 'notifications');
     addDocumentNonBlocking(notificationsRef, {
         userId: authUser.uid,
@@ -194,7 +195,7 @@ export function CasesTable({
         read: false
     });
 
-    // 4. Actualizar vista pública obligatoria
+    // 4. Actualizar vista pública obligatoria (REQ-007)
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);

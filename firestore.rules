@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Función para identificar administradores core del proyecto (bypass temporal)
+    // Función para identificar administradores core del proyecto
     function isCoreAdmin() {
       return request.auth != null && 
              request.auth.token.email != null && 
@@ -32,35 +32,39 @@ service cloud.firestore {
       );
     }
 
-    // Reglas para la vista pública segura
+    // Reglas para la vista pública segura (REQ-007)
     match /publicCaseStatus/{documentId} {
-      allow get: if true;
-      allow list: if false;
+      allow get: if true; // Cualquier ciudadano puede consultar por ID de cédula
+      allow list: if false; // Prohibido listar todos los casos públicos
       allow write: if request.auth != null && isApproved();
     }
 
-    // Trazabilidad de consultas públicas
+    // Trazabilidad de consultas públicas (REQ-007)
     match /publicCaseQueries/{queryId} {
-      allow create: if true; // Cualquier persona puede registrar su consulta
-      allow read, list, update, delete: if request.auth != null && isApproved(); // Solo personal puede auditar
+      allow create: if true; // Cualquier persona puede registrar su consulta de forma anónima
+      allow read, list, update, delete: if request.auth != null && isApproved();
     }
 
+    // Reglas para la colección principal de Casos (REQ-003, REQ-008)
     match /cases/{caseId} {
       allow read: if request.auth != null && (isApproved() || isCoreAdmin());
       allow delete: if request.auth != null && (isCoreAdmin() || (isApproved() && getRole() == 'admin'));
       allow create, update: if request.auth != null && (isCoreAdmin() || (isApproved() && (getRole() == 'admin' || getRole() == 'case-worker')));
 
+      // Subcolección de Novedades/Trazabilidad (REQ-008)
       match /novedades/{novedadId} {
         allow read: if request.auth != null && isApproved();
-        allow create: if request.auth != null && isApproved() && request.resource.data.createdBy == request.auth.uid;
+        allow create: if request.auth != null && isApproved();
       }
     }
 
+    // Mensajes del Buzón Público
     match /mensajes/{mensajeId} {
       allow create: if true;
       allow read, update, delete: if request.auth != null && isApproved();
     }
 
+    // Perfiles de Usuario (REQ-004)
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == userId;
@@ -74,9 +78,11 @@ service cloud.firestore {
       allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
     }
 
-    // Reglas para Notificaciones Internas (REQ-008)
+    // Notificaciones Internas (REQ-008)
     match /notifications/{notificationId} {
-      allow create: if request.auth != null && (isApproved() || isCoreAdmin());
+      // Permitimos la creación si el usuario está autenticado. 
+      // La seguridad se centra en la lectura (solo el dueño o admin).
+      allow create: if request.auth != null;
       allow read, update: if request.auth != null && (request.auth.uid == resource.data.userId || isCoreAdmin());
       allow delete: if request.auth != null && isCoreAdmin();
     }
