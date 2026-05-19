@@ -9,8 +9,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Bypass directo para líderes del proyecto (Admin Core)
-    // Se valida UID y Email de forma atómica para evitar errores de evaluación
+    // Bypass directo por UID para Aleksi (Garantiza acceso inmediato)
     function isCoreAdmin() {
       return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -20,7 +19,8 @@ service cloud.firestore {
       );
     }
 
-    // Verificar si el usuario tiene estado aprobado en la DB
+    // Verificar si el usuario tiene estado aprobado
+    // Se usa 'exists' primero para evitar errores de evaluación
     function isApproved() {
       return isCoreAdmin() || (
         isAuthenticated() && 
