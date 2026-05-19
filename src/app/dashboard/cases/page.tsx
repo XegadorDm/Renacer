@@ -5,7 +5,7 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX, Loader2, CloudOff } from "lucide-react";
+import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX, Loader2, CloudOff, AlertCircle } from "lucide-react";
 import { CasesTable } from "@/components/dashboard/cases-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,7 +32,7 @@ export default function CasesPage() {
   const [selectedCase, setSelectedCase] = useState<(Case & { id: string }) | null>(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
 
-  // CRITICAL: Obtener el perfil para verificar aprobación antes de cualquier consulta de casos
+  // Obtener el perfil para verificar aprobación antes de cualquier consulta de casos
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -79,6 +79,22 @@ export default function CasesPage() {
         <div className="flex flex-col items-center justify-center p-20 gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <p className="text-sm text-muted-foreground">Verificando credenciales de acceso...</p>
+        </div>
+    )
+  }
+
+  // Si no está aprobado tras cargar el perfil, mostramos aviso preventivo
+  if (!isApproved && !isProfileLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center p-20 gap-4 text-center">
+            <AlertCircle className="h-12 w-12 text-destructive" />
+            <h2 className="text-xl font-bold">Acceso Denegado</h2>
+            <p className="text-muted-foreground max-w-md">
+                Su cuenta está pendiente de aprobación administrativa. No tiene permisos para listar la base de datos de casos sociales.
+            </p>
+            <Button variant="outline" onClick={() => router.replace('/dashboard')}>
+                Volver al Inicio
+            </Button>
         </div>
     )
   }

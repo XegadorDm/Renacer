@@ -2,13 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- FUNCIONES DE SEGURIDAD SIMPLIFICADAS ---
+    // --- FUNCIONES DE SEGURIDAD ---
 
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Administradores Core: Acceso total garantizado por UID o Email
+    // Administradores Core: Bypass inmediato por UID o Email verificado
     function isCoreAdmin() {
       return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -18,26 +18,32 @@ service cloud.firestore {
       );
     }
 
-    // Usuario Aprobado: Es Core Admin o tiene estado 'approved' en su documento
-    function isApproved() {
-      return isCoreAdmin() || (
-        isAuthenticated() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
-      );
+    // Obtener rol del usuario de forma segura
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    // Administrador: Es Core Admin o tiene rol 'admin'
+    // Usuario Aprobado: Es Core Admin o tiene estado 'approved' en su documento
+    function isApproved() {
+      if (isCoreAdmin()) {
+        return true;
+      }
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+    }
+
+    // Administrador: Es Core Admin o tiene rol 'admin' aprobado
     function isAdmin() {
-      return isCoreAdmin() || (
-        isApproved() && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
-      );
+      if (isCoreAdmin()) {
+        return true;
+      }
+      return isApproved() && getRole() == 'admin';
     }
 
     // --- REGLAS POR COLECCIÓN ---
 
-    // Colección de Usuarios: Gestión de perfiles y permisos
+    // Colección de Usuarios
     match /users/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow create: if isAuthenticated() && request.auth.uid == userId;
@@ -45,18 +51,19 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Colección de Casos: Acceso total para personal aprobado (Online y Offline)
+    // Colección de Casos (REQ-006, REQ-008)
     match /cases/{caseId} {
-      allow get, list, create, update: if isApproved();
+      allow get, list: if isApproved();
+      allow create, update: if isApproved();
       allow delete: if isAdmin();
 
-      // Historial de novedades (Trazabilidad)
+      // Trazabilidad de novedades
       match /novedades/{novedadId} {
         allow read, list, create: if isApproved();
       }
     }
 
-    // Vista Pública Segura (REQ-007): Solo lectura por cédula para ciudadanos
+    // Vista Pública Segura (REQ-007)
     match /publicCaseStatus/{documentId} {
       allow get: if true; 
       allow list: if false;
@@ -75,14 +82,14 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Mensajes de contacto (Buzón)
+    // Buzón de Mensajes (REQ-008)
     match /mensajes/{mensajeId} {
       allow create: if true;
       allow read, list, update: if isApproved();
       allow delete: if isAdmin();
     }
     
-    // Lista de correos autorizados
+    // Lista de correos autorizados para registro
     match /authorized_emails/{id} {
       allow read: if true;
       allow write: if isAdmin();

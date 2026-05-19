@@ -86,9 +86,9 @@ export function CasesTable({
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
-    // ELIMINACIÓN DE BLOQUEO: Si el perfil está cargando pero es un usuario interno, permitimos la query.
-    // Solo bloqueamos si de verdad no hay usuario o es un invitado no identificado.
-    if (!firestore || !authUser || (!isApproved && !isProfileLoading)) return null;
+    // CRITICAL: Gate the query until profile is loaded and approval is confirmed.
+    // If we trigger 'list' prematurely, Firestore rules will deny the global request.
+    if (!firestore || !authUser || isProfileLoading || !isApproved) return null;
     
     const casesCollection = collection(firestore, 'cases');
     const constraints: any[] = [];
@@ -211,11 +211,11 @@ export function CasesTable({
     setIsCallModalOpen(false);
   };
 
-  if (isLoading) {
+  if (isLoading || isProfileLoading) {
     return (
         <div className="border rounded-lg p-6 space-y-4 flex flex-col items-center justify-center min-h-[300px]">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground italic">Cargando base de datos de casos...</p>
+            <p className="text-sm text-muted-foreground italic">Consultando base de datos de casos segura...</p>
         </div>
     )
   }
