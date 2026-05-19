@@ -80,11 +80,29 @@ service cloud.firestore {
 
     // Notificaciones Internas (REQ-008)
     match /notifications/{notificationId} {
-      // Permitimos la creación si el usuario está autenticado. 
-      // La seguridad se centra en la lectura (solo el dueño o admin).
-      allow create: if request.auth != null;
-      allow read, update: if request.auth != null && (request.auth.uid == resource.data.userId || isCoreAdmin());
-      allow delete: if request.auth != null && isCoreAdmin();
+      allow create: if request.auth != null
+        && isApproved()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.caseId is string
+        && request.resource.data.message is string
+        && request.resource.data.createdAt is string
+        && request.resource.data.read == false;
+
+      allow read: if request.auth != null
+        && isApproved()
+        && (
+          getRole() == 'admin' ||
+          resource.data.userId == request.auth.uid
+        );
+
+      allow update: if request.auth != null
+        && isApproved()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
+
+      allow delete: if request.auth != null
+        && isApproved()
+        && getRole() == 'admin';
     }
   }
 }
