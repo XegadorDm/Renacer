@@ -95,14 +95,29 @@
       "description": "History of case interactions.",
       "properties": {
         "mensaje": { "type": "string" },
-        "tipo": { "type": "string" },
+        "tipo": { "type": "string", "enum": ["llamada", "nota", "sistema"] },
         "createdAt": { "type": "string" },
         "createdBy": { "type": "string" }
+      }
+    },
+    "Mensaje": {
+      "title": "Mensaje",
+      "type": "object",
+      "description": "Citizen contact messages.",
+      "properties": {
+        "nombre": { "type": "string" },
+        "email": { "type": "string" },
+        "cedula": { "type": "string" },
+        "asunto": { "type": "string" },
+        "mensaje": { "type": "string" },
+        "read": { "type": "boolean" },
+        "resolved": { "type": "boolean" },
+        "createdAt": { "type": "string" }
       }
     }
   },
   "auth": {
-    "providers": ["password", "anonymous"]
+    "providers": ["password"]
   },
   "firestore": {
     "/cases/{caseId}": {
@@ -130,7 +145,7 @@
       "description": "User profiles and permissions."
     },
     "/mensajes/{mensajeId}": {
-      "schema": "object",
+      "schema": "Mensaje",
       "description": "Citizen contact messages."
     }
   }

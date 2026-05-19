@@ -43,15 +43,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   // Validación de acceso: aprobados en DB o administradores core del proyecto
   const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email);
 
-  // Auto-aprobación para administradores core: Garantiza que el documento users/{uid} exista y esté aprobado
+  // Auto-aprobación Crítica para Administradores Core
   useEffect(() => {
-    if (user && isCoreAdmin(user.email) && firestore && !isProfileLoading) {
-      if (!userProfile || userProfile.status !== 'approved' || userProfile.role !== 'admin') {
+    if (user && isCoreAdmin(user.email) && firestore) {
+      // Si el perfil no existe, no está aprobado o no es admin, forzamos la sincronización
+      if (!isProfileLoading && (!userProfile || userProfile.status !== 'approved' || userProfile.role !== 'admin')) {
         const userRef = doc(firestore, 'users', user.uid);
         setDoc(userRef, {
           id: user.uid,
           email: user.email,
-          firstName: userProfile?.firstName || 'Admin',
+          firstName: userProfile?.firstName || 'Administrador',
           lastName: userProfile?.lastName || 'Core',
           role: 'admin',
           status: 'approved',
@@ -68,7 +69,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    // Si no está cargando el perfil, ya sabemos si el usuario está aprobado
+    // Si no está cargando el perfil, ya sabemos si el usuario está aprobado o es core admin
     if (!isProfileLoading && user && !isApproved) {
       router.replace('/pending-approval');
     }

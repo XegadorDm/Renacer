@@ -3,94 +3,93 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Función para identificar administradores core (Líderes del proyecto)
-    // Bypass directo por UID y Email para garantizar acceso total inmediato
+    // --- FUNCIONES DE SEGURIDAD ---
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Bypass directo para líderes del proyecto (Admin Core)
+    // Se evalúa por UID primero para máxima seguridad y luego por Email
     function isCoreAdmin() {
-      return request.auth != null && (
+      return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
-        request.auth.uid == 'juancamilogiraldo-uid-placeholder' ||
-        request.auth.uid == 'diegomauricio-uid-placeholder' ||
         request.auth.token.email == 'aleksimbachi@gmail.com' ||
         request.auth.token.email == 'juancamilogiraldo@gmail.com' ||
         request.auth.token.email == 'diegomauriciopastusano@gmail.com'
       );
     }
 
-    // Verificar si el usuario está aprobado administrativamente
+    // Obtener datos del perfil de usuario de forma segura
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Verificar si el usuario tiene estado aprobado en la DB
     function isApproved() {
       return isCoreAdmin() || (
-        request.auth != null &&
+        isAuthenticated() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
+        getUserData().status == 'approved'
       );
     }
 
-    // Obtener el rol del usuario de forma segura
-    function getRole() {
-      return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
-        : 'none';
+    // Verificar si el usuario tiene rol de administrador
+    function isAdmin() {
+      return isCoreAdmin() || (
+        isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        getUserData().role == 'admin'
+      );
     }
+
+    // --- REGLAS POR COLECCIÓN ---
 
     // Colección de Usuarios
     match /users/{userId} {
-      allow read: if request.auth != null && (isCoreAdmin() || request.auth.uid == userId);
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && (isCoreAdmin() || getRole() == 'admin' || request.auth.uid == userId);
-      allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAdmin();
     }
 
-    // Colección de Casos
+    // Colección de Casos (REQ-006, REQ-008)
     match /cases/{caseId} {
-      allow read, list: if request.auth != null && isApproved();
-      allow create: if request.auth != null && isApproved();
-      allow update: if request.auth != null && isApproved();
-      allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
+      allow read, list: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isAdmin();
 
-      // Trazabilidad de llamadas (REQ-008)
+      // Trazabilidad de llamadas
       match /novedades/{novedadId} {
-        allow read, list, create: if request.auth != null && isApproved();
+        allow read, list, create: if isApproved();
       }
     }
 
     // Vista Pública Segura (REQ-007)
     match /publicCaseStatus/{documentId} {
-      allow get: if true;
-      allow list: if false;
-      allow write: if request.auth != null && isApproved();
+      allow get: if true; // Lectura individual permitida por cédula
+      allow list: if false; // Prohibido listar todos los casos públicamente
+      allow write: if isApproved();
     }
 
-    // Trazabilidad de Consultas Públicas (REQ-007)
+    // Auditoría de Consultas Públicas (REQ-007)
     match /publicCaseQueries/{queryId} {
       allow create: if true;
-      allow read, list: if request.auth != null && isApproved();
+      allow read, list: if isApproved();
     }
 
     // Notificaciones Internas (REQ-008)
     match /notifications/{notificationId} {
-      allow create: if request.auth != null
-        && isApproved()
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.caseId is string
-        && request.resource.data.message is string
-        && request.resource.data.createdAt is string
-        && request.resource.data.read == false;
-
-      allow read: if request.auth != null 
-        && isApproved()
-        && (isCoreAdmin() || getRole() == 'admin' || resource.data.userId == request.auth.uid);
-
-      allow update: if request.auth != null 
-        && resource.data.userId == request.auth.uid 
-        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
-
-      allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
+      allow create: if isAuthenticated() && isApproved();
+      allow read: if isAuthenticated() && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
+      allow delete: if isAdmin();
     }
 
     // Mensajes de contacto ciudadanos
     match /mensajes/{mensajeId} {
       allow create: if true;
-      allow read, list, update, delete: if request.auth != null && isApproved();
+      allow read, list, update, delete: if isApproved();
     }
   }
 }
