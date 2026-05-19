@@ -73,7 +73,7 @@ export default function CasesPage() {
                       onClick={toggleOfflineFilter}
                     >
                         <CloudOff className="mr-2 h-4 w-4" />
-                        {offlineOnly ? "Viendo Solo Offline" : "Ver Pendientes Sync"}
+                        {offlineOnly ? "Pendientes Sync" : "Ver Pendientes Sync"}
                     </Button>
                     <Button variant="outline" size="sm" onClick={clearFilters}>
                         <FilterX className="mr-2 h-4 w-4" />
@@ -97,7 +97,7 @@ export default function CasesPage() {
                     </Button>
                     {!selectedCase && (
                         <p className="text-sm text-muted-foreground italic">
-                            * Selecciona un caso en la tabla para habilitar la gestión.
+                            * Selecciona un caso en la tabla para habilitar la gestión de llamadas.
                         </p>
                     )}
                 </div>

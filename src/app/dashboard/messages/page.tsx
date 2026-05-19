@@ -29,7 +29,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import { isCoreAdmin } from '@/lib/core-admins';
 
 function CaseContactDetails({ caseData }: { caseData: Case }) {
   const firestore = useFirestore();
@@ -62,7 +61,7 @@ function CaseContactDetails({ caseData }: { caseData: Case }) {
             ) : workerProfile ? (
               `${workerProfile.firstName} ${workerProfile.lastName}`
             ) : (
-              "Asesor no encontrado"
+              "Asesor"
             )}
           </p>
         </div>
@@ -115,7 +114,7 @@ function MessageCard({ msg, linkedCase }: { msg: Mensaje, linkedCase?: Case }) {
     toast({
       variant: "destructive",
       title: "Mensaje eliminado",
-      description: "El mensaje ha sido borrado del buzón permanentemente.",
+      description: "El mensaje ha sido borrado permanentemente.",
     });
   };
 
@@ -202,7 +201,7 @@ function MessageCard({ msg, linkedCase }: { msg: Mensaje, linkedCase?: Case }) {
               <AlertDialogHeader>
                 <AlertDialogTitle>¿Eliminar este mensaje?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Esta acción es permanente y no se puede deshacer. El mensaje de <strong>{msg.nombre}</strong> será borrado del buzón.
+                  Esta acción borrará el mensaje permanentemente.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -224,7 +223,7 @@ function MessageCard({ msg, linkedCase }: { msg: Mensaje, linkedCase?: Case }) {
             )}
           >
             <CheckCircle className="h-3 w-3 mr-1" />
-            {msg.resolved ? "Reabrir Caso" : "Caso Resuelto"}
+            {msg.resolved ? "Reabrir" : "Resuelto"}
           </Button>
         </div>
       </CardContent>
@@ -239,30 +238,16 @@ export default function MessagesPage() {
   const searchParams = useSearchParams();
   const queryParam = searchParams.get('query') || '';
 
-  // 1. Obtener perfil de usuario para validar aprobación antes de consultar mensajes
-  const userDocRef = useMemoFirebase(() => {
+  // Eliminamos gating de aprobación por solicitud del usuario
+  const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
+    return query(collection(firestore, 'mensajes'), orderBy('createdAt', 'desc'));
   }, [firestore, user]);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
-
-  const isApproved = useMemo(() => {
-    if (!user) return false;
-    if (isCoreAdmin(user.email, user.uid)) return true;
-    return userProfile?.status === 'approved';
-  }, [user, userProfile]);
-
-  // 2. Gate queries until profile is ready to avoid Insufficient Permissions errors
-  const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || isProfileLoading || !isApproved) return null;
-    return query(collection(firestore, 'mensajes'), orderBy('createdAt', 'desc'));
-  }, [firestore, user, isApproved, isProfileLoading]);
-
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore || !user || isProfileLoading || !isApproved) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'cases');
-  }, [firestore, user, isApproved, isProfileLoading]);
+  }, [firestore, user]);
 
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Mensaje>(messagesQuery);
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);
@@ -279,7 +264,7 @@ export default function MessagesPage() {
 
   // Marcar como leídos al entrar
   useEffect(() => {
-    if (messages && firestore && user && isApproved) {
+    if (messages && firestore && user) {
       messages.forEach(msg => {
         if (msg.read === false) {
           const msgRef = doc(firestore, 'mensajes', msg.id);
@@ -287,7 +272,7 @@ export default function MessagesPage() {
         }
       });
     }
-  }, [messages, firestore, user, isApproved]);
+  }, [messages, firestore, user]);
 
   const categorizedMessages = useMemo(() => {
     if (!messages || !cases) return { linked: [], unlinked: [] };
@@ -316,7 +301,7 @@ export default function MessagesPage() {
     return { linked, unlinked };
   }, [messages, cases, queryParam]);
 
-  if (isMessagesLoading || isCasesLoading || isProfileLoading) {
+  if (isMessagesLoading || isCasesLoading) {
     return (
       <div className="space-y-4 py-4">
         <Skeleton className="h-12 w-64 mb-6" />
@@ -328,16 +313,6 @@ export default function MessagesPage() {
     );
   }
 
-  if (!isApproved) {
-      return (
-          <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
-              <AlertCircle className="h-12 w-12 text-destructive" />
-              <h2 className="text-xl font-bold">Acceso Denegado</h2>
-              <p className="text-muted-foreground">No tienes permisos para ver el buzón de mensajes.</p>
-          </div>
-      )
-  }
-
   return (
     <div className="w-full py-4 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -346,14 +321,14 @@ export default function MessagesPage() {
             <Mail className="h-8 w-8" />
             Buzón de Mensajes
           </h1>
-          <p className="text-muted-foreground">Gestión de consultas ciudadanas vinculadas automáticamente.</p>
+          <p className="text-muted-foreground">Gestión de consultas vinculadas por cédula.</p>
         </div>
       </div>
 
       <div className="relative w-full md:w-1/2 lg:w-1/3">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input 
-          placeholder="Buscar por nombre, cédula o asunto..." 
+          placeholder="Filtrar por nombre o cédula..." 
           className="pl-9 bg-background border-primary/20"
           onChange={(e) => handleSearch(e.target.value)}
           defaultValue={queryParam}
@@ -361,14 +336,13 @@ export default function MessagesPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        {/* Columna Izquierda: Casos Vinculados */}
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b-2 border-green-500 pb-2 mb-4">
             <h2 className="text-lg font-bold text-green-700 flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5" />
               Casos Vinculados
             </h2>
-            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">{categorizedMessages.linked.length}</Badge>
+            <Badge className="bg-green-100 text-green-700">{categorizedMessages.linked.length}</Badge>
           </div>
           
           <div className="grid gap-4">
@@ -377,19 +351,18 @@ export default function MessagesPage() {
                 <MessageCard key={msg.id} msg={msg} linkedCase={linkedCase} />
               ))
             ) : (
-              <p className="text-center text-muted-foreground py-10 italic text-sm">No se encontraron mensajes vinculados.</p>
+              <p className="text-center text-muted-foreground py-10 italic text-sm">No hay mensajes vinculados.</p>
             )}
           </div>
         </div>
 
-        {/* Columna Derecha: Sin Caso Registrado */}
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b-2 border-red-400 pb-2 mb-4">
             <h2 className="text-lg font-bold text-red-600 flex items-center gap-2">
               <Inbox className="h-5 w-5" />
               Sin Caso Registrado
             </h2>
-            <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100">{categorizedMessages.unlinked.length}</Badge>
+            <Badge variant="destructive" className="bg-red-100 text-red-700">{categorizedMessages.unlinked.length}</Badge>
           </div>
 
           <div className="grid gap-4">
@@ -398,7 +371,7 @@ export default function MessagesPage() {
                 <MessageCard key={msg.id} msg={msg} />
               ))
             ) : (
-              <p className="text-center text-muted-foreground py-10 italic text-sm">No se encontraron mensajes sin vincular.</p>
+              <p className="text-center text-muted-foreground py-10 italic text-sm">No hay mensajes huérfanos.</p>
             )}
           </div>
         </div>

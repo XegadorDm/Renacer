@@ -38,17 +38,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Aseguramos que el documento del usuario exista sin bloqueos de estado
+  // Auto-aprobación automática para todos los usuarios registrados
   useEffect(() => {
     if (user && firestore && !isProfileLoading && !userProfile) {
       const userRef = doc(firestore, 'users', user.uid);
       setDoc(userRef, {
         id: user.uid,
         email: user.email,
-        firstName: 'Usuario',
-        lastName: 'Renacer',
+        firstName: user.displayName?.split(' ')[0] || 'Usuario',
+        lastName: user.displayName?.split(' ')[1] || 'Renacer',
         role: 'case-worker',
-        status: 'approved', // Auto-aprobación para eliminar bloqueos
+        status: 'approved', 
         createdAt: new Date().toISOString()
       }, { merge: true }).catch(err => console.error("Error auto-creating user:", err));
     }
@@ -112,8 +112,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Usuarios Contactados">
-                    <Link href="/dashboard/contacted"><PhoneCall className={iconClasses}/><span>Contactados</span></Link>
+                <SidebarMenuButton asChild tooltip="Seguimiento">
+                    <Link href="/dashboard/contacted"><PhoneCall className={iconClasses}/><span>Seguimiento</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -123,11 +123,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                             <Mail className={iconClasses}/><span>Buzón</span>
                         </div>
                     </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild tooltip="Solicitudes">
-                    <Link href="/dashboard/users"><ShieldCheck className={iconClasses}/><span>Personal</span></Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
