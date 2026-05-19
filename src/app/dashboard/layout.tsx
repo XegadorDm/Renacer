@@ -1,4 +1,3 @@
-
 'use client';
 import type { ReactNode } from "react";
 import { useEffect } from "react";
@@ -40,16 +39,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Validación de acceso: aprobados en DB o administradores core del proyecto
-  const isApproved = (userProfile && userProfile.status === 'approved') || isCoreAdmin(user?.email, user?.uid);
+  // Validación de acceso inmediata
+  const isAdminCore = isCoreAdmin(user?.email, user?.uid);
+  const isApprovedInDB = userProfile?.status === 'approved';
+  const isApproved = isAdminCore || isApprovedInDB;
 
-  // Auto-aprobación Crítica para Administradores Core
+  // EFECTO CRÍTICO: Sincronización de perfiles para administradores core
   useEffect(() => {
-    if (user && isCoreAdmin(user.email, user.uid) && firestore && !isProfileLoading) {
+    if (user && isAdminCore && firestore && !isProfileLoading) {
       // Si el perfil no existe o no tiene los datos correctos, forzamos la sincronización inmediata
       if (!userProfile || userProfile.status !== 'approved' || userProfile.role !== 'admin') {
         const userRef = doc(firestore, 'users', user.uid);
-        console.log("[RENACER] Sincronizando perfil de administrador core:", user.email);
+        console.log("[RENACER] Sincronizando perfil administrativo para:", user.email);
         setDoc(userRef, {
           id: user.uid,
           email: user.email,
@@ -61,7 +62,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         }, { merge: true }).catch(err => console.error("Error auto-approving admin:", err));
       }
     }
-  }, [user, userProfile, isProfileLoading, firestore]);
+  }, [user, userProfile, isProfileLoading, firestore, isAdminCore]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -70,7 +71,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, [isUserLoading, user, router]);
 
   useEffect(() => {
-    // Redirección si no tiene permisos tras cargar el perfil
+    // Redirección solo si NO es admin core y NO está aprobado en base de datos
     if (!isProfileLoading && user && !isApproved) {
       router.replace('/pending-approval');
     }
@@ -101,7 +102,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     return user.email?.[0].toUpperCase() || 'U';
   }
 
-  const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(user?.email, user?.uid);
+  const isAdmin = userProfile?.role === 'admin' || isAdminCore;
   const iconClasses = "h-5 w-5 text-black shrink-0";
 
   return (

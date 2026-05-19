@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Case": {
@@ -36,7 +35,7 @@
     "PublicCaseStatus": {
       "title": "PublicCaseStatus",
       "type": "object",
-      "description": "Espejo simplificado del caso para consulta pública por cédula.",
+      "description": "Espejo simplificado del caso para consulta pública segura.",
       "properties": {
         "documentId": { "type": "string" },
         "caseNumber": { "type": "string" },
@@ -48,35 +47,10 @@
         "updatedAt": { "type": "object" }
       }
     },
-    "PublicCaseQuery": {
-      "title": "PublicCaseQuery",
-      "type": "object",
-      "description": "Registro de auditoría de búsquedas en la landing page.",
-      "properties": {
-        "documentId": { "type": "string" },
-        "caseNumber": { "type": "string" },
-        "statusAtQuery": { "type": "string" },
-        "consultedAt": { "type": "object" },
-        "result": { "type": "string", "enum": ["found", "not_found"] }
-      }
-    },
-    "Notification": {
-      "title": "Notification",
-      "type": "object",
-      "description": "Notificación interna sobre actualizaciones de casos.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "caseId": { "type": "string" },
-        "message": { "type": "string" },
-        "createdAt": { "type": "string" },
-        "read": { "type": "boolean" }
-      }
-    },
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
-      "description": "Perfil extendido de asesores y administradores.",
+      "description": "Perfil extendido de personal administrativo y asesores.",
       "properties": {
         "id": { "type": "string" },
         "firstName": { "type": "string" },
@@ -84,36 +58,6 @@
         "email": { "type": "string" },
         "role": { "type": "string", "enum": ["admin", "case-worker"] },
         "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
-        "documentType": { "type": "string" },
-        "documentNumber": { "type": "string" },
-        "gender": { "type": "string" },
-        "createdAt": { "type": "string" }
-      }
-    },
-    "Novedad": {
-      "title": "Novedad",
-      "type": "object",
-      "description": "Entrada en el historial de trazabilidad de un caso.",
-      "properties": {
-        "mensaje": { "type": "string" },
-        "tipo": { "type": "string", "enum": ["llamada", "nota", "sistema"] },
-        "createdAt": { "type": "string" },
-        "createdBy": { "type": "string" }
-      }
-    },
-    "Mensaje": {
-      "title": "Mensaje",
-      "type": "object",
-      "description": "Mensaje de contacto enviado por un ciudadano.",
-      "properties": {
-        "id": { "type": "string" },
-        "nombre": { "type": "string" },
-        "email": { "type": "string" },
-        "cedula": { "type": "string" },
-        "asunto": { "type": "string" },
-        "mensaje": { "type": "string" },
-        "read": { "type": "boolean" },
-        "resolved": { "type": "boolean" },
         "createdAt": { "type": "string" }
       }
     }
@@ -124,31 +68,15 @@
   "firestore": {
     "/cases/{caseId}": {
       "schema": "Case",
-      "description": "Datos privados de casos sociales."
-    },
-    "/cases/{caseId}/novedades/{novedadId}": {
-      "schema": "Novedad",
-      "description": "Historial de interacciones del caso."
-    },
-    "/publicCaseStatus/{documentId}": {
-      "schema": "PublicCaseStatus",
-      "description": "Vista pública segura (indexada por cédula)."
-    },
-    "/publicCaseQueries/{queryId}": {
-      "schema": "PublicCaseQuery",
-      "description": "Trazabilidad de consultas ciudadanas."
-    },
-    "/notifications/{notificationId}": {
-      "schema": "Notification",
-      "description": "Alertas internas para el equipo."
+      "description": "Colección privada de caracterizaciones sociales."
     },
     "/users/{userId}": {
       "schema": "UserProfile",
-      "description": "Gestión de personal y permisos."
+      "description": "Gestión de personal interno."
     },
-    "/mensajes/{mensajeId}": {
-      "schema": "Mensaje",
-      "description": "Buzón de ciudadanos."
+    "/publicCaseStatus/{documentId}": {
+      "schema": "PublicCaseStatus",
+      "description": "Índice público para consulta ciudadana por cédula."
     }
   }
 }

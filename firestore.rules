@@ -2,13 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- FUNCIONES DE SEGURIDAD ---
+    // --- FUNCIONES DE SEGURIDAD SIMPLIFICADAS ---
 
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Bypass prioritario para administradores core del proyecto (Infalible)
+    // Administradores Core: Acceso total garantizado por UID o Email
     function isCoreAdmin() {
       return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -18,7 +18,7 @@ service cloud.firestore {
       );
     }
 
-    // Verifica si el usuario tiene un perfil aprobado en la base de datos
+    // Usuario Aprobado: Es Core Admin o tiene estado 'approved' en su documento
     function isApproved() {
       return isCoreAdmin() || (
         isAuthenticated() && 
@@ -27,7 +27,7 @@ service cloud.firestore {
       );
     }
 
-    // Verifica si el usuario tiene rol de administrador
+    // Administrador: Es Core Admin o tiene rol 'admin'
     function isAdmin() {
       return isCoreAdmin() || (
         isApproved() && 
@@ -37,7 +37,7 @@ service cloud.firestore {
 
     // --- REGLAS POR COLECCIÓN ---
 
-    // Colección de Usuarios: Los usuarios ven su propio perfil, admins ven todo
+    // Colección de Usuarios: Gestión de perfiles y permisos
     match /users/{userId} {
       allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow create: if isAuthenticated() && request.auth.uid == userId;
@@ -45,25 +45,22 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Colección de Casos (REQ-006, REQ-008)
+    // Colección de Casos: Acceso total para personal aprobado (Online y Offline)
     match /cases/{caseId} {
-      // Reglas explícitas para evitar ambigüedad en operaciones de lista
-      allow get, list: if isApproved();
-      allow create: if isApproved();
-      allow update: if isApproved();
+      allow get, list, create, update: if isApproved();
       allow delete: if isAdmin();
 
-      // Historial de novedades (trazabilidad)
+      // Historial de novedades (Trazabilidad)
       match /novedades/{novedadId} {
         allow read, list, create: if isApproved();
       }
     }
 
-    // Vista Pública Segura (REQ-007): Lectura individual por cédula permitida a todos
+    // Vista Pública Segura (REQ-007): Solo lectura por cédula para ciudadanos
     match /publicCaseStatus/{documentId} {
       allow get: if true; 
-      allow list: if false; // Prohibido listar todos por privacidad
-      allow write: if isApproved(); // Solo internos aprobados escriben el espejo
+      allow list: if false;
+      allow write: if isApproved();
     }
 
     // Auditoría de Consultas Públicas
@@ -74,17 +71,21 @@ service cloud.firestore {
 
     // Notificaciones Internas
     match /notifications/{notificationId} {
-      allow create: if isApproved();
-      allow read: if isAuthenticated() && (isAdmin() || resource.data.userId == request.auth.uid);
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).changedKeys().hasOnly(['read']);
+      allow create, read, update: if isApproved();
       allow delete: if isAdmin();
     }
 
-    // Mensajes de contacto ciudadanos
+    // Mensajes de contacto (Buzón)
     match /mensajes/{mensajeId} {
       allow create: if true;
       allow read, list, update: if isApproved();
       allow delete: if isAdmin();
+    }
+    
+    // Lista de correos autorizados
+    match /authorized_emails/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
     }
   }
 }
