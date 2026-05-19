@@ -9,6 +9,7 @@ service cloud.firestore {
     }
 
     // Bypass directo e infalible para administradores del proyecto (Líderes)
+    // Se evalúa por UID o por Email.
     function isCoreAdmin() {
       return isAuthenticated() && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -20,20 +21,23 @@ service cloud.firestore {
 
     // Verifica si el usuario tiene un perfil aprobado en la colección 'users'
     function isApproved() {
-      // Prioridad 1: Líderes del proyecto
-      if (isCoreAdmin()) { return true; }
-      
+      // Prioridad 1: Líderes del proyecto (Bypass sin lectura de DB)
       // Prioridad 2: Usuarios con documento físico aprobado
-      return isAuthenticated() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved';
+      return isCoreAdmin() || (
+        isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
+      );
     }
 
     // Verifica si el usuario tiene rol de administrador
     function isAdmin() {
-      if (isCoreAdmin()) { return true; }
-      return isApproved() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isCoreAdmin() || (
+        isAuthenticated() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
     }
 
     // --- REGLAS POR COLECCIÓN ---
@@ -51,7 +55,7 @@ service cloud.firestore {
       // Solo usuarios aprobados pueden ver o listar casos
       allow get, list: if isApproved();
       
-      // Solo usuarios aprobados con rol admin o case-worker pueden crear/editar
+      // Solo usuarios aprobados pueden crear/editar
       allow create, update: if isApproved();
       
       // Solo administradores pueden borrar casos
