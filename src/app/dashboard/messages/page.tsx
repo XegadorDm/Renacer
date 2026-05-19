@@ -233,21 +233,21 @@ function MessageCard({ msg, linkedCase }: { msg: Mensaje, linkedCase?: Case }) {
 
 export default function MessagesPage() {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryParam = searchParams.get('query') || '';
 
   // Eliminamos gating de aprobación por solicitud del usuario
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || isUserLoading) return null;
     return query(collection(firestore, 'mensajes'), orderBy('createdAt', 'desc'));
-  }, [firestore, user]);
+  }, [firestore, user, isUserLoading]);
 
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user || isUserLoading) return null;
     return collection(firestore, 'cases');
-  }, [firestore, user]);
+  }, [firestore, user, isUserLoading]);
 
   const { data: messages, isLoading: isMessagesLoading } = useCollection<Mensaje>(messagesQuery);
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);

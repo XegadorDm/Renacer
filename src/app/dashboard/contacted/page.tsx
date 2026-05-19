@@ -18,10 +18,11 @@ import { useToast } from '@/hooks/use-toast';
 
 function HistoryModal({ caseId, open, onOpenChange }: { caseId: string, open: boolean, onOpenChange: (open: boolean) => void }) {
   const firestore = useFirestore();
+  const { isUserLoading } = useUser();
   const novedadesQuery = useMemoFirebase(() => {
-    if (!firestore || !caseId) return null;
+    if (!firestore || !caseId || isUserLoading) return null;
     return query(collection(firestore, 'cases', caseId, 'novedades'), orderBy('createdAt', 'desc'));
-  }, [firestore, caseId]);
+  }, [firestore, caseId, isUserLoading]);
 
   const { data: novedades, isLoading } = useCollection<Novedad>(novedadesQuery);
 
@@ -73,10 +74,11 @@ function HistoryModal({ caseId, open, onOpenChange }: { caseId: string, open: bo
 
 function ContactCard({ item, onRetry, onShowHistory }: { item: Case & { id: string }, onRetry: () => void, onShowHistory: () => void }) {
   const firestore = useFirestore();
+  const { isUserLoading } = useUser();
   const novedadesQuery = useMemoFirebase(() => {
-    if (!firestore || !item.id) return null;
+    if (!firestore || !item.id || isUserLoading) return null;
     return query(collection(firestore, 'cases', item.id, 'novedades'), orderBy('createdAt', 'desc'));
-  }, [firestore, item.id]);
+  }, [firestore, item.id, isUserLoading]);
   const { data: novedades } = useCollection<Novedad>(novedadesQuery);
 
   const lastAttemptDate = useMemo(() => {
@@ -142,7 +144,7 @@ function ContactCard({ item, onRetry, onShowHistory }: { item: Case & { id: stri
 
 export default function ContactedUsersPage() {
   const firestore = useFirestore();
-  const { user: authUser } = useUser();
+  const { user: authUser, isUserLoading } = useUser();
   const { toast } = useToast();
 
   const [selectedCase, setSelectedCase] = useState<(Case & { id: string }) | null>(null);
@@ -150,9 +152,9 @@ export default function ContactedUsersPage() {
   const [isCallOpen, setIsCallOpen] = useState(false);
 
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
+    if (!firestore || !authUser || isUserLoading) return null;
     return collection(firestore, 'cases');
-  }, [firestore, authUser]);
+  }, [firestore, authUser, isUserLoading]);
 
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);
 

@@ -66,7 +66,7 @@ export function CasesTable({
   setIsCallModalOpen
 }: CasesTableProps) {
   const firestore = useFirestore();
-  const { user: authUser } = useUser();
+  const { user: authUser, isUserLoading } = useUser();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -75,7 +75,7 @@ export function CasesTable({
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
   const casesQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
+    if (!firestore || !authUser || isUserLoading) return null;
     
     const casesCollection = collection(firestore, 'cases');
     const constraints: any[] = [];
@@ -107,7 +107,7 @@ export function CasesTable({
     constraints.push(orderBy("createdAt", "desc"));
 
     return firestoreQuery(casesCollection, ...constraints);
-  }, [firestore, authUser, location, startDate, endDate, period]);
+  }, [firestore, authUser, isUserLoading, location, startDate, endDate, period]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
