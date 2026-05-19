@@ -4,18 +4,15 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Función para identificar administradores core (Líderes del proyecto)
-    // Bypass directo por UID para garantizar acceso total inmediato
+    // Bypass directo por UID y Email para garantizar acceso total inmediato
     function isCoreAdmin() {
       return request.auth != null && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
         request.auth.uid == 'juancamilogiraldo-uid-placeholder' ||
         request.auth.uid == 'diegomauricio-uid-placeholder' ||
-        (request.auth.token.email != null && 
-         request.auth.token.email in [
-           'aleksimbachi@gmail.com', 
-           'juancamilogiraldo@gmail.com', 
-           'diegomauriciopastusano@gmail.com'
-         ])
+        request.auth.token.email == 'aleksimbachi@gmail.com' ||
+        request.auth.token.email == 'juancamilogiraldo@gmail.com' ||
+        request.auth.token.email == 'diegomauriciopastusano@gmail.com'
       );
     }
 
@@ -37,7 +34,7 @@ service cloud.firestore {
 
     // Colección de Usuarios
     match /users/{userId} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && (isCoreAdmin() || request.auth.uid == userId);
       allow create: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && (isCoreAdmin() || getRole() == 'admin' || request.auth.uid == userId);
       allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
@@ -74,9 +71,13 @@ service cloud.firestore {
       allow create: if request.auth != null
         && isApproved()
         && request.resource.data.userId == request.auth.uid
+        && request.resource.data.caseId is string
+        && request.resource.data.message is string
+        && request.resource.data.createdAt is string
         && request.resource.data.read == false;
 
       allow read: if request.auth != null 
+        && isApproved()
         && (isCoreAdmin() || getRole() == 'admin' || resource.data.userId == request.auth.uid);
 
       allow update: if request.auth != null 
