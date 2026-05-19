@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from "react";
@@ -6,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon, CloudOff, CloudRain, Cloud } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
@@ -42,8 +41,9 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-type WithId<T> = T & { id: string };
+type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
 
 interface CasesTableProps {
   query: string;
@@ -171,11 +171,9 @@ export function CasesTable({
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
     
-    // 1. Actualizar caso principal
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
 
-    // 2. Registrar Trazabilidad (REQ-008: Historial de intentos)
     const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
     addDocumentNonBlocking(novedadesRef, {
         mensaje: contacted ? "Llamada efectiva realizada" : "Intento de llamada sin éxito",
@@ -184,8 +182,6 @@ export function CasesTable({
         createdBy: authUser.uid
     });
 
-    // 3. Crear Notificación Interna (REQ-008: Notificación)
-    // Usamos el UID del usuario actual para asegurar que se registre en su buzón personal
     const notificationsRef = collection(firestore, 'notifications');
     addDocumentNonBlocking(notificationsRef, {
         userId: authUser.uid,
@@ -195,7 +191,6 @@ export function CasesTable({
         read: false
     });
 
-    // 4. Actualizar vista pública obligatoria (REQ-007)
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
@@ -259,7 +254,24 @@ export function CasesTable({
                     onClick={() => onSelectCase(c as WithId<Case>)}
                   >
                     <TableCell className="pl-6">
-                        <div className={`w-3 h-3 rounded-full border-2 transition-all ${selectedCaseId === c.id ? 'bg-primary border-primary scale-125' : 'border-muted-foreground'}`} />
+                        <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded-full border-2 transition-all ${selectedCaseId === c.id ? 'bg-primary border-primary scale-125' : 'border-muted-foreground'}`} />
+                            {c._hasPendingWrites && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="relative flex items-center justify-center">
+                                                <Cloud className="h-4 w-4 text-accent animate-pulse" />
+                                                <span className="absolute -top-1 -right-1 h-2 w-2 bg-orange-500 rounded-full border border-white" />
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="text-[10px] font-bold">Pendiente de sincronizar con el servidor (Modo Offline)</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
+                        </div>
                     </TableCell>
                     <TableCell className="font-mono text-[10px] text-muted-foreground font-semibold">{c.caseNumber}</TableCell>
                     <TableCell className="font-bold uppercase text-xs tracking-tight">{c.firstName} {c.lastName}</TableCell>
