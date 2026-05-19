@@ -1,21 +1,22 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Función para identificar administradores core (Líderes del proyecto)
-    // Se incluye el UID directo para evitar cualquier fallo de permisos en la cuenta principal
     function isCoreAdmin() {
       return request.auth != null && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
-        (request.auth.token.email != null && (
-          request.auth.token.email.lower() == 'aleksimbachi@gmail.com' ||
-          request.auth.token.email.lower() == 'juancamilogiraldo@gmail.com' ||
-          request.auth.token.email.lower() == 'diegomauriciopastusano@gmail.com'
-        ))
+        (request.auth.token.email != null && 
+         request.auth.token.email.lower() in [
+           'aleksimbachi@gmail.com', 
+           'juancamilogiraldo@gmail.com', 
+           'diegomauriciopastusano@gmail.com'
+         ])
       );
     }
 
-    // Obtener el rol del usuario desde Firestore de forma segura
+    // Obtener el rol del usuario desde Firestore
     function getRole() {
       return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
         ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
@@ -23,7 +24,6 @@ service cloud.firestore {
     }
 
     // Verificar si el usuario está aprobado
-    // Los admins core siempre están aprobados
     function isApproved() {
       return isCoreAdmin() || (
         request.auth != null &&
@@ -40,7 +40,7 @@ service cloud.firestore {
       allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
     }
 
-    // Colección de Casos (REQ-003, REQ-006, REQ-008)
+    // Colección de Casos
     match /cases/{caseId} {
       allow read, list: if request.auth != null && isApproved();
       allow create, update: if request.auth != null && isApproved();
@@ -51,20 +51,20 @@ service cloud.firestore {
       }
     }
 
-    // Vista Pública Segura (REQ-007)
+    // Vista Pública Segura
     match /publicCaseStatus/{documentId} {
       allow get: if true;
       allow list: if false;
       allow write: if request.auth != null && isApproved();
     }
 
-    // Trazabilidad de Consultas Públicas (Audit Log)
+    // Trazabilidad de Consultas Públicas
     match /publicCaseQueries/{queryId} {
       allow create: if true;
       allow read, list: if request.auth != null && isApproved();
     }
 
-    // Notificaciones Internas (REQ-008)
+    // Notificaciones Internas
     match /notifications/{notificationId} {
       allow create: if request.auth != null
         && isApproved()

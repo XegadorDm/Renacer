@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Case": {
@@ -15,7 +16,20 @@
         "status": { "type": "string" },
         "createdAt": { "type": "object" },
         "userId": { "type": "string" },
-        "members": { "type": "object" }
+        "members": { "type": "object" },
+        "testimony": { "type": "string" },
+        "phone1": { "type": "string" },
+        "phone2": { "type": "string" },
+        "address": { "type": "string" },
+        "department": { "type": "string" },
+        "age": { "type": "number" },
+        "gender": { "type": "string" },
+        "maritalStatus": { "type": "string" },
+        "ethnicGroup": { "type": "string" },
+        "displacementType": { "type": "string" },
+        "disability": { "type": "string" },
+        "isElderly": { "type": "boolean" },
+        "householdMembers": { "type": "number" }
       }
     },
     "PublicCaseStatus": {
@@ -74,6 +88,17 @@
         "gender": { "type": "string" },
         "createdAt": { "type": "string" }
       }
+    },
+    "Novedad": {
+      "title": "Novedad",
+      "type": "object",
+      "description": "History of case interactions.",
+      "properties": {
+        "mensaje": { "type": "string" },
+        "tipo": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" }
+      }
     }
   },
   "auth": {
@@ -85,7 +110,7 @@
       "description": "Full private case data."
     },
     "/cases/{caseId}/novedades/{novedadId}": {
-      "schema": "object",
+      "schema": "Novedad",
       "description": "History of interactions and calls."
     },
     "/publicCaseStatus/{documentId}": {
