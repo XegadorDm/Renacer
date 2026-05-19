@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CaseStatusIndicator } from "./case-status-indicator";
 import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, CheckCircle2, XCircle, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import type { Case } from "@/lib/case-schema";
@@ -167,7 +167,7 @@ export function CasesTable({
   };
   
   const handleRegisterNovedad = (contacted: boolean) => {
-    if (!selectedCase || !firestore) return;
+    if (!selectedCase || !firestore || !authUser) return;
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
     
@@ -175,7 +175,26 @@ export function CasesTable({
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
 
-    // 2. Actualizar vista pública obligatoria con nombres enriquecidos
+    // 2. Registrar Trazabilidad (REQ-008: Historial de intentos)
+    const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
+    addDocumentNonBlocking(novedadesRef, {
+        mensaje: contacted ? "Llamada efectiva realizada" : "Intento de llamada sin éxito",
+        tipo: 'llamada',
+        createdAt: new Date().toISOString(),
+        createdBy: authUser.uid
+    });
+
+    // 3. Crear Notificación Interna (REQ-008: Notificación)
+    const notificationsRef = collection(firestore, 'notifications');
+    addDocumentNonBlocking(notificationsRef, {
+        userId: authUser.uid,
+        caseId: selectedCase.id,
+        message: `Se registró un intento de contacto (${newStatus}) para el caso ${selectedCase.caseNumber}`,
+        createdAt: new Date().toISOString(),
+        read: false
+    });
+
+    // 4. Actualizar vista pública obligatoria
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
@@ -194,7 +213,7 @@ export function CasesTable({
 
     toast({
         title: contacted ? "Llamada Registrada" : "Intento Registrado",
-        description: `Se actualizó el estado a ${newStatus} en la base pública.`,
+        description: `Se actualizó el historial y la base pública del caso.`,
     });
     setIsCallModalOpen(false);
   };
