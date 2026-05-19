@@ -14,7 +14,8 @@
         "municipality": { "type": "string" },
         "status": { "type": "string" },
         "createdAt": { "type": "object" },
-        "userId": { "type": "string" }
+        "userId": { "type": "string" },
+        "members": { "type": "object" }
       }
     },
     "PublicCaseStatus": {
@@ -30,6 +31,18 @@
         "municipality": { "type": "string" },
         "createdAt": { "type": "object" },
         "updatedAt": { "type": "object" }
+      }
+    },
+    "PublicCaseQuery": {
+      "title": "PublicCaseQuery",
+      "type": "object",
+      "description": "Audit log of public identification queries.",
+      "properties": {
+        "documentId": { "type": "string" },
+        "caseNumber": { "type": "string" },
+        "statusAtQuery": { "type": "string" },
+        "consultedAt": { "type": "object" },
+        "result": { "type": "string", "enum": ["found", "not_found"] }
       }
     },
     "Notification": {
@@ -79,6 +92,10 @@
       "schema": "PublicCaseStatus",
       "description": "Limited public access for status checks."
     },
+    "/publicCaseQueries/{queryId}": {
+      "schema": "PublicCaseQuery",
+      "description": "Traceability of public queries."
+    },
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "Internal notifications."
@@ -86,10 +103,6 @@
     "/users/{userId}": {
       "schema": "UserProfile",
       "description": "User profiles and permissions."
-    },
-    "/publicCaseQueries/{queryId}": {
-      "schema": "object",
-      "description": "Audit log of public queries."
     },
     "/mensajes/{mensajeId}": {
       "schema": "object",

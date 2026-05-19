@@ -3,6 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Función para identificar administradores core (Líderes del proyecto)
+    // Se incluye el UID directo para evitar cualquier fallo de permisos en la cuenta principal
     function isCoreAdmin() {
       return request.auth != null && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
@@ -14,7 +15,7 @@ service cloud.firestore {
       );
     }
 
-    // Obtener el rol del usuario desde Firestore
+    // Obtener el rol del usuario desde Firestore de forma segura
     function getRole() {
       return request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) 
         ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role 
@@ -22,6 +23,7 @@ service cloud.firestore {
     }
 
     // Verificar si el usuario está aprobado
+    // Los admins core siempre están aprobados
     function isApproved() {
       return isCoreAdmin() || (
         request.auth != null &&
@@ -56,7 +58,7 @@ service cloud.firestore {
       allow write: if request.auth != null && isApproved();
     }
 
-    // Trazabilidad de Consultas Públicas
+    // Trazabilidad de Consultas Públicas (Audit Log)
     match /publicCaseQueries/{queryId} {
       allow create: if true;
       allow read, list: if request.auth != null && isApproved();
@@ -79,7 +81,7 @@ service cloud.firestore {
       allow delete: if request.auth != null && (isCoreAdmin() || getRole() == 'admin');
     }
 
-    // Mensajes de contacto
+    // Mensajes de contacto ciudadanos
     match /mensajes/{mensajeId} {
       allow create: if true;
       allow read, list, update, delete: if request.auth != null && isApproved();
