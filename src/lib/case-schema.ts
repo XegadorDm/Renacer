@@ -41,6 +41,14 @@ export interface PublicCaseStatus {
     updatedAt: any;
 }
 
+export interface PublicCaseQuery {
+    documentId: string;
+    caseNumber: string | null;
+    statusAtQuery: string | null;
+    consultedAt: any;
+    result: 'found' | 'not_found';
+}
+
 export interface UserProfile {
     id: string;
     firstName: string;

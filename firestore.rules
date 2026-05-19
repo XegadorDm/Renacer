@@ -4,11 +4,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Función para identificar administradores core (Líderes del proyecto)
+    // Se usa bypass por UID directo para Aleksi Imbachi para evitar bloqueos por email
     function isCoreAdmin() {
       return request.auth != null && (
         request.auth.uid == 'gKSHtlJQt8aVOQZPTXCTEqmYENA3' ||
+        request.auth.uid == 'juancamilogiraldo-uid-placeholder' ||
+        request.auth.uid == 'diegomauricio-uid-placeholder' ||
         (request.auth.token.email != null && 
-         request.auth.token.email.lower() in [
+         request.auth.token.email in [
            'aleksimbachi@gmail.com', 
            'juancamilogiraldo@gmail.com', 
            'diegomauriciopastusano@gmail.com'
@@ -24,6 +27,7 @@ service cloud.firestore {
     }
 
     // Verificar si el usuario está aprobado
+    // Los admins core siempre están aprobados por bypass
     function isApproved() {
       return isCoreAdmin() || (
         request.auth != null &&
@@ -51,20 +55,20 @@ service cloud.firestore {
       }
     }
 
-    // Vista Pública Segura
+    // Vista Pública Segura (REQ-007)
     match /publicCaseStatus/{documentId} {
       allow get: if true;
       allow list: if false;
       allow write: if request.auth != null && isApproved();
     }
 
-    // Trazabilidad de Consultas Públicas
+    // Trazabilidad de Consultas Públicas (REQ-007)
     match /publicCaseQueries/{queryId} {
       allow create: if true;
       allow read, list: if request.auth != null && isApproved();
     }
 
-    // Notificaciones Internas
+    // Notificaciones Internas (REQ-008)
     match /notifications/{notificationId} {
       allow create: if request.auth != null
         && isApproved()
