@@ -61,7 +61,6 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: false para minimizar ruidos de sincronización interna
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       { includeMetadataChanges: false },
@@ -97,7 +96,6 @@ export function useCollection<T = any>(
     );
 
     return () => {
-      // Unsubscribe de forma segura
       unsubscribe();
     };
   }, [memoizedTargetRefOrQuery]);
