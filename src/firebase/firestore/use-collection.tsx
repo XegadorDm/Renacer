@@ -39,7 +39,6 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
- * Optimizado para el REQ-006 (Soporte offline) mediante la exposición de metadatos de sincronización.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -62,12 +61,10 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: true es vital para el REQ-006.
-    // Permite que la interfaz reaccione cuando un documento pasa de "Pendiente Sync" a "Sincronizado"
-    // sin necesidad de cambios en los datos reales del documento.
+    // includeMetadataChanges: false para minimizar ruidos de sincronización interna
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      { includeMetadataChanges: true },
+      { includeMetadataChanges: false },
       (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
         snapshot.docs.forEach((doc) => {
@@ -81,7 +78,7 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (error: FirestoreError) => {
+      async (serverError: FirestoreError) => {
         const path: string =
           memoizedTargetRefOrQuery.type === 'collection'
             ? (memoizedTargetRefOrQuery as CollectionReference).path
@@ -99,7 +96,10 @@ export function useCollection<T = any>(
       }
     );
 
-    return () => unsubscribe();
+    return () => {
+      // Unsubscribe de forma segura
+      unsubscribe();
+    };
   }, [memoizedTargetRefOrQuery]);
 
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {

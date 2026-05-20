@@ -1,12 +1,12 @@
-
 'use client';
 
-import React, { useMemo, type ReactNode } from 'react';
+import React, { useState, useEffect, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { getApps, initializeApp, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { 
   getFirestore,
+  initializeFirestore,
   Firestore 
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
@@ -22,41 +22,52 @@ let firestoreInstance: Firestore | undefined;
 
 /**
  * Proveedor de Firebase para el cliente.
- * Utiliza getFirestore() para evitar el error "INTERNAL ASSERTION FAILED (ca9)"
- * garantizando una recuperación segura de la instancia de base de datos.
+ * Utiliza un estado 'isReady' y useEffect para asegurar que los servicios
+ * estén completamente inicializados antes de renderizar los componentes hijos,
+ * evitando el error "INTERNAL ASSERTION FAILED (ca9)".
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
-  const firebaseServices = useMemo(() => {
-    // 1. Inicializar la App de Firebase (Idempotente)
-    if (!appInstance) {
-      const existingApps = getApps();
-      appInstance = existingApps.length === 0 ? initializeApp(firebaseConfig) : getApp();
-    }
+  const [isReady, setIsReady] = useState(false);
 
-    // 2. Inicializar el servicio de Autenticación
-    if (!authInstance) {
-      authInstance = getAuth(appInstance);
-    }
+  useEffect(() => {
+    // La inicialización debe ocurrir solo en el cliente
+    if (typeof window !== 'undefined') {
+      if (!appInstance) {
+        const existingApps = getApps();
+        appInstance = existingApps.length === 0 ? initializeApp(firebaseConfig) : getApp();
+      }
 
-    // 3. Inicializar Firestore de forma segura
-    // getFirestore() es preferible sobre initializeFirestore() en entornos con HMR
-    // ya que no intenta re-configurar el caché si ya está activo.
-    if (!firestoreInstance) {
-      firestoreInstance = getFirestore(appInstance);
-    }
+      if (!authInstance) {
+        authInstance = getAuth(appInstance);
+      }
 
-    return {
-      firebaseApp: appInstance,
-      auth: authInstance,
-      firestore: firestoreInstance,
-    };
+      if (!firestoreInstance) {
+        try {
+          // initializeFirestore es más estable para la primera llamada en entornos HMR.
+          // Usamos una configuración mínima para evitar conflictos de caché.
+          firestoreInstance = initializeFirestore(appInstance, {
+            experimentalForceLongPolling: false,
+          });
+        } catch (e) {
+          // Si ya estaba inicializado (por ejemplo, en un hot reload), recuperamos la instancia.
+          firestoreInstance = getFirestore(appInstance);
+        }
+      }
+      setIsReady(true);
+    }
   }, []);
+
+  // No renderizamos nada hasta que Firebase esté listo.
+  // Esto evita que los hooks como useCollection se ejecuten prematuramente con una instancia inestable.
+  if (!isReady || !appInstance || !authInstance || !firestoreInstance) {
+    return null; 
+  }
 
   return (
     <FirebaseProvider
-      firebaseApp={firebaseServices.firebaseApp}
-      auth={firebaseServices.auth}
-      firestore={firebaseServices.firestore}
+      firebaseApp={appInstance}
+      auth={authInstance}
+      firestore={firestoreInstance}
     >
       {children}
     </FirebaseProvider>
