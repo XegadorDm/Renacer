@@ -7,8 +7,6 @@ import { getAuth, Auth } from 'firebase/auth';
 import { 
   getFirestore,
   initializeFirestore, 
-  persistentLocalCache, 
-  persistentSingleTabManager,
   Firestore 
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
@@ -25,7 +23,7 @@ let firestoreInstance: Firestore | undefined;
 /**
  * Proveedor de Firebase para el cliente.
  * Centraliza la inicialización para evitar el error "INTERNAL ASSERTION FAILED" 
- * causado por múltiples inicializaciones del caché en entornos Next.js.
+ * causado por conflictos en la configuración del caché persistente.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
@@ -40,15 +38,12 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       authInstance = getAuth(appInstance);
     }
 
-    // 3. Inicializar Firestore con Caché Persistente (Crucial para REQ-006)
+    // 3. Inicializar Firestore de forma simplificada
     if (!firestoreInstance) {
       try {
-        // Intentamos configurar el caché persistente para el modo offline
-        // Se usa persistentSingleTabManager para evitar conflictos de listeners entre pestañas
+        // Se utiliza initializeFirestore con configuración mínima para evitar errores de aserción
         firestoreInstance = initializeFirestore(appInstance, {
-          localCache: persistentLocalCache({
-            tabManager: persistentSingleTabManager()
-          })
+          experimentalForceLongPolling: false,
         });
       } catch (e) {
         // Si initializeFirestore falla (ej. ya inicializado por HMR), recuperamos la instancia existente
