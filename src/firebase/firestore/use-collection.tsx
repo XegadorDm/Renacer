@@ -39,7 +39,7 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
- * Optimized for REQ-006 (Offline support) by exposing pending writes metadata.
+ * Optimizado para el REQ-006 (Soporte offline) mediante la exposición de metadatos de sincronización.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -62,19 +62,21 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: false para evitar renders adicionales por cambios de sincronización local
+    // includeMetadataChanges: true es vital para el REQ-006.
+    // Permite que la interfaz reaccione cuando un documento pasa de "Pendiente Sync" a "Sincronizado"
+    // sin necesidad de cambios en los datos reales del documento.
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      { includeMetadataChanges: false },
+      { includeMetadataChanges: true },
       (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = [];
-        for (const doc of snapshot.docs) {
+        snapshot.docs.forEach((doc) => {
           results.push({ 
             ...(doc.data() as T), 
             id: doc.id,
-            _hasPendingWrites: doc.metadata.hasPendingWrites // Identifica registros no sincronizados
+            _hasPendingWrites: doc.metadata.hasPendingWrites
           });
-        }
+        });
         setData(results);
         setError(null);
         setIsLoading(false);

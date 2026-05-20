@@ -4,33 +4,55 @@ import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { getApps, initializeApp, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { 
+  getFirestore,
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager,
+  Firestore 
+} from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
-let appInstance: FirebaseApp;
-let authInstance: Auth;
-let firestoreInstance: Firestore;
+// Singletons definidos fuera para persistir entre re-renders de Next.js
+let appInstance: FirebaseApp | undefined;
+let authInstance: Auth | undefined;
+let firestoreInstance: Firestore | undefined;
 
 /**
- * Proveedor de Firebase simplificado para máxima compatibilidad y estabilidad.
+ * Proveedor de Firebase para el cliente.
+ * Centraliza la inicialización para evitar el error "INTERNAL ASSERTION FAILED" 
+ * causado por múltiples inicializaciones del caché en entornos Next.js.
  */
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
+    // 1. Inicializar la App de Firebase (Idempotente)
     if (!appInstance) {
       const existingApps = getApps();
       appInstance = existingApps.length === 0 ? initializeApp(firebaseConfig) : getApp();
     }
 
+    // 2. Inicializar el servicio de Autenticación
     if (!authInstance) {
       authInstance = getAuth(appInstance);
     }
 
+    // 3. Inicializar Firestore con Caché Persistente (Crucial para REQ-006)
     if (!firestoreInstance) {
-      firestoreInstance = getFirestore(appInstance);
+      try {
+        // Intentamos configurar el caché persistente para el modo offline multi-pestaña
+        firestoreInstance = initializeFirestore(appInstance, {
+          localCache: persistentLocalCache({
+            tabManager: persistentMultipleTabManager()
+          })
+        });
+      } catch (e) {
+        // Si initializeFirestore falla (ej. ya inicializado por HMR), recuperamos la instancia existente
+        firestoreInstance = getFirestore(appInstance);
+      }
     }
 
     return {
