@@ -15,19 +15,12 @@ import { FirestorePermissionError } from '@/firebase/errors';
 /** Utility type to add an 'id' field and sync status to a given type T. */
 export type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
 
-/**
- * Interface for the return value of the useCollection hook.
- * @template T Type of the document data.
- */
 export interface UseCollectionResult<T> {
-  data: WithId<T>[] | null; // Document data with ID, or null.
-  isLoading: boolean;       // True if loading.
-  error: FirestoreError | Error | null; // Error object, or null.
+  data: WithId<T>[] | null;
+  isLoading: boolean;
+  error: FirestoreError | Error | null;
 }
 
-/* Internal implementation of Query:
-  https://github.com/firebase/firebase-js-sdk/blob/c5f08a9bc5da0d2b0207802c972d53724ccef055/packages/firestore/src/lite-api/reference.ts#L143
-*/
 export interface InternalQuery extends Query<DocumentData> {
   _query: {
     path: {
@@ -38,19 +31,19 @@ export interface InternalQuery extends Query<DocumentData> {
 }
 
 /**
- * React hook to subscribe to a Firestore collection or query in real-time.
+ * Hook blindado para suscripciones en tiempo real.
+ * Implementa limpieza estricta para evitar errores de aserción interna (ca9).
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
 ): UseCollectionResult<T> {
-  type ResultItemType = WithId<T>;
-  type StateDataType = ResultItemType[] | null;
-
-  const [data, setData] = useState<StateDataType>(null);
+  const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (!memoizedTargetRefOrQuery) {
       setData(null);
       setIsLoading(false);
@@ -61,47 +54,51 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
+    // includeMetadataChanges: false para máxima estabilidad según requerimiento previo
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       { includeMetadataChanges: false },
       (snapshot: QuerySnapshot<DocumentData>) => {
-        const results: ResultItemType[] = [];
-        snapshot.docs.forEach((doc) => {
-          results.push({ 
-            ...(doc.data() as T), 
-            id: doc.id,
-            _hasPendingWrites: doc.metadata.hasPendingWrites
-          });
-        });
+        if (!isMounted) return;
+        
+        const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
+          ...(doc.data() as T), 
+          id: doc.id,
+          _hasPendingWrites: doc.metadata.hasPendingWrites
+        }));
+        
         setData(results);
         setError(null);
         setIsLoading(false);
       },
-      async (serverError: FirestoreError) => {
+      (serverError: FirestoreError) => {
+        if (!isMounted) return;
+
         const path: string =
           memoizedTargetRefOrQuery.type === 'collection'
             ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
           path,
-        })
+        });
 
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
+        setError(contextualError);
+        setData(null);
+        setIsLoading(false);
         errorEmitter.emit('permission-error', contextualError);
       }
     );
 
     return () => {
-      unsubscribe();
+      isMounted = false;
+      unsubscribe(); // Limpieza inmediata del listener
     };
   }, [memoizedTargetRefOrQuery]);
 
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
+    throw new Error('La referencia de Firestore no fue memorizada correctamente con useMemoFirebase');
   }
   return { data, isLoading, error };
 }
