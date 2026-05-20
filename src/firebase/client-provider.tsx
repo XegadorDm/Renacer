@@ -8,7 +8,7 @@ import {
   getFirestore,
   initializeFirestore, 
   persistentLocalCache, 
-  persistentMultipleTabManager,
+  persistentSingleTabManager,
   Firestore 
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
@@ -43,10 +43,11 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     // 3. Inicializar Firestore con Caché Persistente (Crucial para REQ-006)
     if (!firestoreInstance) {
       try {
-        // Intentamos configurar el caché persistente para el modo offline multi-pestaña
+        // Intentamos configurar el caché persistente para el modo offline
+        // Se usa persistentSingleTabManager para evitar conflictos de listeners entre pestañas
         firestoreInstance = initializeFirestore(appInstance, {
           localCache: persistentLocalCache({
-            tabManager: persistentMultipleTabManager()
+            tabManager: persistentSingleTabManager()
           })
         });
       } catch (e) {
