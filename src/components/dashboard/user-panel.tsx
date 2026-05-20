@@ -10,8 +10,7 @@ import { es } from 'date-fns/locale';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, getDocs } from 'firebase/firestore';
 import { Skeleton } from '../ui/skeleton';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ShieldAlert, Download, Database } from 'lucide-react';
+import { Download, Database, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserProfile {
@@ -74,7 +73,7 @@ export function UserPanel() {
       toast({
         variant: "destructive",
         title: "Error al exportar",
-        description: "No se pudieron obtener los datos de la base de datos.",
+        description: "No se pudieron obtener los datos de la base de datos para el respaldo.",
       });
     } finally {
       setIsExporting(false);
@@ -95,14 +94,14 @@ export function UserPanel() {
   };
 
   const isAdmin = userProfile?.role === 'admin';
-  const displayRole = userProfile?.role ? roleTranslations[userProfile.role] || userProfile.role : 'Cargando rol...';
+  const displayRole = userProfile?.role ? roleTranslations[userProfile.role] || userProfile.role : 'Cargando...';
 
   if (isUserLoading || isProfileLoading) {
       return (
           <Card>
               <CardHeader>
                   <CardTitle>Información de Usuario</CardTitle>
-                  <CardDescription>Resumen de tu sesión actual.</CardDescription>
+                  <CardDescription>Cargando perfil...</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                   <div className="flex items-center gap-4">
@@ -133,45 +132,41 @@ export function UserPanel() {
           <div>
             <h3 className="text-lg font-bold">{userProfile?.firstName} {userProfile?.lastName}</h3>
             <p className="text-sm text-muted-foreground truncate max-w-[180px]">{user?.email}</p>
-            <Badge variant="secondary" className="mt-1 bg-primary/10 text-primary border-primary/20">{displayRole}</Badge>
+            <Badge variant="secondary" className="mt-1 bg-primary/10 text-primary border-primary/20 font-bold uppercase text-[9px]">
+              {displayRole}
+            </Badge>
           </div>
         </div>
 
         {isAdmin && (
           <div className="space-y-3 pt-4 border-t">
-            <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Database className="h-4 w-4" /> Respaldo de Seguridad
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <Database className="h-3 w-3" /> Respaldo de Seguridad
             </h4>
             <Button 
               onClick={handleExportBackup} 
               disabled={isExporting}
-              className="w-full bg-accent hover:bg-accent/90 text-white font-bold"
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
             >
               <Download className="mr-2 h-4 w-4" />
               {isExporting ? "GENERANDO..." : "GENERAR RESPALDO"}
             </Button>
-            <p className="text-[10px] text-muted-foreground text-center italic">
-              Último respaldo: {lastBackup ? format(new Date(lastBackup), "d/MM/yyyy HH:mm", { locale: es }) : "Nunca"}
-            </p>
+            {lastBackup && (
+              <p className="text-[9px] text-muted-foreground flex items-center justify-center gap-1 font-medium italic">
+                <Clock className="h-2 w-2" />
+                Último respaldo: {format(new Date(lastBackup), "d/MM/yyyy HH:mm", { locale: es })}
+              </p>
+            )}
           </div>
         )}
 
-        <Alert className="bg-primary/5 border-primary/20 text-foreground py-3">
-            <ShieldAlert className="h-4 w-4 text-primary" />
-            <AlertTitle className="text-[10px] font-bold uppercase tracking-tighter">Debug de Permisos</AlertTitle>
-            <AlertDescription className="text-[10px] font-mono mt-1">
-                UID: <span className="text-primary font-bold">{user?.uid}</span><br/>
-                ROL: "<span className="text-accent font-bold underline">{userProfile?.role || 'null'}</span>"
-            </AlertDescription>
-        </Alert>
-
         <div className="space-y-2 text-sm pt-4 border-t">
           <div className="flex justify-between items-center">
-            <span className="font-medium text-muted-foreground">Fecha:</span>
+            <span className="text-xs font-medium text-muted-foreground">Fecha:</span>
             <span className="font-mono text-foreground capitalize text-[10px] bg-muted px-2 py-0.5 rounded">{formattedDate}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="font-medium text-muted-foreground">Hora:</span>
+            <span className="text-xs font-medium text-muted-foreground">Hora:</span>
             <span className="font-mono text-foreground text-[10px] bg-muted px-2 py-0.5 rounded">{formattedTime}</span>
           </div>
         </div>
