@@ -180,6 +180,18 @@ export function CasesTable({
         createdBy: authUser.uid
     });
 
+    // REQ-011: Agregar notificación automática
+    const notificationsRef = collection(firestore, 'notifications');
+    addDocumentNonBlocking(notificationsRef, {
+        message: `El caso ${selectedCase.caseNumber} cambió de estado a ${newStatus}`,
+        caseId: selectedCase.id,
+        caseNumber: selectedCase.caseNumber,
+        type: "status_change",
+        createdAt: serverTimestamp(),
+        createdBy: authUser.uid,
+        read: false
+    });
+
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
