@@ -13,7 +13,6 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { useUser } from '../provider';
 
-/** Utility type to add an 'id' field and sync status to a given type T. */
 export type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
 
 export interface UseCollectionResult<T> {
@@ -31,10 +30,6 @@ export interface InternalQuery extends Query<DocumentData> {
   }
 }
 
-/**
- * Hook de colección estabilizado.
- * includeMetadataChanges: false es necesario para evitar el error interno ca9 en entornos de desarrollo.
- */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
 ): UseCollectionResult<T> {
@@ -58,7 +53,7 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: false para evitar colisiones en el agregador de cambios interno (error ca9)
+    // includeMetadataChanges: false es CRÍTICO para evitar el error interno ca9 en Next.js
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       { includeMetadataChanges: false },
@@ -102,7 +97,7 @@ export function useCollection<T = any>(
   }, [memoizedTargetRefOrQuery, user, isUserLoading]);
 
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error('La referencia de Firestore no fue memorizada correctamente con useMemoFirebase. Esto causaría bucles de renderizado.');
+    throw new Error('Firestore reference must be memoized with useMemoFirebase');
   }
 
   return { data, isLoading, error };

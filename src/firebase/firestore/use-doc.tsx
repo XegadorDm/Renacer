@@ -20,9 +20,6 @@ export interface UseDocResult<T> {
   error: FirestoreError | Error | null;
 }
 
-/**
- * Hook de documento único estabilizado.
- */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
 ): UseDocResult<T> {
@@ -86,7 +83,7 @@ export function useDoc<T = any>(
   }, [memoizedDocRef, user, isUserLoading]);
 
   if(memoizedDocRef && !memoizedDocRef.__memo) {
-    throw new Error('La referencia de Firestore no fue memorizada correctamente con useMemoFirebase');
+    throw new Error('Firestore reference must be memoized with useMemoFirebase');
   }
 
   return { data, isLoading, error };
