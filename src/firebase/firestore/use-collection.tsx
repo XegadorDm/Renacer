@@ -32,8 +32,9 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * useCollection
- * Hook ultra-estabilizado para evitar error ca9.
- * Se asegura de cerrar listeners previos antes de abrir nuevos.
+ * Hook estabilizado para seguimiento de estado de sincronización por documento.
+ * Activa includeMetadataChanges para permitir que el badge 'PENDIENTE SYNC' 
+ * desaparezca automáticamente al recibir confirmación del servidor.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -55,16 +56,20 @@ export function useCollection<T = any>(
 
     setIsLoading(true);
 
-    // Suscripción pura sin metadatos para evitar conflicto ca9
+    // REQ-011: includeMetadataChanges es necesario para que el badge desaparezca automáticamente
+    // al pasar de escritura local a confirmación de servidor.
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
+      { includeMetadataChanges: true },
       (snapshot: QuerySnapshot<DocumentData>) => {
         if (!isMounted) return;
         
         const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
           ...(doc.data() as T), 
           id: doc.id,
-          _hasPendingWrites: snapshot.metadata.hasPendingWrites
+          // CRÍTICO: Usar el metadato del documento individual, no el del snapshot global
+          // para evitar que fallos en otras colecciones (como notifications) afecten visualmente.
+          _hasPendingWrites: doc.metadata.hasPendingWrites
         }));
         
         setData(results);

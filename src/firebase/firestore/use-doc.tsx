@@ -22,8 +22,7 @@ export interface UseDocResult<T> {
 
 /**
  * useDoc
- * Hook ultra-estabilizado para evitar error ca9.
- * Se asegura de cerrar listeners previos antes de abrir nuevos.
+ * Hook estabilizado para seguimiento de estado de sincronización.
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
@@ -47,6 +46,7 @@ export function useDoc<T = any>(
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
+      { includeMetadataChanges: true },
       (snapshot: DocumentSnapshot<DocumentData>) => {
         if (!isMounted) return;
         
