@@ -33,7 +33,7 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * Hook de colección estabilizado.
- * includeMetadataChanges: true es esencial para REQ-006 (badges de sincronización).
+ * includeMetadataChanges: false para evitar el error ca9 en entornos HMR.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -46,8 +46,6 @@ export function useCollection<T = any>(
   useEffect(() => {
     let isMounted = true;
 
-    // PROTECCIÓN: No iniciar listeners si la query es nula o el usuario no está listo.
-    // Esto evita errores de permisos durante el cambio de estado de auth.
     if (!memoizedTargetRefOrQuery || isUserLoading || !user) {
       setData(null);
       setIsLoading(false);
@@ -58,10 +56,9 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // Activamos metadatos para detectar _hasPendingWrites (REQ-006)
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      { includeMetadataChanges: true },
+      { includeMetadataChanges: false },
       (snapshot: QuerySnapshot<DocumentData>) => {
         if (!isMounted) return;
         
@@ -97,11 +94,10 @@ export function useCollection<T = any>(
 
     return () => {
       isMounted = false;
-      unsubscribe(); // Limpieza inmediata al desmontar
+      unsubscribe();
     };
   }, [memoizedTargetRefOrQuery, user, isUserLoading]);
 
-  // Validación de seguridad para asegurar que la referencia sea estable
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error('La referencia de Firestore no fue memorizada correctamente con useMemoFirebase. Esto causaría bucles de renderizado.');
   }

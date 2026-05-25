@@ -22,6 +22,7 @@ export interface UseDocResult<T> {
 
 /**
  * Hook de documento único estabilizado.
+ * includeMetadataChanges: false para evitar el error ca9 en entornos HMR.
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
@@ -46,7 +47,7 @@ export function useDoc<T = any>(
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
-      { includeMetadataChanges: true },
+      { includeMetadataChanges: false },
       (snapshot: DocumentSnapshot<DocumentData>) => {
         if (!isMounted) return;
         
