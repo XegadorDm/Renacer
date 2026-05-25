@@ -77,6 +77,7 @@ export function CasesTable({
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
+  // Estabilización de la consulta de Firestore para evitar recreaciones infinitas y error ca9
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || isUserLoading) return null;
     
@@ -100,19 +101,27 @@ export function CasesTable({
     }
 
     if (finalStartDate) {
-      const start = Timestamp.fromDate(startOfDay(parseISO(finalStartDate)));
-      constraints.push(where("createdAt", ">=", start));
+      try {
+        const start = Timestamp.fromDate(startOfDay(parseISO(finalStartDate)));
+        constraints.push(where("createdAt", ">=", start));
+      } catch (e) {
+        console.error("Invalid start date format");
+      }
     }
 
     if (endDate) {
-      const end = Timestamp.fromDate(endOfDay(parseISO(endDate)));
-      constraints.push(where("createdAt", "<=", end));
+      try {
+        const end = Timestamp.fromDate(endOfDay(parseISO(endDate)));
+        constraints.push(where("createdAt", "<=", end));
+      } catch (e) {
+        console.error("Invalid end date format");
+      }
     }
 
     constraints.push(orderBy("createdAt", "desc"));
 
     return firestoreQuery(casesCollection, ...constraints);
-  }, [firestore, authUser, isUserLoading, location, startDate, endDate, period]);
+  }, [firestore, authUser?.uid, isUserLoading, location, startDate, endDate, period]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
@@ -182,7 +191,6 @@ export function CasesTable({
         createdBy: authUser.uid
     });
 
-    // REQ-011: Agregar notificación automática
     const notificationsRef = collection(firestore, 'notifications');
     addDocumentNonBlocking(notificationsRef, {
         message: `El caso ${selectedCase.caseNumber} cambió de estado a ${newStatus}`,

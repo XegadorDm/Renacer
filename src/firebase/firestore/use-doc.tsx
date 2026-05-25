@@ -47,6 +47,7 @@ export function useDoc<T = any>(
 
     setIsLoading(true);
 
+    // IMPORTANTE: Se omiten opciones de metadatos para estabilizar el motor interno de Firestore (ca9)
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {

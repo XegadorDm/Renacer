@@ -58,7 +58,7 @@ export function useCollection<T = any>(
 
     setIsLoading(true);
 
-    // IMPORTANTE: Se omiten opciones de metadatos para estabilizar el ID ca9
+    // IMPORTANTE: Se omiten opciones de metadatos para estabilizar el motor interno de Firestore (ca9)
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
