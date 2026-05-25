@@ -55,6 +55,18 @@ interface CasesTableProps {
   setIsCallModalOpen: (open: boolean) => void;
 }
 
+/**
+ * Normaliza un string eliminando tildes, convirtiendo a minúsculas y quitando espacios.
+ */
+const normalize = (str: string) => {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+};
+
 export function CasesTable({ 
   query, 
   docQuery, 
@@ -77,18 +89,13 @@ export function CasesTable({
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
-  // Estabilización de la consulta de Firestore para evitar recreaciones infinitas y error ca9
+  // Consulta de Firestore estabilizada. 
+  // Eliminamos el filtrado de municipio por servidor para permitir normalización (tildes/mayúsculas) en el cliente.
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || isUserLoading) return null;
     
     const casesCollection = collection(firestore, 'cases');
     const constraints: any[] = [];
-
-    // Normalización de ubicación para evitar fallos por codificación URL
-    const normalizedLocation = location ? decodeURIComponent(location) : '';
-    if (normalizedLocation && normalizedLocation !== 'all') {
-      constraints.push(where("municipality", "==", normalizedLocation));
-    }
 
     let finalStartDate = startDate;
     if (!finalStartDate && period && period !== 'all') {
@@ -121,7 +128,7 @@ export function CasesTable({
     constraints.push(orderBy("createdAt", "desc"));
 
     return firestoreQuery(casesCollection, ...constraints);
-  }, [firestore, authUser?.uid, isUserLoading, location, startDate, endDate, period]);
+  }, [firestore, authUser?.uid, isUserLoading, startDate, endDate, period]);
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
@@ -134,6 +141,13 @@ export function CasesTable({
     
     let filtered = cases as WithId<Case>[];
 
+    // 1. Filtrado de Municipio (Normalizado: ignora tildes, espacios y mayúsculas)
+    if (location && location !== 'all') {
+        const normalizedLocation = normalize(decodeURIComponent(location));
+        filtered = filtered.filter(c => normalize(c.municipality) === normalizedLocation);
+    }
+
+    // 2. Búsqueda General
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(c => 
@@ -142,6 +156,7 @@ export function CasesTable({
         );
     }
 
+    // 3. Búsqueda por Cédula
     if (docQuery) {
         const normalizedSearch = docQuery.replace(/\D/g, '');
         filtered = filtered.filter(c => {
@@ -150,12 +165,13 @@ export function CasesTable({
         });
     }
 
+    // 4. Filtro Offline
     if (offlineOnly) {
       filtered = filtered.filter(c => c._hasPendingWrites === true);
     }
 
     return filtered;
-  }, [cases, query, docQuery, offlineOnly]);
+  }, [cases, query, docQuery, location, offlineOnly]);
 
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
@@ -319,7 +335,7 @@ export function CasesTable({
               ) : (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center h-48 text-muted-foreground">
-                    No se encontraron registros.
+                    No se encontraron registros en {location && location !== 'all' ? location : 'la base de datos'}.
                   </TableCell>
                 </TableRow>
               )}
