@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from "react";
@@ -6,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2, AlertCircle, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
@@ -40,7 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
-type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
+type WithId<T> = T & { id: string; _hasPendingWrites?: boolean; syncError?: boolean };
 
 interface CasesTableProps {
   query: string;
@@ -161,18 +160,23 @@ export function CasesTable({
     return filtered;
   }, [cases, query, docQuery, location, offlineOnly]);
 
+  const selectedCase = useMemo(() => {
+    if (!selectedCaseId || !cases) return null;
+    return (cases as WithId<Case>[]).find(c => c.id === selectedCaseId);
+  }, [selectedCaseId, cases]);
+
   const handleRetrySync = (c: WithId<Case>) => {
     if (!firestore || !authUser) return;
     const docRef = doc(firestore, 'cases', c.id);
     
-    const { id, _hasPendingWrites, ...caseData } = c;
+    const { id, _hasPendingWrites, syncError, ...caseData } = c;
     const retryData = {
         ...caseData,
-        syncError: false, // Limpiar bandera de error
+        syncError: false,
         updatedAt: serverTimestamp()
     };
 
-    setDocumentNonBlocking(docRef, retryData, { merge: true });
+    setDocumentNonBlocking(retryData as any, docRef, { merge: true });
     
     toast({
         title: "Reintentando sincronización",
@@ -200,13 +204,13 @@ export function CasesTable({
   };
   
   const handleRegisterNovedad = (contacted: boolean) => {
-    const selectedCase = (cases as WithId<Case>[])?.find(c => c.id === selectedCaseId);
     if (!selectedCase || !firestore || !authUser) return;
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
 
+    // 1. Guardar Novedad en subcolección
     const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
     addDocumentNonBlocking(novedadesRef, {
         mensaje: contacted ? "Llamada efectiva realizada" : "Intento de llamada sin éxito",
@@ -215,6 +219,20 @@ export function CasesTable({
         createdBy: authUser.uid
     });
 
+    // 2. Notificación automática
+    const notificationsRef = collection(firestore, 'notifications');
+    addDocumentNonBlocking(notificationsRef, {
+        message: `El caso ${selectedCase.caseNumber} cambió de estado a ${newStatus}`,
+        caseId: selectedCase.id,
+        caseNumber: selectedCase.caseNumber,
+        type: "status_change",
+        createdAt: serverTimestamp(),
+        createdBy: authUser.uid,
+        read: false,
+        userId: selectedCase.userId
+    });
+
+    // 3. Actualizar vista pública
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
@@ -230,8 +248,8 @@ export function CasesTable({
     }));
 
     toast({
-        title: "Registro Exitoso",
-        description: `La gestión se ha guardado correctamente.`,
+        title: "Gestión Registrada",
+        description: contacted ? "El usuario ha sido contactado." : "Se registró el intento fallido.",
     });
     setIsCallModalOpen(false);
   };
@@ -363,22 +381,65 @@ export function CasesTable({
         </div>
       </div>
 
+      {/* Modal Funcional de Gestión de Llamada */}
       <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden shadow-2xl">
-            <DialogHeader className="p-6 bg-primary text-primary-foreground">
-                <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
-                    <Phone className="h-7 w-7 animate-bounce" />
-                    Gestión de Llamada
-                </DialogTitle>
-            </DialogHeader>
+        <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden shadow-2xl border-none">
+            {selectedCase && (
+                <>
+                    <DialogHeader className="p-6 bg-primary text-primary-foreground">
+                        <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+                            <Phone className="h-7 w-7 animate-bounce" />
+                            Gestión de Llamada
+                        </DialogTitle>
+                    </DialogHeader>
 
-            <div className="p-6 space-y-6">
-                <p className="text-sm text-muted-foreground text-center">Para reintentar una llamada, use el botón de reintento en la fila del caso o entre a detalles.</p>
-            </div>
+                    <div className="p-6 space-y-6">
+                        <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-xl border border-primary/10">
+                            <div className="bg-primary/10 p-3 rounded-full border border-primary/20">
+                                <User className="h-10 w-10 text-primary" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Beneficiario</p>
+                                <p className="text-xl font-bold text-foreground leading-tight">{selectedCase.firstName} {selectedCase.lastName}</p>
+                                <p className="text-xs text-muted-foreground">C.C. {selectedCase.documentId} - {selectedCase.municipality}</p>
+                            </div>
+                        </div>
 
-            <DialogFooter className="flex gap-2 p-6 bg-muted/20 border-t">
-                <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="flex-1">CERRAR</Button>
-            </DialogFooter>
+                        <div className="p-5 bg-accent/5 border border-accent/20 rounded-xl space-y-4">
+                            <p className="text-[10px] text-accent uppercase font-black tracking-widest text-center">Números de Contacto</p>
+                            <div className="grid gap-3">
+                                <div className="flex flex-col items-center justify-center bg-background p-4 rounded-lg border shadow-sm">
+                                    <span className="text-3xl font-mono font-black tracking-[0.2em] text-primary">{selectedCase.phone1}</span>
+                                    <Badge variant="outline" className="mt-2 text-[9px] uppercase font-bold">Línea Principal</Badge>
+                                </div>
+                                {selectedCase.phone2 && (
+                                    <div className="flex flex-col items-center justify-center bg-background p-3 rounded-lg border border-dashed shadow-sm">
+                                        <span className="text-xl font-mono font-bold tracking-widest text-muted-foreground">{selectedCase.phone2}</span>
+                                        <Badge variant="outline" className="mt-2 text-[8px] uppercase">Línea Alternativa</Badge>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <DialogFooter className="flex flex-col sm:flex-row gap-2 p-6 bg-muted/20 border-t">
+                        <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="w-full sm:flex-1 font-bold h-12">
+                            CANCELAR
+                        </Button>
+                        <Button variant="destructive" onClick={() => handleRegisterNovedad(false)} className="w-full sm:flex-1 font-bold h-12">
+                            <XCircle className="mr-2 h-4 w-4" /> FALLIDO
+                        </Button>
+                        <Button variant="default" onClick={() => handleRegisterNovedad(true)} className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 font-bold h-12 text-white">
+                            <CheckCircle2 className="mr-2 h-4 w-4" /> EXITOSO
+                        </Button>
+                    </DialogFooter>
+                </>
+            )}
+            {!selectedCase && (
+                <div className="p-12 text-center text-muted-foreground italic">
+                    Seleccione un caso para gestionar la llamada.
+                </div>
+            )}
         </DialogContent>
       </Dialog>
 
