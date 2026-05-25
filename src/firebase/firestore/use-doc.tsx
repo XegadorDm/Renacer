@@ -23,6 +23,7 @@ export interface UseDocResult<T> {
 /**
  * useDoc
  * Hook estabilizado para evitar errores de aserción interna en Firestore.
+ * includeMetadataChanges: false es obligatorio para estabilidad.
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,

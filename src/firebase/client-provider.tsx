@@ -4,7 +4,7 @@ import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { getApps, initializeApp, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 interface FirebaseClientProviderProps {
@@ -12,11 +12,8 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * SINGLETONS DE MÓDULO: 
- * Estas variables residen fuera del ciclo de vida de React.
- * En Next.js (Desarrollo), persisten durante el Hot Module Replacement (HMR),
- * lo que evita que intentemos inicializar Firestore más de una vez con 
- * configuraciones de persistencia conflictivas (causa del error ca9).
+ * SINGLETONS GLOBALES:
+ * Estas variables residen fuera de React para persistir durante HMR.
  */
 let appInstance: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
@@ -24,29 +21,38 @@ let firestoreInstance: Firestore | undefined;
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // Evitar ejecución en el servidor (SSR)
     if (typeof window === 'undefined') {
       return { firebaseApp: null, auth: null, firestore: null };
     }
 
-    // 1. Inicializar App (Patrón Idempotente)
+    // 1. Inicializar App
     if (!appInstance) {
       const apps = getApps();
       appInstance = apps.length === 0 ? initializeApp(firebaseConfig) : getApp();
     }
     
-    // 2. Inicializar Auth (Singleton)
+    // 2. Inicializar Auth
     if (!authInstance) {
       authInstance = getAuth(appInstance);
     }
     
-    // 3. Inicializar Firestore (Singleton Directo)
-    // Usamos getFirestore() ya que es inteligente: si la app ya tiene una instancia
-    // (incluso con persistencia habilitada previamente), la devuelve tal cual.
-    // No usamos initializeFirestore aquí para evitar el error 'Unexpected state (ID: ca9)'
-    // que ocurre al intentar re-configurar la base de datos local en desarrollo.
+    // 3. Inicializar Firestore con protección contra ca9
     if (!firestoreInstance) {
-      firestoreInstance = getFirestore(appInstance);
+      try {
+        // Solo habilitamos persistencia en producción para evitar colisiones en desarrollo
+        if (process.env.NODE_ENV === 'production') {
+          firestoreInstance = initializeFirestore(appInstance, {
+            localCache: persistentLocalCache({
+              tabManager: persistentSingleTabManager()
+            })
+          });
+        } else {
+          firestoreInstance = getFirestore(appInstance);
+        }
+      } catch (e) {
+        // Si ya fue inicializado por otra parte del SDK, recuperamos la instancia existente
+        firestoreInstance = getFirestore(appInstance);
+      }
     }
     
     return { 
