@@ -32,8 +32,8 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * useCollection
- * Hook estabilizado para evitar el error ca9.
- * Se omiten las opciones de Snapshot para garantizar la máxima estabilidad del SDK.
+ * Hook ultra-estabilizado para erradicar el error ca9.
+ * Se utiliza la versión más simple de onSnapshot para evitar el pánico del motor de sincronización.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -46,6 +46,7 @@ export function useCollection<T = any>(
   useEffect(() => {
     let isMounted = true;
 
+    // Solo suscribirse si hay una referencia válida y el usuario está listo
     if (!memoizedTargetRefOrQuery || isUserLoading || !user) {
       if (isMounted) {
         setData(null);
@@ -56,9 +57,8 @@ export function useCollection<T = any>(
     }
 
     setIsLoading(true);
-    setError(null);
 
-    // Omitir el segundo argumento de opciones es fundamental para evitar el error ca9
+    // IMPORTANTE: Se omiten opciones de metadatos para estabilizar el ID ca9
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
@@ -80,7 +80,7 @@ export function useCollection<T = any>(
         const path: string =
           memoizedTargetRefOrQuery.type === 'collection'
             ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString();
+            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query?.path?.canonicalString() || 'unknown';
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',

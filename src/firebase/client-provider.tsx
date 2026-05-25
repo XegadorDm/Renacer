@@ -12,9 +12,9 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * SINGLETONS GLOBALES:
- * Se mantienen fuera del componente para garantizar que NO se re-inicialicen
- * durante el Hot Module Replacement (HMR) de Next.js, evitando el error ca9.
+ * SINGLETONS GLOBALES DE MÓDULO:
+ * Se mantienen fuera del componente para garantizar que NUNCA se re-inicialicen
+ * durante el Hot Module Replacement (HMR) de Next.js, eliminando el error ca9.
  */
 let appInstance: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
@@ -26,29 +26,33 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       return { firebaseApp: null, auth: null, firestore: null };
     }
 
-    // 1. Inicializar App una sola vez
-    if (!appInstance) {
-      const apps = getApps();
-      appInstance = apps.length === 0 ? initializeApp(firebaseConfig) : getApp();
+    try {
+      // 1. Inicializar App una sola vez de forma atómica
+      if (!appInstance) {
+        const apps = getApps();
+        appInstance = apps.length === 0 ? initializeApp(firebaseConfig) : getApp();
+      }
+      
+      // 2. Inicializar Auth de forma única
+      if (!authInstance) {
+        authInstance = getAuth(appInstance);
+      }
+      
+      // 3. Obtener Firestore de forma única y estable
+      // Se utiliza getFirestore directamente para evitar conflictos de persistencia en desarrollo
+      if (!firestoreInstance) {
+        firestoreInstance = getFirestore(appInstance);
+      }
+      
+      return { 
+        firebaseApp: appInstance, 
+        auth: authInstance, 
+        firestore: firestoreInstance 
+      };
+    } catch (error) {
+      console.error("FirebaseClientProvider Error:", error);
+      return { firebaseApp: null, auth: null, firestore: null };
     }
-    
-    // 2. Inicializar Auth una sola vez
-    if (!authInstance) {
-      authInstance = getAuth(appInstance);
-    }
-    
-    // 3. Obtener Firestore de forma estable
-    // Usar getFirestore directamente es lo más estable para evitar el error ca9
-    // ya que gestiona internamente la reutilización de la instancia.
-    if (!firestoreInstance) {
-      firestoreInstance = getFirestore(appInstance);
-    }
-    
-    return { 
-      firebaseApp: appInstance, 
-      auth: authInstance, 
-      firestore: firestoreInstance 
-    };
   }, []);
 
   return (

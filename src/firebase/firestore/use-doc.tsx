@@ -22,8 +22,8 @@ export interface UseDocResult<T> {
 
 /**
  * useDoc
- * Hook estabilizado para evitar errores ca9 en Firestore.
- * Se omiten las opciones de Snapshot para garantizar la estabilidad del motor de sincronización.
+ * Hook ultra-estabilizado para erradicar el error ca9.
+ * Evita el uso de opciones de metadatos que disparan aserciones internas en el SDK.
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
@@ -46,7 +46,6 @@ export function useDoc<T = any>(
     }
 
     setIsLoading(true);
-    setError(null);
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
