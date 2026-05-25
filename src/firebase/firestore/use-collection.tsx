@@ -30,6 +30,11 @@ export interface InternalQuery extends Query<DocumentData> {
   }
 }
 
+/**
+ * useCollection
+ * Hook estabilizado para evitar el error ca9.
+ * includeMetadataChanges se mantiene en false para máxima estabilidad del stream.
+ */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
 ): UseCollectionResult<T> {
@@ -53,7 +58,8 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: false es CRÍTICO para evitar el error interno ca9 en Next.js
+    // CRÍTICO: includeMetadataChanges debe ser false para evitar colisiones 
+    // en el motor de sincronización de Firestore durante recargas rápidas.
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       { includeMetadataChanges: false },
@@ -96,6 +102,7 @@ export function useCollection<T = any>(
     };
   }, [memoizedTargetRefOrQuery, user, isUserLoading]);
 
+  // Validación de seguridad para evitar bucles infinitos por falta de memoización
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error('Firestore reference must be memoized with useMemoFirebase');
   }

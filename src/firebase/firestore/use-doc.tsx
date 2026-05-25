@@ -20,6 +20,10 @@ export interface UseDocResult<T> {
   error: FirestoreError | Error | null;
 }
 
+/**
+ * useDoc
+ * Hook estabilizado para evitar errores de aserción interna en Firestore.
+ */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
 ): UseDocResult<T> {

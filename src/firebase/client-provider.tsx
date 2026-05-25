@@ -11,31 +11,40 @@ interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
-// Singletons globales para evitar re-inicialización por HMR en desarrollo
+/**
+ * SINGLETONS DE MÓDULO: 
+ * Estas variables residen fuera del ciclo de vida de React.
+ * En Next.js (Desarrollo), persisten durante el Hot Module Replacement (HMR),
+ * lo que evita que intentemos inicializar Firestore más de una vez con 
+ * configuraciones de persistencia conflictivas (causa del error ca9).
+ */
 let appInstance: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
 let firestoreInstance: Firestore | undefined;
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // Evitar ejecución en el servidor
+    // Evitar ejecución en el servidor (SSR)
     if (typeof window === 'undefined') {
       return { firebaseApp: null, auth: null, firestore: null };
     }
 
-    // Inicializar App una sola vez
+    // 1. Inicializar App (Patrón Idempotente)
     if (!appInstance) {
       const apps = getApps();
       appInstance = apps.length === 0 ? initializeApp(firebaseConfig) : getApp();
     }
     
-    // Inicializar Auth una sola vez
+    // 2. Inicializar Auth (Singleton)
     if (!authInstance) {
       authInstance = getAuth(appInstance);
     }
     
-    // Inicializar Firestore usando el singleton inteligente del SDK
-    // Esto previene errores de "Unexpected state (ca9)" al no forzar persistencia manual en cada render
+    // 3. Inicializar Firestore (Singleton Directo)
+    // Usamos getFirestore() ya que es inteligente: si la app ya tiene una instancia
+    // (incluso con persistencia habilitada previamente), la devuelve tal cual.
+    // No usamos initializeFirestore aquí para evitar el error 'Unexpected state (ID: ca9)'
+    // que ocurre al intentar re-configurar la base de datos local en desarrollo.
     if (!firestoreInstance) {
       firestoreInstance = getFirestore(appInstance);
     }
