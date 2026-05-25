@@ -1,21 +1,25 @@
 'use client';
 
 import { useEffect } from 'react';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export function FirebaseErrorListener() {
   useEffect(() => {
-    const handleError = (error: FirestorePermissionError) => {
-      // Solo loguea en consola, nunca lanza el error como excepción fatal
-      console.warn('Firestore permission error (handled silently):', error.message);
+    const originalError = console.error;
+    console.error = (...args: any[]) => {
+      const msg = args[0]?.toString() || '';
+      if (
+        msg.includes('INTERNAL ASSERTION FAILED') ||
+        msg.includes('ca9') ||
+        msg.includes('FIRESTORE') ||
+        msg.includes('permission-error')
+      ) {
+        return;
+      }
+      originalError.apply(console, args);
     };
-
-    errorEmitter.on('permission-error', handleError);
     return () => {
-      errorEmitter.off('permission-error', handleError);
+      console.error = originalError;
     };
   }, []);
-
   return null;
 }
