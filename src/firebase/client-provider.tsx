@@ -4,7 +4,7 @@ import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { getApps, initializeApp, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 interface FirebaseClientProviderProps {
@@ -29,7 +29,19 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       authInstance = getAuth(appInstance);
     }
     if (!firestoreInstance) {
-      firestoreInstance = getFirestore(appInstance);
+      try {
+        if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+          firestoreInstance = initializeFirestore(appInstance, {
+            localCache: persistentLocalCache({
+              tabManager: persistentSingleTabManager()
+            })
+          });
+        } else {
+          firestoreInstance = getFirestore(appInstance);
+        }
+      } catch (e) {
+        firestoreInstance = getFirestore(appInstance);
+      }
     }
     return { firebaseApp: appInstance, auth: authInstance, firestore: firestoreInstance };
   }, []);
