@@ -8,9 +8,9 @@ import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 
 interface FirebaseProviderProps {
   children: ReactNode;
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
+  firebaseApp: FirebaseApp | null;
+  firestore: Firestore | null;
+  auth: Auth | null;
 }
 
 interface UserAuthState {
@@ -24,15 +24,6 @@ export interface FirebaseContextState {
   firebaseApp: FirebaseApp | null;
   firestore: Firestore | null;
   auth: Auth | null;
-  user: User | null;
-  isUserLoading: boolean;
-  userError: Error | null;
-}
-
-export interface FirebaseServicesAndUser {
-  firebaseApp: FirebaseApp;
-  firestore: Firestore;
-  auth: Auth;
   user: User | null;
   isUserLoading: boolean;
   userError: Error | null;
@@ -60,7 +51,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   useEffect(() => {
     if (!auth) {
-      setUserAuthState({ user: null, isUserLoading: false, userError: new Error("Auth service not provided.") });
+      setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
       return;
     }
 
@@ -81,9 +72,9 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const servicesAvailable = !!(firebaseApp && firestore && auth);
     return {
       areServicesAvailable: servicesAvailable,
-      firebaseApp: servicesAvailable ? firebaseApp : null,
-      firestore: servicesAvailable ? firestore : null,
-      auth: servicesAvailable ? auth : null,
+      firebaseApp: firebaseApp || null,
+      firestore: firestore || null,
+      auth: auth || null,
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
@@ -98,27 +89,17 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   );
 };
 
-export const useFirebase = (): FirebaseServicesAndUser => {
+export const useFirebase = (): FirebaseContextState => {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
-  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
-    throw new Error('Firebase core services not available.');
-  }
-  return {
-    firebaseApp: context.firebaseApp,
-    firestore: context.firestore,
-    auth: context.auth,
-    user: context.user,
-    isUserLoading: context.isUserLoading,
-    userError: context.userError,
-  };
+  return context;
 };
 
-export const useAuth = (): Auth => useFirebase().auth;
-export const useFirestore = (): Firestore => useFirebase().firestore;
-export const useFirebaseApp = (): FirebaseApp => useFirebase().firebaseApp;
+export const useAuth = (): Auth | null => useFirebase().auth;
+export const useFirestore = (): Firestore | null => useFirebase().firestore;
+export const useFirebaseApp = (): FirebaseApp | null => useFirebase().firebaseApp;
 
 type MemoFirebase<T> = T & {__memo?: boolean};
 
@@ -127,7 +108,6 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
   
   if (typeof memoized !== 'object' || memoized === null) return memoized;
   
-  // Forzamos la marca de memoización
   Object.defineProperty(memoized, '__memo', {
     value: true,
     configurable: true,
@@ -139,6 +119,10 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
 }
 
 export const useUser = (): UserHookResult => {
-  const { user, isUserLoading, userError } = useFirebase();
-  return { user, isUserLoading, userError };
+  const context = useFirebase();
+  return { 
+    user: context.user, 
+    isUserLoading: context.isUserLoading, 
+    userError: context.userError 
+  };
 };

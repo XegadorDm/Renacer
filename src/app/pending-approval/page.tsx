@@ -11,7 +11,7 @@ import type { UserProfile } from '@/lib/case-schema';
 
 export default function PendingApprovalPage() {
   const { user, isUserLoading } = useUser();
-  const { auth } = useAuth();
+  const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
 
@@ -20,7 +20,7 @@ export default function PendingApprovalPage() {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+  const { data: userProfile } = useDoc<UserProfile>(userDocRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {

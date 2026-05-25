@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -32,7 +33,7 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * Hook blindado para suscripciones en tiempo real.
- * Implementa limpieza estricta para evitar errores de aserción interna (ca9).
+ * includeMetadataChanges: false para evitar conflictos de estado interno (ca9).
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -54,7 +55,7 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: false para máxima estabilidad según requerimiento previo
+    // Desactivamos metadatos para máxima estabilidad en el motor de persistencia
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       { includeMetadataChanges: false },
@@ -93,7 +94,7 @@ export function useCollection<T = any>(
 
     return () => {
       isMounted = false;
-      unsubscribe(); // Limpieza inmediata del listener
+      unsubscribe(); // Limpieza forzada e inmediata
     };
   }, [memoizedTargetRefOrQuery]);
 

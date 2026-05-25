@@ -134,7 +134,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              {/* REQ-004: Acceso administrativo restaurado */}
               {isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild tooltip="Personal">
