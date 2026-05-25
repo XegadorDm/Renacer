@@ -33,7 +33,7 @@ export interface InternalQuery extends Query<DocumentData> {
 /**
  * useCollection
  * Hook ultra-estabilizado para erradicar el error ca9.
- * Se utiliza la versión más simple de onSnapshot para evitar el pánico del motor de sincronización.
+ * Se utiliza la versión más pura de onSnapshot sin opciones de metadatos.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -67,7 +67,7 @@ export function useCollection<T = any>(
         const results: WithId<T>[] = snapshot.docs.map(doc => ({ 
           ...(doc.data() as T), 
           id: doc.id,
-          _hasPendingWrites: doc.metadata.hasPendingWrites
+          _hasPendingWrites: snapshot.metadata.hasPendingWrites
         }));
         
         setData(results);

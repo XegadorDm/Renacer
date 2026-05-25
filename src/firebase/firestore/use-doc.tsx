@@ -23,7 +23,7 @@ export interface UseDocResult<T> {
 /**
  * useDoc
  * Hook ultra-estabilizado para erradicar el error ca9.
- * Evita el uso de opciones de metadatos que disparan aserciones internas en el SDK.
+ * Se utiliza la versión más pura de onSnapshot sin opciones de metadatos.
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,

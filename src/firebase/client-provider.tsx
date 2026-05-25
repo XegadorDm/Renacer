@@ -39,7 +39,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       }
       
       // 3. Obtener Firestore de forma única y estable
-      // Se utiliza getFirestore directamente para evitar conflictos de persistencia en desarrollo
+      // Se utiliza getFirestore directamente para máxima estabilidad con HMR
       if (!firestoreInstance) {
         firestoreInstance = getFirestore(appInstance);
       }
