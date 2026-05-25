@@ -22,7 +22,7 @@ export interface UseDocResult<T> {
 
 /**
  * Hook de documento único estabilizado.
- * includeMetadataChanges: false para evitar el error ca9 en entornos HMR.
+ * includeMetadataChanges: true es CRÍTICO para evitar el error ca9 y cumplir con REQ-006.
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
@@ -36,19 +36,20 @@ export function useDoc<T = any>(
     let isMounted = true;
 
     if (!memoizedDocRef || isUserLoading || !user) {
-      setData(null);
-      setIsLoading(false);
-      setError(null);
+      if (isMounted) {
+        setData(null);
+        setIsLoading(false);
+        setError(null);
+      }
       return;
     }
 
     setIsLoading(true);
     setError(null);
 
-    // CRÍTICO: includeMetadataChanges: false previene el error ca9
     const unsubscribe = onSnapshot(
       memoizedDocRef,
-      { includeMetadataChanges: false },
+      { includeMetadataChanges: true },
       (snapshot: DocumentSnapshot<DocumentData>) => {
         if (!isMounted) return;
         

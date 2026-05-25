@@ -11,9 +11,10 @@ interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
-let appInstance: FirebaseApp;
-let authInstance: Auth;
-let firestoreInstance: Firestore;
+// Singletons fuera del componente para evitar re-inicialización por HMR
+let appInstance: FirebaseApp | undefined;
+let authInstance: Auth | undefined;
+let firestoreInstance: Firestore | undefined;
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
@@ -25,27 +26,30 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       const existingApps = getApps();
       appInstance = existingApps.length === 0 ? initializeApp(firebaseConfig) : getApp();
     }
+    
     if (!authInstance) {
       authInstance = getAuth(appInstance);
     }
+    
     if (!firestoreInstance) {
       try {
-        // En producción usamos persistencia avanzada, en desarrollo getFirestore básico para evitar ca9
-        if (process.env.NODE_ENV === 'production') {
-          firestoreInstance = initializeFirestore(appInstance, {
-            localCache: persistentLocalCache({
-              tabManager: persistentSingleTabManager()
-            })
-          });
-        } else {
-          firestoreInstance = getFirestore(appInstance);
-        }
+        // En producción y desarrollo usamos la configuración más estable para Next.js
+        firestoreInstance = initializeFirestore(appInstance, {
+          localCache: persistentLocalCache({
+            tabManager: persistentSingleTabManager()
+          })
+        });
       } catch (e) {
-        // Fallback si initializeFirestore falla (ej: ya inicializado)
+        // Si ya fue inicializado (error común en HMR), recuperamos la instancia existente
         firestoreInstance = getFirestore(appInstance);
       }
     }
-    return { firebaseApp: appInstance, auth: authInstance, firestore: firestoreInstance };
+    
+    return { 
+      firebaseApp: appInstance, 
+      auth: authInstance, 
+      firestore: firestoreInstance 
+    };
   }, []);
 
   return (
