@@ -19,10 +19,11 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, Settings, Users, Loader2, Mail, PhoneCall } from "lucide-react";
+import { Home, LogOut, Settings, Users, Loader2, Mail, PhoneCall, UserCog } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { doc, setDoc } from "firebase/firestore";
 import type { UserProfile } from "@/lib/case-schema";
+import { isCoreAdmin } from "@/lib/core-admins";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -37,34 +38,41 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // Asegurar que el perfil del usuario exista para evitar errores de permisos
+  // REQ-004: Asegurar que el perfil exista y respetar el flujo de aprobación
   useEffect(() => {
     if (user && firestore && !isProfileLoading && !userProfile) {
+      const isCore = isCoreAdmin(user.email);
       const userRef = doc(firestore, 'users', user.uid);
       setDoc(userRef, {
         id: user.uid,
         email: user.email,
         firstName: user.displayName?.split(' ')[0] || 'Usuario',
         lastName: user.displayName?.split(' ')[1] || 'Renacer',
-        role: 'case-worker',
-        status: 'approved', 
+        role: isCore ? 'admin' : 'case-worker',
+        status: isCore ? 'approved' : 'pending', 
         createdAt: new Date().toISOString()
       }, { merge: true }).catch(err => console.error("Error auto-creating user:", err));
     }
   }, [user, userProfile, isProfileLoading, firestore]);
 
+  // REQ-004: Control de acceso por estado de aprobación
   useEffect(() => {
+    if (!isUserLoading && user && !isProfileLoading && userProfile) {
+      if (userProfile.status === 'pending' && !isCoreAdmin(user.email)) {
+        router.replace('/pending-approval');
+      }
+    }
     if (!isUserLoading && !user) {
       router.replace('/login');
     }
-  }, [isUserLoading, user, router]);
+  }, [isUserLoading, user, userProfile, isProfileLoading, router]);
 
-  if (isUserLoading || !user) {
+  if (isUserLoading || isProfileLoading || (user && !userProfile)) {
     return (
         <div className="flex items-center justify-center min-h-screen">
             <div className="flex flex-col items-center gap-4">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                <p className="text-sm font-medium text-muted-foreground">Iniciando sesión...</p>
+                <p className="text-sm font-medium text-muted-foreground">Cargando plataforma...</p>
             </div>
         </div>
     )
@@ -81,10 +89,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     if (userProfile?.firstName && userProfile?.lastName) {
       return `${userProfile.firstName[0]}${userProfile.lastName[0]}`.toUpperCase();
     }
-    return user.email?.[0].toUpperCase() || 'U';
+    return user?.email?.[0].toUpperCase() || 'U';
   }
 
   const iconClasses = "h-5 w-5 text-black shrink-0";
+  const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(user?.email);
 
   return (
     <SidebarProvider>
@@ -124,6 +133,15 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              {/* REQ-004: Acceso administrativo restaurado */}
+              {isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Personal">
+                      <Link href="/dashboard/users"><UserCog className={iconClasses}/><span>Personal</span></Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarContent>
           <SidebarFooter>
@@ -144,13 +162,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="overflow-hidden rounded-full h-9 w-9">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/40/40`} alt="Avatar" />
+                    <AvatarImage src={user?.photoURL || `https://picsum.photos/seed/${user?.uid}/40/40`} alt="Avatar" />
                     <AvatarFallback>{getInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{userProfile?.firstName || user.email}</DropdownMenuLabel>
+                <DropdownMenuLabel>{userProfile?.firstName || user?.email}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>Configuración</DropdownMenuItem>
                 <DropdownMenuItem>Soporte</DropdownMenuItem>
