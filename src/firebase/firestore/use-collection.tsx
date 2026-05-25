@@ -32,8 +32,8 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * useCollection
- * Hook ultra-estabilizado para erradicar el error ca9.
- * Se utiliza la versión más pura de onSnapshot sin opciones de metadatos.
+ * Hook ultra-estabilizado.
+ * IMPORTANTE: Se omiten opciones de metadatos para reducir la complejidad interna del SDK (ca9).
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -46,7 +46,6 @@ export function useCollection<T = any>(
   useEffect(() => {
     let isMounted = true;
 
-    // Solo suscribirse si hay una referencia válida y el usuario está listo
     if (!memoizedTargetRefOrQuery || isUserLoading || !user) {
       if (isMounted) {
         setData(null);
@@ -58,7 +57,7 @@ export function useCollection<T = any>(
 
     setIsLoading(true);
 
-    // IMPORTANTE: Se omiten opciones de metadatos para estabilizar el motor interno de Firestore (ca9)
+    // Suscripción PURA: Sin includeMetadataChanges para aislar errores de persistencia.
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {

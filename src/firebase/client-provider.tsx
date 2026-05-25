@@ -12,9 +12,8 @@ interface FirebaseClientProviderProps {
 }
 
 /**
- * SINGLETONS GLOBALES DE MÓDULO:
- * Se mantienen fuera del componente para garantizar que NUNCA se re-inicialicen
- * durante el Hot Module Replacement (HMR) de Next.js, eliminando el error ca9.
+ * SINGLETONS DE MÓDULO:
+ * Se mantienen fuera del componente para evitar re-inicializaciones durante HMR.
  */
 let appInstance: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
@@ -22,24 +21,25 @@ let firestoreInstance: Firestore | undefined;
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
+    // Evitar ejecución en el servidor
     if (typeof window === 'undefined') {
       return { firebaseApp: null, auth: null, firestore: null };
     }
 
     try {
-      // 1. Inicializar App una sola vez de forma atómica
+      // 1. Inicializar App (una sola vez)
       if (!appInstance) {
         const apps = getApps();
         appInstance = apps.length === 0 ? initializeApp(firebaseConfig) : getApp();
       }
       
-      // 2. Inicializar Auth de forma única
+      // 2. Inicializar Auth
       if (!authInstance) {
         authInstance = getAuth(appInstance);
       }
       
-      // 3. Obtener Firestore de forma única y estable
-      // Se utiliza getFirestore directamente para máxima estabilidad con HMR
+      // 3. Obtener Firestore (SIN persistencia, SIN initializeFirestore personalizado)
+      // Usamos getFirestore(app) directamente para asegurar que no hay configuración de caché local activa.
       if (!firestoreInstance) {
         firestoreInstance = getFirestore(appInstance);
       }
@@ -50,7 +50,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
         firestore: firestoreInstance 
       };
     } catch (error) {
-      console.error("FirebaseClientProvider Error:", error);
+      console.error("FirebaseClientProvider: Error durante la inicialización minimalista:", error);
       return { firebaseApp: null, auth: null, firestore: null };
     }
   }, []);

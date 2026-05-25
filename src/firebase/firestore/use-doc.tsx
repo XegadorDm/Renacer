@@ -22,8 +22,8 @@ export interface UseDocResult<T> {
 
 /**
  * useDoc
- * Hook ultra-estabilizado para erradicar el error ca9.
- * Se utiliza la versión más pura de onSnapshot sin opciones de metadatos.
+ * Hook ultra-estabilizado.
+ * IMPORTANTE: Se omiten opciones de metadatos para reducir la complejidad interna del SDK (ca9).
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
@@ -47,7 +47,7 @@ export function useDoc<T = any>(
 
     setIsLoading(true);
 
-    // IMPORTANTE: Se omiten opciones de metadatos para estabilizar el motor interno de Firestore (ca9)
+    // Suscripción PURA: Sin includeMetadataChanges para aislar errores de persistencia.
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
