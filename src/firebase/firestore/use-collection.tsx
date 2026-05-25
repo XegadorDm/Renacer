@@ -33,7 +33,7 @@ export interface InternalQuery extends Query<DocumentData> {
 /**
  * useCollection
  * Hook estabilizado para evitar el error ca9.
- * includeMetadataChanges: false es CRÍTICO para evitar el error INTERNAL ASSERTION FAILED.
+ * Se omiten las opciones de Snapshot para garantizar la máxima estabilidad del SDK.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -58,10 +58,9 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: false es la configuración más estable para evitar errores ca9
+    // Omitir el segundo argumento de opciones es fundamental para evitar el error ca9
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      { includeMetadataChanges: false },
       (snapshot: QuerySnapshot<DocumentData>) => {
         if (!isMounted) return;
         

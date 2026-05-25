@@ -38,7 +38,8 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     }
     
     // 3. Obtener Firestore de forma estable
-    // getFirestore es idempotente y recupera la instancia existente si ya fue creada
+    // Usar getFirestore directamente es lo más estable para evitar el error ca9
+    // ya que gestiona internamente la reutilización de la instancia.
     if (!firestoreInstance) {
       firestoreInstance = getFirestore(appInstance);
     }

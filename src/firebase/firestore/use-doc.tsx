@@ -23,7 +23,7 @@ export interface UseDocResult<T> {
 /**
  * useDoc
  * Hook estabilizado para evitar errores ca9 en Firestore.
- * includeMetadataChanges: false garantiza la estabilidad del Watch stream.
+ * Se omiten las opciones de Snapshot para garantizar la estabilidad del motor de sincronización.
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
@@ -50,7 +50,6 @@ export function useDoc<T = any>(
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
-      { includeMetadataChanges: false },
       (snapshot: DocumentSnapshot<DocumentData>) => {
         if (!isMounted) return;
         
