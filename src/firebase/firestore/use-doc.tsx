@@ -45,6 +45,7 @@ export function useDoc<T = any>(
     setIsLoading(true);
     setError(null);
 
+    // CRÍTICO: includeMetadataChanges: false previene el error ca9
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       { includeMetadataChanges: false },

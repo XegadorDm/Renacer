@@ -30,7 +30,8 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     }
     if (!firestoreInstance) {
       try {
-        if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+        // En producción usamos persistencia avanzada, en desarrollo getFirestore básico para evitar ca9
+        if (process.env.NODE_ENV === 'production') {
           firestoreInstance = initializeFirestore(appInstance, {
             localCache: persistentLocalCache({
               tabManager: persistentSingleTabManager()
@@ -40,6 +41,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
           firestoreInstance = getFirestore(appInstance);
         }
       } catch (e) {
+        // Fallback si initializeFirestore falla (ej: ya inicializado)
         firestoreInstance = getFirestore(appInstance);
       }
     }

@@ -56,6 +56,7 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
+    // CRÍTICO: includeMetadataChanges: false previene el error ca9
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       { includeMetadataChanges: false },
