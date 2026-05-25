@@ -33,7 +33,7 @@ export interface InternalQuery extends Query<DocumentData> {
 
 /**
  * Hook de colección estabilizado.
- * includeMetadataChanges: true es CRÍTICO para evitar el error ca9 y cumplir con REQ-006.
+ * includeMetadataChanges: false es necesario para evitar el error interno ca9 en entornos de desarrollo.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -46,8 +46,6 @@ export function useCollection<T = any>(
   useEffect(() => {
     let isMounted = true;
 
-    // No suscribir si no hay query o si el usuario no está autenticado aún
-    // Esto evita estados inconsistentes en el watch stream
     if (!memoizedTargetRefOrQuery || isUserLoading || !user) {
       if (isMounted) {
         setData(null);
@@ -60,11 +58,10 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: true permite al SDK gestionar correctamente el estado del documento
-    // y evita que el agregador de cambios interno entre en pánico (error ca9)
+    // includeMetadataChanges: false para evitar colisiones en el agregador de cambios interno (error ca9)
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      { includeMetadataChanges: true },
+      { includeMetadataChanges: false },
       (snapshot: QuerySnapshot<DocumentData>) => {
         if (!isMounted) return;
         

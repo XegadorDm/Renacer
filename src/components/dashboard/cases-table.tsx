@@ -83,8 +83,10 @@ export function CasesTable({
     const casesCollection = collection(firestore, 'cases');
     const constraints: any[] = [];
 
-    if (location && location !== 'all') {
-      constraints.push(where("municipality", "==", location));
+    // Normalización de ubicación para evitar fallos por codificación URL
+    const normalizedLocation = location ? decodeURIComponent(location) : '';
+    if (normalizedLocation && normalizedLocation !== 'all') {
+      constraints.push(where("municipality", "==", normalizedLocation));
     }
 
     let finalStartDate = startDate;

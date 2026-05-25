@@ -33,14 +33,15 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     
     if (!firestoreInstance) {
       try {
-        // En producción y desarrollo usamos la configuración más estable para Next.js
+        // En Next.js 15/HMR, initializeFirestore puede fallar si ya existe una conexión persistente.
+        // Solo intentamos inicializar con caché si no existe una instancia previa.
         firestoreInstance = initializeFirestore(appInstance, {
           localCache: persistentLocalCache({
             tabManager: persistentSingleTabManager()
           })
         });
       } catch (e) {
-        // Si ya fue inicializado (error común en HMR), recuperamos la instancia existente
+        // Fallback seguro al singleton inteligente del SDK
         firestoreInstance = getFirestore(appInstance);
       }
     }
