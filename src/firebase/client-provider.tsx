@@ -4,7 +4,7 @@ import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
 import { getApps, initializeApp, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore, initializeFirestore, persistentLocalCache, persistentSingleTabManager } from 'firebase/firestore';
+import { getFirestore, Firestore } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 interface FirebaseClientProviderProps {
@@ -13,7 +13,8 @@ interface FirebaseClientProviderProps {
 
 /**
  * SINGLETONS GLOBALES:
- * Estas variables residen fuera de React para persistir durante HMR.
+ * Se mantienen fuera del componente para garantizar que NO se re-inicialicen
+ * durante el Hot Module Replacement (HMR) de Next.js, evitando el error ca9.
  */
 let appInstance: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
@@ -25,34 +26,21 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       return { firebaseApp: null, auth: null, firestore: null };
     }
 
-    // 1. Inicializar App
+    // 1. Inicializar App una sola vez
     if (!appInstance) {
       const apps = getApps();
       appInstance = apps.length === 0 ? initializeApp(firebaseConfig) : getApp();
     }
     
-    // 2. Inicializar Auth
+    // 2. Inicializar Auth una sola vez
     if (!authInstance) {
       authInstance = getAuth(appInstance);
     }
     
-    // 3. Inicializar Firestore con protección contra ca9
+    // 3. Obtener Firestore de forma estable
+    // getFirestore es idempotente y recupera la instancia existente si ya fue creada
     if (!firestoreInstance) {
-      try {
-        // Solo habilitamos persistencia en producción para evitar colisiones en desarrollo
-        if (process.env.NODE_ENV === 'production') {
-          firestoreInstance = initializeFirestore(appInstance, {
-            localCache: persistentLocalCache({
-              tabManager: persistentSingleTabManager()
-            })
-          });
-        } else {
-          firestoreInstance = getFirestore(appInstance);
-        }
-      } catch (e) {
-        // Si ya fue inicializado por otra parte del SDK, recuperamos la instancia existente
-        firestoreInstance = getFirestore(appInstance);
-      }
+      firestoreInstance = getFirestore(appInstance);
     }
     
     return { 

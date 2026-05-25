@@ -22,8 +22,8 @@ export interface UseDocResult<T> {
 
 /**
  * useDoc
- * Hook estabilizado para evitar errores de aserción interna en Firestore.
- * includeMetadataChanges: false es obligatorio para estabilidad.
+ * Hook estabilizado para evitar errores ca9 en Firestore.
+ * includeMetadataChanges: false garantiza la estabilidad del Watch stream.
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,

@@ -33,7 +33,7 @@ export interface InternalQuery extends Query<DocumentData> {
 /**
  * useCollection
  * Hook estabilizado para evitar el error ca9.
- * includeMetadataChanges: false es CRÍTICO para la estabilidad en Next.js.
+ * includeMetadataChanges: false es CRÍTICO para evitar el error INTERNAL ASSERTION FAILED.
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -46,7 +46,6 @@ export function useCollection<T = any>(
   useEffect(() => {
     let isMounted = true;
 
-    // Solo iniciamos el listener si el usuario está autenticado y la query es válida
     if (!memoizedTargetRefOrQuery || isUserLoading || !user) {
       if (isMounted) {
         setData(null);
@@ -59,7 +58,7 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // includeMetadataChanges: false evita el error de aserción interna ca9
+    // includeMetadataChanges: false es la configuración más estable para evitar errores ca9
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       { includeMetadataChanges: false },
