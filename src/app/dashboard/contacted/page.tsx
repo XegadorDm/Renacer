@@ -190,8 +190,9 @@ export default function ContactedUsersPage() {
         caseNumber: selectedCase.caseNumber,
         type: "status_change",
         createdAt: serverTimestamp(),
-        createdBy: authUser.uid,
-        read: false
+        createdBy: authUser.uid || 'system',
+        read: false,
+        userId: selectedCase.userId || authUser.uid || null
     });
 
     const normalized = selectedCase.documentId.replace(/\D/g, '');

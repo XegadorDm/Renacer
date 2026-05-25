@@ -176,7 +176,7 @@ export function CasesTable({
         updatedAt: serverTimestamp()
     };
 
-    setDocumentNonBlocking(retryData as any, docRef, { merge: true });
+    setDocumentNonBlocking(docRef, retryData as any, { merge: true });
     
     toast({
         title: "Reintentando sincronización",
@@ -227,9 +227,9 @@ export function CasesTable({
         caseNumber: selectedCase.caseNumber,
         type: "status_change",
         createdAt: serverTimestamp(),
-        createdBy: authUser.uid,
+        createdBy: authUser.uid || 'system',
         read: false,
-        userId: selectedCase.userId
+        userId: selectedCase.userId || authUser.uid || null
     });
 
     // 3. Actualizar vista pública
