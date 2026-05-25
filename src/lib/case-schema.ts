@@ -28,6 +28,7 @@ export interface Case {
     userId: string;
     createdAt: any; 
     members: { [uid: string]: 'owner' | 'editor' | 'viewer' };
+    syncError?: boolean; // Campo para rastrear errores de sincronización local
 }
 
 export interface PublicCaseStatus {

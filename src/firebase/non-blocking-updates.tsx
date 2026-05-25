@@ -1,3 +1,4 @@
+
 'use client';
     
 import {
@@ -22,19 +23,19 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
       'permission-error',
       new FirestorePermissionError({
         path: docRef.path,
-        operation: 'write', // or 'create'/'update' based on options
+        operation: 'write',
         requestResourceData: data,
       })
-    )
+    );
+    // Marcar error en caché local para visibilidad del usuario
+    updateDoc(docRef, { syncError: true }).catch(() => {});
   })
-  // Execution continues immediately
 }
 
 
 /**
  * Initiates an addDoc operation for a collection reference.
  * Does NOT await the write operation internally.
- * Returns the Promise for the new doc ref, but typically not awaited by caller.
  */
 export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
   const promise = addDoc(colRef, data)
@@ -66,7 +67,9 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
           operation: 'update',
           requestResourceData: data,
         })
-      )
+      );
+      // Marcar error en caché local
+      updateDoc(docRef, { syncError: true }).catch(() => {});
     });
 }
 
@@ -84,6 +87,8 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
           path: docRef.path,
           operation: 'delete',
         })
-      )
+      );
+      // Marcar error en caché local antes de que el objeto desaparezca si es posible
+      updateDoc(docRef, { syncError: true }).catch(() => {});
     });
 }

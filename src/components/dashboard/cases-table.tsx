@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
@@ -5,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2 } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
@@ -55,9 +56,6 @@ interface CasesTableProps {
   setIsCallModalOpen: (open: boolean) => void;
 }
 
-/**
- * Normaliza un string eliminando tildes, convirtiendo a minúsculas y quitando espacios.
- */
 const normalize = (str: string) => {
   if (!str) return "";
   return str
@@ -89,8 +87,6 @@ export function CasesTable({
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
-  // Consulta de Firestore estabilizada. 
-  // Eliminamos el filtrado de municipio por servidor para permitir normalización (tildes/mayúsculas) en el cliente.
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || isUserLoading) return null;
     
@@ -132,22 +128,16 @@ export function CasesTable({
 
   const { data: cases, isLoading } = useCollection<Case>(casesQuery);
   
-  const selectedCase = useMemo(() => {
-    return (cases as WithId<Case>[])?.find(c => c.id === selectedCaseId) || null;
-  }, [cases, selectedCaseId]);
-
   const filteredCases = useMemo(() => {
     if (!cases) return [];
     
     let filtered = cases as WithId<Case>[];
 
-    // 1. Filtrado de Municipio (Normalizado: ignora tildes, espacios y mayúsculas)
     if (location && location !== 'all') {
         const normalizedLocation = normalize(decodeURIComponent(location));
         filtered = filtered.filter(c => normalize(c.municipality) === normalizedLocation);
     }
 
-    // 2. Búsqueda General
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(c => 
@@ -156,7 +146,6 @@ export function CasesTable({
         );
     }
 
-    // 3. Búsqueda por Cédula
     if (docQuery) {
         const normalizedSearch = docQuery.replace(/\D/g, '');
         filtered = filtered.filter(c => {
@@ -165,13 +154,31 @@ export function CasesTable({
         });
     }
 
-    // 4. Filtro Offline
     if (offlineOnly) {
-      filtered = filtered.filter(c => c._hasPendingWrites === true);
+      filtered = filtered.filter(c => c._hasPendingWrites === true || c.syncError === true);
     }
 
     return filtered;
   }, [cases, query, docQuery, location, offlineOnly]);
+
+  const handleRetrySync = (c: WithId<Case>) => {
+    if (!firestore || !authUser) return;
+    const docRef = doc(firestore, 'cases', c.id);
+    
+    const { id, _hasPendingWrites, ...caseData } = c;
+    const retryData = {
+        ...caseData,
+        syncError: false, // Limpiar bandera de error
+        updatedAt: serverTimestamp()
+    };
+
+    setDocumentNonBlocking(docRef, retryData, { merge: true });
+    
+    toast({
+        title: "Reintentando sincronización",
+        description: `Se está intentando enviar el caso ${c.caseNumber} nuevamente.`,
+    });
+  };
 
   const confirmDelete = () => {
     if (!caseToDelete || !firestore) return;
@@ -193,6 +200,7 @@ export function CasesTable({
   };
   
   const handleRegisterNovedad = (contacted: boolean) => {
+    const selectedCase = (cases as WithId<Case>[])?.find(c => c.id === selectedCaseId);
     if (!selectedCase || !firestore || !authUser) return;
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
@@ -205,17 +213,6 @@ export function CasesTable({
         tipo: 'llamada',
         createdAt: new Date().toISOString(),
         createdBy: authUser.uid
-    });
-
-    const notificationsRef = collection(firestore, 'notifications');
-    addDocumentNonBlocking(notificationsRef, {
-        message: `El caso ${selectedCase.caseNumber} cambió de estado a ${newStatus}`,
-        caseId: selectedCase.id,
-        caseNumber: selectedCase.caseNumber,
-        type: "status_change",
-        createdAt: serverTimestamp(),
-        createdBy: authUser.uid,
-        read: false
     });
 
     const normalized = selectedCase.documentId.replace(/\D/g, '');
@@ -258,7 +255,7 @@ export function CasesTable({
                 <TableHead className="w-[60px]"></TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
-                <TableHead className="font-bold text-primary min-w-[130px] uppercase text-[10px] tracking-widest">Estado Sync</TableHead>
+                <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">Estado Sync</TableHead>
                 <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">Registro</TableHead>
                 <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Seguimiento</TableHead>
                 <TableHead className="text-right font-bold pr-6 text-primary uppercase text-[10px] tracking-widest">Acciones</TableHead>
@@ -278,15 +275,37 @@ export function CasesTable({
                     <TableCell className="font-mono text-[10px] text-muted-foreground">{c.caseNumber}</TableCell>
                     <TableCell className="font-bold uppercase text-xs">{c.firstName} {c.lastName}</TableCell>
                     <TableCell>
-                        {c._hasPendingWrites ? (
-                          <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-[9px] font-bold py-0 h-5">
-                            <CloudUpload className="mr-1 h-3 w-3" /> PENDIENTE SYNC
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-[9px] font-bold py-0 h-5">
-                            <CheckCircle2 className="mr-1 h-3 w-3" /> SINCRONIZADO
-                          </Badge>
-                        )}
+                        <div className="flex flex-col gap-1">
+                            {c.syncError ? (
+                                <>
+                                    <Badge variant="destructive" className="bg-red-600 text-white text-[9px] font-bold py-0 h-5 w-fit">
+                                        <AlertCircle className="mr-1 h-3 w-3" /> ERROR DE SYNC
+                                    </Badge>
+                                    <p className="text-[8px] text-red-600 font-bold leading-tight max-w-[120px]">
+                                        No fue posible sincronizar el registro. Verifique la conexión e intente nuevamente.
+                                    </p>
+                                    <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        className="h-6 text-[8px] font-black mt-1 border-red-600 text-red-600 hover:bg-red-50 w-fit"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRetrySync(c as WithId<Case>);
+                                        }}
+                                    >
+                                        <RefreshCw className="mr-1 h-2 w-2" /> REINTENTAR
+                                    </Button>
+                                </>
+                            ) : c._hasPendingWrites ? (
+                                <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-[9px] font-bold py-0 h-5 w-fit">
+                                    <CloudUpload className="mr-1 h-3 w-3" /> PENDIENTE SYNC
+                                </Badge>
+                            ) : (
+                                <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-[9px] font-bold py-0 h-5 w-fit">
+                                    <CheckCircle2 className="mr-1 h-3 w-3" /> SINCRONIZADO
+                                </Badge>
+                            )}
+                        </div>
                     </TableCell>
                     <TableCell className="text-[10px] font-mono">
                         {c.createdAt ? (
@@ -354,28 +373,11 @@ export function CasesTable({
             </DialogHeader>
 
             <div className="p-6 space-y-6">
-                {selectedCase && (
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-xl border border-primary/10">
-                            <User className="h-10 w-10 text-primary bg-primary/10 p-2 rounded-full" />
-                            <div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-black">Beneficiario</p>
-                                <p className="text-xl font-bold">{selectedCase.firstName} {selectedCase.lastName}</p>
-                            </div>
-                        </div>
-
-                        <div className="p-5 bg-accent/5 border border-accent/20 rounded-xl text-center">
-                            <p className="text-[10px] text-accent uppercase font-black mb-3">Línea de Contacto</p>
-                            <span className="text-3xl font-mono font-black text-primary tracking-widest">{selectedCase.phone1}</span>
-                        </div>
-                    </div>
-                )}
+                <p className="text-sm text-muted-foreground text-center">Para reintentar una llamada, use el botón de reintento en la fila del caso o entre a detalles.</p>
             </div>
 
             <DialogFooter className="flex gap-2 p-6 bg-muted/20 border-t">
-                <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="flex-1">CANCELAR</Button>
-                <Button variant="destructive" onClick={() => handleRegisterNovedad(false)} className="flex-1">FALLIDO</Button>
-                <Button variant="default" onClick={() => handleRegisterNovedad(true)} className="flex-1 bg-green-600 hover:bg-green-700">EXITOSO</Button>
+                <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="flex-1">CERRAR</Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
