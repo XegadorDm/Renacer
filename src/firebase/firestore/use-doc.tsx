@@ -10,8 +10,9 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useUser } from '../provider';
 
-type WithId<T> = T & { id: string };
+type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
 
 export interface UseDocResult<T> {
   data: WithId<T> | null;
@@ -20,8 +21,7 @@ export interface UseDocResult<T> {
 }
 
 /**
- * Hook blindado para suscripción a documento único.
- * Evita fugas de memoria y errores de estado interno.
+ * Hook de documento único estabilizado.
  */
 export function useDoc<T = any>(
   memoizedDocRef: (DocumentReference<DocumentData> & {__memo?: boolean}) | null | undefined,
@@ -29,11 +29,12 @@ export function useDoc<T = any>(
   const [data, setData] = useState<WithId<T> | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
     let isMounted = true;
 
-    if (!memoizedDocRef) {
+    if (!memoizedDocRef || isUserLoading || !user) {
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -45,11 +46,16 @@ export function useDoc<T = any>(
 
     const unsubscribe = onSnapshot(
       memoizedDocRef,
+      { includeMetadataChanges: true },
       (snapshot: DocumentSnapshot<DocumentData>) => {
         if (!isMounted) return;
         
         if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
+          setData({ 
+              ...(snapshot.data() as T), 
+              id: snapshot.id,
+              _hasPendingWrites: snapshot.metadata.hasPendingWrites 
+          });
         } else {
           setData(null);
         }
@@ -73,9 +79,9 @@ export function useDoc<T = any>(
 
     return () => {
       isMounted = false;
-      unsubscribe(); // Limpieza inmediata
+      unsubscribe();
     };
-  }, [memoizedDocRef]);
+  }, [memoizedDocRef, user, isUserLoading]);
 
   if(memoizedDocRef && !memoizedDocRef.__memo) {
     throw new Error('La referencia de Firestore no fue memorizada correctamente con useMemoFirebase');

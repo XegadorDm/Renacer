@@ -2,28 +2,39 @@
 
 import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-import { getApps, initializeApp, getApp, FirebaseApp } from 'firebase/app';
+import { getApps, initializeApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  Firestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentSingleTabManager 
+} from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
 }
 
-// Variables globales fuera del ciclo de React para evitar el error ca9
+/**
+ * SINGLETONS GLOBALES
+ * Mantenemos las instancias fuera del ciclo de vida de React para evitar 
+ * el error ca9 (Internal Assertion Failed) causado por reinicializaciones del HMR.
+ */
 let appInstance: FirebaseApp | undefined;
 let authInstance: Auth | undefined;
 let firestoreInstance: Firestore | undefined;
 
 export function FirebaseClientProvider({ children }: FirebaseClientProviderProps) {
   const firebaseServices = useMemo(() => {
-    // En el servidor devolvemos null
-    if (typeof window === 'undefined') return null;
+    if (typeof window === 'undefined') {
+        return { firebaseApp: null, auth: null, firestore: null };
+    }
 
     if (!appInstance) {
-      const existingApps = getApps();
-      appInstance = existingApps.length === 0 ? initializeApp(firebaseConfig) : existingApps[0];
+      const apps = getApps();
+      appInstance = apps.length > 0 ? apps[0] : initializeApp(firebaseConfig);
     }
 
     if (!authInstance) {
@@ -31,7 +42,18 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     }
 
     if (!firestoreInstance) {
-      firestoreInstance = getFirestore(appInstance);
+      // Configuramos la persistencia de forma explícita una sola vez.
+      // Usamos SingleTabManager para máxima estabilidad en navegadores móviles/escritorio.
+      try {
+          firestoreInstance = initializeFirestore(appInstance, {
+            localCache: persistentLocalCache({
+                tabManager: persistentSingleTabManager()
+            })
+          });
+      } catch (e) {
+          // Si ya está inicializado, recuperamos la instancia existente
+          firestoreInstance = getFirestore(appInstance);
+      }
     }
 
     return { 
@@ -41,12 +63,11 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     };
   }, []);
 
-  // Siempre envolvemos en el proveedor para evitar errores de contexto en SSR
   return (
     <FirebaseProvider
-      firebaseApp={firebaseServices?.firebaseApp || null}
-      auth={firebaseServices?.auth || null}
-      firestore={firebaseServices?.firestore || null}
+      firebaseApp={firebaseServices.firebaseApp}
+      auth={firebaseServices.auth}
+      firestore={firebaseServices.firestore}
     >
       {children}
     </FirebaseProvider>

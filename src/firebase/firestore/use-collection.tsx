@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useUser } from '../provider';
 
 /** Utility type to add an 'id' field and sync status to a given type T. */
 export type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
@@ -32,8 +32,8 @@ export interface InternalQuery extends Query<DocumentData> {
 }
 
 /**
- * Hook blindado para suscripciones en tiempo real.
- * includeMetadataChanges: false para evitar conflictos de estado interno (ca9).
+ * Hook de colección estabilizado.
+ * includeMetadataChanges: true es esencial para REQ-006 (badges de sincronización).
  */
 export function useCollection<T = any>(
     memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
@@ -41,11 +41,14 @@ export function useCollection<T = any>(
   const [data, setData] = useState<WithId<T>[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
     let isMounted = true;
 
-    if (!memoizedTargetRefOrQuery) {
+    // PROTECCIÓN: No iniciar listeners si la query es nula o el usuario no está listo.
+    // Esto evita errores de permisos durante el cambio de estado de auth.
+    if (!memoizedTargetRefOrQuery || isUserLoading || !user) {
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -55,10 +58,10 @@ export function useCollection<T = any>(
     setIsLoading(true);
     setError(null);
 
-    // Desactivamos metadatos para máxima estabilidad en el motor de persistencia
+    // Activamos metadatos para detectar _hasPendingWrites (REQ-006)
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
-      { includeMetadataChanges: false },
+      { includeMetadataChanges: true },
       (snapshot: QuerySnapshot<DocumentData>) => {
         if (!isMounted) return;
         
@@ -94,12 +97,14 @@ export function useCollection<T = any>(
 
     return () => {
       isMounted = false;
-      unsubscribe(); // Limpieza forzada e inmediata
+      unsubscribe(); // Limpieza inmediata al desmontar
     };
-  }, [memoizedTargetRefOrQuery]);
+  }, [memoizedTargetRefOrQuery, user, isUserLoading]);
 
+  // Validación de seguridad para asegurar que la referencia sea estable
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
-    throw new Error('La referencia de Firestore no fue memorizada correctamente con useMemoFirebase');
+    throw new Error('La referencia de Firestore no fue memorizada correctamente con useMemoFirebase. Esto causaría bucles de renderizado.');
   }
+
   return { data, isLoading, error };
 }

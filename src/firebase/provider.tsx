@@ -50,6 +50,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   });
 
   useEffect(() => {
+    // Si no hay instancia de auth (ej. en el servidor), salimos temprano.
     if (!auth) {
       setUserAuthState(prev => ({ ...prev, isUserLoading: false }));
       return;
@@ -92,7 +93,16 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 export const useFirebase = (): FirebaseContextState => {
   const context = useContext(FirebaseContext);
   if (context === undefined) {
-    throw new Error('useFirebase must be used within a FirebaseProvider.');
+    // Fallback seguro para SSR y entornos no inicializados
+    return {
+        areServicesAvailable: false,
+        firebaseApp: null,
+        firestore: null,
+        auth: null,
+        user: null,
+        isUserLoading: true,
+        userError: null
+    };
   }
   return context;
 };
@@ -103,6 +113,12 @@ export const useFirebaseApp = (): FirebaseApp | null => useFirebase().firebaseAp
 
 type MemoFirebase<T> = T & {__memo?: boolean};
 
+/**
+ * useMemoFirebase
+ * Utilidad CRÍTICA para estabilizar referencias de Firestore.
+ * Sin esto, los hooks useCollection/useDoc entrarían en bucles infinitos
+ * al recibir una nueva instancia de Query en cada render.
+ */
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
   const memoized = useMemo(factory, deps);
   
