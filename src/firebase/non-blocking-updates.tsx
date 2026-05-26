@@ -1,4 +1,3 @@
-
 'use client';
     
 import {
@@ -11,14 +10,27 @@ import {
   SetOptions,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
-import {FirestorePermissionError} from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
+
+/**
+ * Función auxiliar para marcar un documento con error de sincronización
+ */
+function markSyncError(docRef: DocumentReference, error: any, currentAttempts: number = 0) {
+    updateDoc(docRef, {
+        syncStatus: 'error',
+        syncError: true,
+        syncAttempts: (currentAttempts || 0) + 1,
+        lastSyncError: error.message || 'Error de permisos o red persistente',
+        lastSyncAt: new Date().toISOString()
+    }).catch(() => {});
+}
 
 /**
  * Initiates a setDoc operation for a document reference.
  * Does NOT await the write operation internally.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
-  setDoc(docRef, data, options).catch(error => {
+  setDoc(docRef, { ...data, syncStatus: 'pending' }, options).catch(error => {
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
@@ -27,9 +39,8 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
         requestResourceData: data,
       })
     );
-    // Marcar error en caché local para visibilidad del usuario
-    updateDoc(docRef, { syncError: true }).catch(() => {});
-  })
+    markSyncError(docRef, error, data.syncAttempts);
+  });
 }
 
 
@@ -58,7 +69,7 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
  * Does NOT await the write operation internally.
  */
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
-  updateDoc(docRef, data)
+  updateDoc(docRef, { ...data, syncStatus: 'pending' })
     .catch(error => {
       errorEmitter.emit(
         'permission-error',
@@ -68,8 +79,7 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
           requestResourceData: data,
         })
       );
-      // Marcar error en caché local
-      updateDoc(docRef, { syncError: true }).catch(() => {});
+      markSyncError(docRef, error, data.syncAttempts);
     });
 }
 
@@ -88,7 +98,7 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
           operation: 'delete',
         })
       );
-      // Marcar error en caché local antes de que el objeto desaparezca si es posible
-      updateDoc(docRef, { syncError: true }).catch(() => {});
+      // Intentamos marcar el error antes de la eliminación si falló la regla
+      updateDoc(docRef, { syncStatus: 'error', syncError: true }).catch(() => {});
     });
 }

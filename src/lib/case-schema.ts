@@ -1,13 +1,13 @@
-
 export type CaseStatus = "Sin novedad" | "CONTACTADO" | "NO CONTACTADO";
 export type UserStatus = "pending" | "approved" | "rejected";
+export type SyncStatus = "synced" | "pending" | "error";
 
 export interface Case {
     id: string;
     caseNumber: string;
     firstName: string;
     lastName: string;
-    documentId: string; // Cédula tal como se ingresa
+    documentId: string;
     internalId?: string;
     ethnicGroup: string;
     maritalStatus: string;
@@ -28,11 +28,17 @@ export interface Case {
     userId: string;
     createdAt: any; 
     members: { [uid: string]: 'owner' | 'editor' | 'viewer' };
-    syncError?: boolean; // Campo para rastrear errores de sincronización local
+    
+    // Capa de Recuperación de Sincronización
+    syncStatus?: SyncStatus;
+    syncAttempts?: number;
+    lastSyncError?: string;
+    lastSyncAt?: any;
+    syncError?: boolean; // Retrocompatibilidad visual
 }
 
 export interface PublicCaseStatus {
-    documentId: string; // Cédula normalizada (solo números)
+    documentId: string;
     caseNumber: string;
     firstName: string;
     lastName: string;

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2, AlertCircle, RefreshCw, XCircle } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2, AlertCircle, RefreshCw, XCircle, Info } from "lucide-react";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
@@ -37,9 +37,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 
-type WithId<T> = T & { id: string; _hasPendingWrites?: boolean; syncError?: boolean };
+type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
 
 interface CasesTableProps {
   query: string;
@@ -154,7 +155,7 @@ export function CasesTable({
     }
 
     if (offlineOnly) {
-      filtered = filtered.filter(c => c._hasPendingWrites === true || c.syncError === true);
+      filtered = filtered.filter(c => c._hasPendingWrites === true || c.syncStatus === 'error' || c.syncError === true);
     }
 
     return filtered;
@@ -169,9 +170,12 @@ export function CasesTable({
     if (!firestore || !authUser) return;
     const docRef = doc(firestore, 'cases', c.id);
     
-    const { id, _hasPendingWrites, syncError, ...caseData } = c;
+    const { id, _hasPendingWrites, ...caseData } = c;
+    
+    // Capa de recuperación manual: Limpiamos estados de error y reintentamos
     const retryData = {
         ...caseData,
+        syncStatus: 'pending',
         syncError: false,
         updatedAt: serverTimestamp()
     };
@@ -180,7 +184,7 @@ export function CasesTable({
     
     toast({
         title: "Reintentando sincronización",
-        description: `Se está intentando enviar el caso ${c.caseNumber} nuevamente.`,
+        description: `Enviando nuevamente el caso ${c.caseNumber}... Intentos previos: ${c.syncAttempts || 0}`,
     });
   };
 
@@ -210,7 +214,6 @@ export function CasesTable({
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { status: newStatus });
 
-    // 1. Guardar Novedad en subcolección
     const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
     addDocumentNonBlocking(novedadesRef, {
         mensaje: contacted ? "Llamada efectiva realizada" : "Intento de llamada sin éxito",
@@ -219,7 +222,6 @@ export function CasesTable({
         createdBy: authUser.uid
     });
 
-    // 2. Notificación automática
     const notificationsRef = collection(firestore, 'notifications');
     addDocumentNonBlocking(notificationsRef, {
         message: `El caso ${selectedCase.caseNumber} cambió de estado a ${newStatus}`,
@@ -232,7 +234,6 @@ export function CasesTable({
         userId: selectedCase.userId || authUser.uid || null
     });
 
-    // 3. Actualizar vista pública
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
@@ -273,7 +274,7 @@ export function CasesTable({
                 <TableHead className="w-[60px]"></TableHead>
                 <TableHead className="font-bold text-primary min-w-[120px] uppercase text-[10px] tracking-widest">N° Caso</TableHead>
                 <TableHead className="font-bold text-primary min-w-[200px] uppercase text-[10px] tracking-widest">Beneficiario</TableHead>
-                <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">Estado Sync</TableHead>
+                <TableHead className="font-bold text-primary min-w-[160px] uppercase text-[10px] tracking-widest">Estado Sync</TableHead>
                 <TableHead className="font-bold text-primary min-w-[150px] uppercase text-[10px] tracking-widest">Registro</TableHead>
                 <TableHead className="font-bold text-primary text-center min-w-[180px] uppercase text-[10px] tracking-widest">Seguimiento</TableHead>
                 <TableHead className="text-right font-bold pr-6 text-primary uppercase text-[10px] tracking-widest">Acciones</TableHead>
@@ -294,26 +295,39 @@ export function CasesTable({
                     <TableCell className="font-bold uppercase text-xs">{c.firstName} {c.lastName}</TableCell>
                     <TableCell>
                         <div className="flex flex-col gap-1">
-                            {c.syncError ? (
-                                <>
-                                    <Badge variant="destructive" className="bg-red-600 text-white text-[9px] font-bold py-0 h-5 w-fit">
-                                        <AlertCircle className="mr-1 h-3 w-3" /> ERROR DE SYNC
-                                    </Badge>
-                                    <p className="text-[8px] text-red-600 font-bold leading-tight max-w-[120px]">
-                                        No fue posible sincronizar el registro. Verifique la conexión e intente nuevamente.
-                                    </p>
-                                    <Button 
-                                        size="sm" 
-                                        variant="outline" 
-                                        className="h-6 text-[8px] font-black mt-1 border-red-600 text-red-600 hover:bg-red-50 w-fit"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRetrySync(c as WithId<Case>);
-                                        }}
-                                    >
-                                        <RefreshCw className="mr-1 h-2 w-2" /> REINTENTAR
-                                    </Button>
-                                </>
+                            {c.syncStatus === 'error' || c.syncError ? (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="flex flex-col gap-1 cursor-help">
+                                                <Badge variant="destructive" className="bg-red-600 text-white text-[9px] font-bold py-0 h-5 w-fit animate-pulse">
+                                                    <AlertCircle className="mr-1 h-3 w-3" /> ERROR_SYNC
+                                                </Badge>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline" 
+                                                    className="h-6 text-[8px] font-black border-red-600 text-red-600 hover:bg-red-50 w-fit"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleRetrySync(c as WithId<Case>);
+                                                    }}
+                                                >
+                                                    <RefreshCw className="mr-1 h-2 w-2" /> REINTENTAR
+                                                </Button>
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-[250px] p-3 text-[10px]">
+                                            <div className="flex items-start gap-2 text-destructive font-bold mb-1">
+                                                <XCircle className="h-4 w-4" />
+                                                <span>ERROR DE CARGA</span>
+                                            </div>
+                                            <p className="mb-2">No fue posible sincronizar el registro. Verifique la conexión e intente nuevamente.</p>
+                                            <div className="pt-2 border-t opacity-70">
+                                                <strong>Causa:</strong> {c.lastSyncError || "Error desconocido"}
+                                            </div>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             ) : c._hasPendingWrites ? (
                                 <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-[9px] font-bold py-0 h-5 w-fit">
                                     <CloudUpload className="mr-1 h-3 w-3" /> PENDIENTE SYNC
@@ -381,7 +395,6 @@ export function CasesTable({
         </div>
       </div>
 
-      {/* Modal Funcional de Gestión de Llamada */}
       <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
         <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden shadow-2xl border-none">
             {selectedCase && (
