@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2, AlertCircle, RefreshCw, XCircle, Info } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2, AlertCircle, RefreshCw, XCircle } from "lucide-react";
 import { Button } from "../ui/button";
-import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, updateDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
-import { collection, query as firestoreQuery, where, doc, Timestamp, orderBy, serverTimestamp } from "firebase/firestore";
+import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
+import { collection, query as firestoreQuery, where, doc, Timestamp, serverTimestamp } from "firebase/firestore";
 import type { Case } from "@/lib/case-schema";
 import { format, subDays, parseISO, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
@@ -56,6 +56,7 @@ interface CasesTableProps {
   setIsCallModalOpen: (open: boolean) => void;
 }
 
+// Normalización robusta para comparaciones de texto
 const normalize = (str: string) => {
   if (!str) return "";
   return str
@@ -87,12 +88,14 @@ export function CasesTable({
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>({});
 
+  // Query de Firestore mínima absoluta para evitar exclusión de registros antiguos
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || isUserLoading) return null;
     
     const casesCollection = collection(firestore, 'cases');
     const constraints: any[] = [];
 
+    // Filtros de fecha básicos (si existen)
     let finalStartDate = startDate;
     if (!finalStartDate && period && period !== 'all') {
         const now = new Date();
@@ -107,22 +110,18 @@ export function CasesTable({
       try {
         const start = Timestamp.fromDate(startOfDay(parseISO(finalStartDate)));
         constraints.push(where("createdAt", ">=", start));
-      } catch (e) {
-        console.error("Invalid start date format");
-      }
+      } catch (e) {}
     }
 
     if (endDate) {
       try {
         const end = Timestamp.fromDate(endOfDay(parseISO(endDate)));
         constraints.push(where("createdAt", "<=", end));
-      } catch (e) {
-        console.error("Invalid end date format");
-      }
+      } catch (e) {}
     }
 
-    constraints.push(orderBy("createdAt", "desc"));
-
+    // IMPORTANTE: No usamos orderBy ni where sobre campos que puedan faltar en registros antiguos
+    // El ordenamiento y filtrado por ubicación se hace en memoria.
     return firestoreQuery(casesCollection, ...constraints);
   }, [firestore, authUser?.uid, isUserLoading, startDate, endDate, period]);
 
@@ -131,21 +130,25 @@ export function CasesTable({
   const filteredCases = useMemo(() => {
     if (!cases) return [];
     
-    let filtered = cases as WithId<Case>[];
+    // Clonamos para no mutar el array original
+    let filtered = [...cases] as WithId<Case>[];
 
+    // 1. Filtrado por Municipio (Normalizado y Robusto)
     if (location && location !== 'all') {
         const normalizedLocation = normalize(decodeURIComponent(location));
-        filtered = filtered.filter(c => normalize(c.municipality) === normalizedLocation);
+        filtered = filtered.filter(c => normalize(c.municipality || "") === normalizedLocation);
     }
 
+    // 2. Filtrado por Búsqueda General
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(c => 
             `${c.firstName || ''} ${c.lastName || ''}`.toLowerCase().includes(searchTerm) || 
-            c.caseNumber?.toLowerCase().includes(searchTerm)
+            (c.caseNumber || "").toLowerCase().includes(searchTerm)
         );
     }
 
+    // 3. Filtrado por Cédula (Solo números)
     if (docQuery) {
         const normalizedSearch = docQuery.replace(/\D/g, '');
         filtered = filtered.filter(c => {
@@ -154,9 +157,25 @@ export function CasesTable({
         });
     }
 
+    // 4. Filtrado Offline / Errores (En memoria) - Tratamos undefined como synced
     if (offlineOnly) {
-      filtered = filtered.filter(c => c._hasPendingWrites === true || c.syncStatus === 'error' || c.syncError === true);
+      filtered = filtered.filter(c => 
+        c._hasPendingWrites === true || 
+        c.syncStatus === 'error' || 
+        c.syncError === true
+      );
     }
+
+    // 5. Ordenamiento en memoria (Más robusto para datos inconsistentes)
+    filtered.sort((a, b) => {
+        const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate().getTime() : 
+                     (typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : 
+                     (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0));
+        const dateB = b.createdAt instanceof Timestamp ? b.createdAt.toDate().getTime() : 
+                     (typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : 
+                     (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0));
+        return dateB - dateA;
+    });
 
     return filtered;
   }, [cases, query, docQuery, location, offlineOnly]);
@@ -170,21 +189,22 @@ export function CasesTable({
     if (!firestore || !authUser) return;
     const docRef = doc(firestore, 'cases', c.id);
     
-    const { id, _hasPendingWrites, ...caseData } = c;
-    
-    // Capa de recuperación manual: Limpiamos estados de error y reintentamos
+    // Limpiamos estados de error y reintentamos
     const retryData = {
-        ...caseData,
+        ...c,
         syncStatus: 'pending',
         syncError: false,
         updatedAt: serverTimestamp()
     };
+    // Eliminamos campos internos de UI antes de enviar
+    delete (retryData as any).id;
+    delete (retryData as any)._hasPendingWrites;
 
     setDocumentNonBlocking(docRef, retryData as any, { merge: true });
     
     toast({
         title: "Reintentando sincronización",
-        description: `Enviando nuevamente el caso ${c.caseNumber}... Intentos previos: ${c.syncAttempts || 0}`,
+        description: `Enviando nuevamente el caso ${c.caseNumber}...`,
     });
   };
 
@@ -344,7 +364,7 @@ export function CasesTable({
                              format(
                                 c.createdAt instanceof Timestamp ? c.createdAt.toDate() : 
                                 (typeof c.createdAt === 'string' ? parseISO(c.createdAt) : 
-                                (c.createdAt.toDate ? c.createdAt.toDate() : new Date())), 
+                                (c.createdAt?.toDate ? c.createdAt.toDate() : new Date())), 
                                 "dd/MM/yyyy HH:mm", 
                                 { locale: es }
                             )
