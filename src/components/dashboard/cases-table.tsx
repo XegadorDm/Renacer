@@ -120,8 +120,6 @@ export function CasesTable({
       } catch (e) {}
     }
 
-    // IMPORTANTE: No usamos orderBy ni where sobre campos que puedan faltar en registros antiguos
-    // El ordenamiento y filtrado por ubicación se hace en memoria.
     return firestoreQuery(casesCollection, ...constraints);
   }, [firestore, authUser?.uid, isUserLoading, startDate, endDate, period]);
 
@@ -130,10 +128,9 @@ export function CasesTable({
   const filteredCases = useMemo(() => {
     if (!cases) return [];
     
-    // Clonamos para no mutar el array original
     let filtered = [...cases] as WithId<Case>[];
 
-    // 1. Filtrado por Municipio (Normalizado y Robusto)
+    // 1. Filtrado por Municipio
     if (location && location !== 'all') {
         const normalizedLocation = normalize(decodeURIComponent(location));
         filtered = filtered.filter(c => normalize(c.municipality || "") === normalizedLocation);
@@ -148,7 +145,7 @@ export function CasesTable({
         );
     }
 
-    // 3. Filtrado por Cédula (Solo números)
+    // 3. Filtrado por Cédula
     if (docQuery) {
         const normalizedSearch = docQuery.replace(/\D/g, '');
         filtered = filtered.filter(c => {
@@ -157,7 +154,7 @@ export function CasesTable({
         });
     }
 
-    // 4. Filtrado Offline / Errores (En memoria) - Tratamos undefined como synced
+    // 4. Filtrado Offline
     if (offlineOnly) {
       filtered = filtered.filter(c => 
         c._hasPendingWrites === true || 
@@ -166,7 +163,7 @@ export function CasesTable({
       );
     }
 
-    // 5. Ordenamiento en memoria (Más robusto para datos inconsistentes)
+    // 5. Ordenamiento en memoria
     filtered.sort((a, b) => {
         const dateA = a.createdAt instanceof Timestamp ? a.createdAt.toDate().getTime() : 
                      (typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : 
@@ -189,18 +186,15 @@ export function CasesTable({
     if (!firestore || !authUser) return;
     const docRef = doc(firestore, 'cases', c.id);
     
-    // Limpiamos estados de error y reintentamos
+    // Limpiamos estados de error internos y reintentamos el guardado normal
+    const { id, _hasPendingWrites, syncStatus, syncError, lastSyncError, lastSyncAt, syncAttempts, ...cleanData } = c as any;
+    
     const retryData = {
-        ...c,
-        syncStatus: 'pending',
-        syncError: false,
+        ...cleanData,
         updatedAt: serverTimestamp()
     };
-    // Eliminamos campos internos de UI antes de enviar
-    delete (retryData as any).id;
-    delete (retryData as any)._hasPendingWrites;
 
-    setDocumentNonBlocking(docRef, retryData as any, { merge: true });
+    setDocumentNonBlocking(docRef, retryData, { merge: true });
     
     toast({
         title: "Reintentando sincronización",
@@ -320,7 +314,7 @@ export function CasesTable({
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <div className="flex flex-col gap-1 cursor-help">
-                                                <Badge variant="destructive" className="bg-red-600 text-white text-[9px] font-bold py-0 h-5 w-fit animate-pulse">
+                                                <Badge variant="destructive" className="bg-red-600 text-white text-[9px] font-bold py-0 h-5 w-fit">
                                                     <AlertCircle className="mr-1 h-3 w-3" /> ERROR_SYNC
                                                 </Badge>
                                                 <Button 
@@ -342,9 +336,11 @@ export function CasesTable({
                                                 <span>ERROR DE CARGA</span>
                                             </div>
                                             <p className="mb-2">No fue posible sincronizar el registro. Verifique la conexión e intente nuevamente.</p>
-                                            <div className="pt-2 border-t opacity-70">
-                                                <strong>Causa:</strong> {c.lastSyncError || "Error desconocido"}
-                                            </div>
+                                            {c.lastSyncError && (
+                                                <div className="pt-2 border-t opacity-70">
+                                                    <strong>Causa:</strong> {c.lastSyncError}
+                                                </div>
+                                            )}
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>

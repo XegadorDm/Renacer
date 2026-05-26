@@ -13,24 +13,11 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
- * Función auxiliar para marcar un documento con error de sincronización
- */
-function markSyncError(docRef: DocumentReference, error: any, currentAttempts: number = 0) {
-    updateDoc(docRef, {
-        syncStatus: 'error',
-        syncError: true,
-        syncAttempts: (currentAttempts || 0) + 1,
-        lastSyncError: error.message || 'Error de permisos o red persistente',
-        lastSyncAt: new Date().toISOString()
-    }).catch(() => {});
-}
-
-/**
  * Initiates a setDoc operation for a document reference.
  * Does NOT await the write operation internally.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
-  setDoc(docRef, { ...data, syncStatus: 'pending' }, options).catch(error => {
+  setDoc(docRef, data, options).catch(error => {
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
@@ -39,7 +26,7 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
         requestResourceData: data,
       })
     );
-    markSyncError(docRef, error, data.syncAttempts);
+    console.error("Firestore Set Error:", error);
   });
 }
 
@@ -59,6 +46,7 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
           requestResourceData: data,
         })
       )
+      console.error("Firestore Add Error:", error);
     });
   return promise;
 }
@@ -69,7 +57,7 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
  * Does NOT await the write operation internally.
  */
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
-  updateDoc(docRef, { ...data, syncStatus: 'pending' })
+  updateDoc(docRef, data)
     .catch(error => {
       errorEmitter.emit(
         'permission-error',
@@ -79,7 +67,7 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
           requestResourceData: data,
         })
       );
-      markSyncError(docRef, error, data.syncAttempts);
+      console.error("Firestore Update Error:", error);
     });
 }
 
@@ -98,7 +86,6 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
           operation: 'delete',
         })
       );
-      // Intentamos marcar el error antes de la eliminación si falló la regla
-      updateDoc(docRef, { syncStatus: 'error', syncError: true }).catch(() => {});
+      console.error("Firestore Delete Error:", error);
     });
 }
