@@ -13,8 +13,8 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
- * Initiates a setDoc operation for a document reference.
- * Does NOT await the write operation internally.
+ * Realiza un setDoc limpio sin modificar el payload.
+ * Permite que Firestore gestione la persistencia local y sincronización.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
   setDoc(docRef, data, options).catch(error => {
@@ -30,14 +30,11 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
   });
 }
 
-
 /**
- * Initiates an addDoc operation for a collection reference.
- * Does NOT await the write operation internally.
+ * Realiza un addDoc limpio.
  */
 export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
-  const promise = addDoc(colRef, data)
-    .catch(error => {
+  return addDoc(colRef, data).catch(error => {
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
@@ -45,20 +42,16 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
           operation: 'create',
           requestResourceData: data,
         })
-      )
+      );
       console.error("Firestore Add Error:", error);
     });
-  return promise;
 }
 
-
 /**
- * Initiates an updateDoc operation for a document reference.
- * Does NOT await the write operation internally.
+ * Realiza un updateDoc limpio.
  */
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
-  updateDoc(docRef, data)
-    .catch(error => {
+  updateDoc(docRef, data).catch(error => {
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
@@ -71,14 +64,11 @@ export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) 
     });
 }
 
-
 /**
- * Initiates a deleteDoc operation for a document reference.
- * Does NOT await the write operation internally.
+ * Realiza un deleteDoc limpio.
  */
 export function deleteDocumentNonBlocking(docRef: DocumentReference) {
-  deleteDoc(docRef)
-    .catch(error => {
+  deleteDoc(docRef).catch(error => {
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
