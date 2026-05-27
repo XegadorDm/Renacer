@@ -157,7 +157,12 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
               : `Datos de ${values.firstName} guardados localmente. Se sincronizarán automáticamente al recuperar la conexión.`,
         });
         
-        router.push(isEditMode ? `/dashboard/cases/${caseData.id}` : `/dashboard/cases?location=${values.municipality}`);
+        // CORRECCIÓN: Encode de parámetros para evitar ERR_FAILED con caracteres especiales
+        const targetUrl = isEditMode 
+          ? `/dashboard/cases/${caseData.id}` 
+          : `/dashboard/cases?location=${encodeURIComponent(values.municipality)}`;
+          
+        router.push(targetUrl);
 
     } catch (e) {
         toast({
@@ -165,7 +170,6 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             title: "Error al guardar",
             description: "No se pudo procesar la solicitud."
         });
-    } finally {
         setIsSubmitting(false);
     }
   }

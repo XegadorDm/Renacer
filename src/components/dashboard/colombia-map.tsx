@@ -15,7 +15,8 @@ export function ColombiaMap({ userRole }: { userRole?: string }) {
   ];
 
   const createHref = (regionName: string) => {
-    let href = `/dashboard/cases?location=${regionName}`;
+    // CORRECCIÓN: Encode de parámetros para evitar problemas de navegación con caracteres especiales
+    let href = `/dashboard/cases?location=${encodeURIComponent(regionName)}`;
     if (userRole) {
       href += `&role=${userRole}`;
     }
