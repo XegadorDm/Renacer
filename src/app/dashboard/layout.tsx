@@ -19,7 +19,7 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Home, LogOut, Settings, Users, Loader2, Mail, PhoneCall, UserCog } from "lucide-react";
+import { Home, LogOut, Settings, Users, Loader2, Mail, PhoneCall, UserCog, Database } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
 import { doc, setDoc } from "firebase/firestore";
 import type { UserProfile } from "@/lib/case-schema";
@@ -38,7 +38,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
-  // REQ-004: Asegurar que el perfil exista y respetar el flujo de aprobación
   useEffect(() => {
     if (user && firestore && !isProfileLoading && !userProfile) {
       const isCore = isCoreAdmin(user.email);
@@ -55,7 +54,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [user, userProfile, isProfileLoading, firestore]);
 
-  // REQ-004: Control de acceso por estado de aprobación
   useEffect(() => {
     if (!isUserLoading && user && !isProfileLoading && userProfile) {
       if (userProfile.status === 'pending' && !isCoreAdmin(user.email)) {
@@ -135,11 +133,18 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </SidebarMenuItem>
 
               {isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild tooltip="Personal">
-                      <Link href="/dashboard/users"><UserCog className={iconClasses}/><span>Personal</span></Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Personal">
+                        <Link href="/dashboard/users"><UserCog className={iconClasses}/><span>Personal</span></Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Copias de Seguridad">
+                        <Link href="/dashboard/backups"><Database className={iconClasses}/><span>Backups</span></Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </>
               )}
             </SidebarMenu>
           </SidebarContent>
