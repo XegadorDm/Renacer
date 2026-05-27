@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -21,6 +21,7 @@ import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import type { Case } from '@/lib/case-schema';
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 const formSchema = z.object({
   firstName: z.string()
@@ -64,6 +65,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
   const { user } = useUser();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   
   const isEditMode = !!caseData;
 
@@ -157,12 +159,17 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
               : `Datos de ${values.firstName} guardados localmente. Se sincronizarán automáticamente al recuperar la conexión.`,
         });
         
-        // CORRECCIÓN: Encode de parámetros para evitar ERR_FAILED con caracteres especiales
-        const targetUrl = isEditMode 
-          ? `/dashboard/cases/${caseData.id}` 
-          : `/dashboard/cases?location=${encodeURIComponent(values.municipality)}`;
-          
-        router.push(targetUrl);
+        // REQ: Si está offline, NO hacemos navegación automática para evitar ERR_FAILED
+        if (isOnline) {
+            const targetUrl = isEditMode 
+              ? `/dashboard/cases/${caseData.id}` 
+              : `/dashboard/cases?location=${encodeURIComponent(values.municipality)}`;
+            router.push(targetUrl);
+        } else {
+            // Permanecemos en la vista para evitar el error de red de Next.js
+            setSaveSuccess(true);
+            setIsSubmitting(false);
+        }
 
     } catch (e) {
         toast({
@@ -172,6 +179,30 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         });
         setIsSubmitting(false);
     }
+  }
+
+  if (saveSuccess) {
+    return (
+        <div className="flex flex-col items-center justify-center py-12 text-center space-y-6">
+            <div className="bg-green-100 p-6 rounded-full">
+                <CheckCircle2 className="h-16 w-16 text-green-600 animate-bounce" />
+            </div>
+            <div className="space-y-2">
+                <h3 className="text-2xl font-bold">¡Registro Guardado Localmente!</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                    La información se ha almacenado de forma segura en su dispositivo. El caso aparecerá con el indicador <span className="font-bold text-orange-600">PENDIENTE SYNC</span> en la lista una vez recupere la conexión.
+                </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button variant="outline" onClick={() => { setSaveSuccess(false); form.reset(); }}>
+                    Registrar Otro Caso
+                </Button>
+                <Button asChild>
+                    <Link href="/dashboard/cases">Ir a la Lista de Casos</Link>
+                </Button>
+            </div>
+        </div>
+    )
   }
 
   const formFields = [
