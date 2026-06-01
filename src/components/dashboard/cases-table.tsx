@@ -89,8 +89,6 @@ export function CasesTable({
 
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || isUserLoading) return null;
-    // REQ: No usar 'where' sobre createdAt para evitar que registros con serverTimestamp()
-    // nulo (pendientes de sync) desaparezcan de la vista local.
     return collection(firestore, 'cases');
   }, [firestore, authUser?.uid, isUserLoading]);
 
@@ -101,13 +99,11 @@ export function CasesTable({
     
     let filtered = [...cases] as WithId<Case>[];
 
-    // 1. Filtrado por Municipio (Normalizado)
     if (location && location !== 'all') {
         const normalizedLocation = normalize(decodeURIComponent(location));
         filtered = filtered.filter(c => normalize(c.municipality || "") === normalizedLocation);
     }
 
-    // 2. Filtrado por Fecha (En memoria para soportar registros offline sin timestamp del servidor)
     let finalStartDate = startDate;
     if (!finalStartDate && period && period !== 'all') {
         const now = new Date();
@@ -120,7 +116,7 @@ export function CasesTable({
 
     if (finalStartDate || endDate) {
         filtered = filtered.filter(c => {
-            if (!c.createdAt) return true; // Mostrar pendientes siempre
+            if (!c.createdAt) return true;
             const date = c.createdAt instanceof Timestamp ? c.createdAt.toDate() : 
                          (typeof c.createdAt === 'string' ? parseISO(c.createdAt) : 
                          (c.createdAt?.toDate ? c.createdAt.toDate() : new Date()));
@@ -131,7 +127,6 @@ export function CasesTable({
         });
     }
 
-    // 3. Búsqueda General y Cédula
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(c => 
@@ -145,12 +140,10 @@ export function CasesTable({
         filtered = filtered.filter(c => (c.documentId || "").replace(/\D/g, '').includes(normalizedSearch));
     }
 
-    // 4. Filtrado Offline
     if (offlineOnly) {
       filtered = filtered.filter(c => c._hasPendingWrites === true || c.syncError === true);
     }
 
-    // 5. Ordenamiento
     filtered.sort((a, b) => {
         const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : Date.now());
         const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : Date.now());
@@ -165,12 +158,29 @@ export function CasesTable({
     return (cases as WithId<Case>[]).find(c => c.id === selectedCaseId);
   }, [selectedCaseId, cases]);
 
+  /**
+   * REQ-006: Función de reintento manual de sincronización.
+   */
   const handleRetrySync = (c: WithId<Case>) => {
     if (!firestore || !authUser) return;
-    const docRef = doc(firestore, 'cases', c.id);
-    const { id, _hasPendingWrites, syncError, ...cleanData } = c as any;
-    setDocumentNonBlocking(docRef, { ...cleanData, updatedAt: serverTimestamp() }, { merge: true });
+    
     toast({ title: "Reintentando sincronización...", description: `Enviando caso ${c.caseNumber}.` });
+    
+    const docRef = doc(firestore, 'cases', c.id);
+    const { id, _hasPendingWrites, syncError, syncStatus, syncAttempts, lastSyncError, lastSyncAt, ...cleanData } = c as any;
+    
+    // Preparar el reintento limpiando el estado de error previo
+    const retryData = {
+      ...cleanData,
+      syncStatus: 'pending',
+      syncError: false,
+      syncAttempts: (syncAttempts || 0) + 1,
+      updatedAt: serverTimestamp()
+    };
+    
+    setDocumentNonBlocking(docRef, retryData, { merge: true });
+    
+    toast({ title: "Sincronización reenviada", description: "El proceso se ha encolado nuevamente." });
   };
 
   const confirmDelete = () => {
@@ -242,10 +252,29 @@ export function CasesTable({
                     <TableCell className="font-bold uppercase text-xs">{c.firstName} {c.lastName}</TableCell>
                     <TableCell>
                         <div className="flex flex-col gap-1">
-                            {c.syncError ? (
-                                <Badge variant="destructive" className="bg-red-600 text-white text-[9px] py-0 h-5 w-fit">
-                                    <AlertCircle className="mr-1 h-3 w-3" /> ERROR_SYNC
-                                </Badge>
+                            {c.syncStatus === 'error' || c.syncError ? (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <div className="flex flex-col gap-1">
+                                                <Badge variant="destructive" className="bg-red-600 text-white text-[9px] py-0 h-5 w-fit">
+                                                    <AlertCircle className="mr-1 h-3 w-3" /> ERROR_SYNC ({c.syncAttempts || 0})
+                                                </Badge>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="ghost" 
+                                                    onClick={(e) => { e.stopPropagation(); handleRetrySync(c); }}
+                                                    className="h-6 text-[8px] font-black uppercase text-primary hover:bg-primary/10"
+                                                >
+                                                    <RefreshCw className="mr-1 h-3 w-3" /> Reintentar
+                                                </Button>
+                                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="max-w-xs text-xs">Error: {c.lastSyncError || "Acceso denegado o conexión fallida."}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             ) : c._hasPendingWrites ? (
                                 <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-[9px] py-0 h-5 w-fit">
                                     <CloudUpload className="mr-1 h-3 w-3" /> PENDIENTE SYNC

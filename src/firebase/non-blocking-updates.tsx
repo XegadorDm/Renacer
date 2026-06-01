@@ -13,11 +13,19 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
- * Realiza un setDoc limpio sin modificar el payload.
- * Permite que Firestore gestione la persistencia local y sincronización.
+ * Realiza un setDoc capturando errores para trazabilidad REQ-006.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
   setDoc(docRef, data, options).catch(error => {
+    // Trazabilidad visual de error REQ-006
+    updateDoc(docRef, {
+      syncStatus: 'error',
+      syncError: true,
+      syncAttempts: (data.syncAttempts || 0) + 1,
+      lastSyncError: error.message || "Error desconocido",
+      lastSyncAt: new Date().toISOString()
+    }).catch(() => {}); // Ignorar fallo en la escritura del log de error
+
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
@@ -48,10 +56,19 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
 }
 
 /**
- * Realiza un updateDoc limpio.
+ * Realiza un updateDoc con trazabilidad de error REQ-006.
  */
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
   updateDoc(docRef, data).catch(error => {
+      // Trazabilidad visual de error REQ-006
+      updateDoc(docRef, {
+        syncStatus: 'error',
+        syncError: true,
+        syncAttempts: (data.syncAttempts || 0) + 1,
+        lastSyncError: error.message || "Error desconocido",
+        lastSyncAt: new Date().toISOString()
+      }).catch(() => {});
+
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
