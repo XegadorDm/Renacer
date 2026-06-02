@@ -141,7 +141,7 @@ export function CasesTable({
     }
 
     if (offlineOnly) {
-      filtered = filtered.filter(c => c._hasPendingWrites === true || c.syncError === true);
+      filtered = filtered.filter(c => c._hasPendingWrites === true || c.syncStatus === 'error' || c.syncError === true);
     }
 
     filtered.sort((a, b) => {
@@ -158,18 +158,16 @@ export function CasesTable({
     return (cases as WithId<Case>[]).find(c => c.id === selectedCaseId);
   }, [selectedCaseId, cases]);
 
-  /**
-   * REQ-006: Función de reintento manual de sincronización.
-   */
   const handleRetrySync = (c: WithId<Case>) => {
     if (!firestore || !authUser) return;
     
     toast({ title: "Reintentando sincronización...", description: `Enviando caso ${c.caseNumber}.` });
     
     const docRef = doc(firestore, 'cases', c.id);
+    
+    // Limpiamos los campos de error para el reintento
     const { id, _hasPendingWrites, syncError, syncStatus, syncAttempts, lastSyncError, lastSyncAt, ...cleanData } = c as any;
     
-    // Preparar el reintento limpiando el estado de error previo
     const retryData = {
       ...cleanData,
       syncStatus: 'pending',
@@ -210,7 +208,7 @@ export function CasesTable({
         createdAt: serverTimestamp(),
         createdBy: authUser.uid,
         read: false,
-        userId: selectedCase.userId || authUser.uid
+        userId: selectedCase.userId || authUser.uid || null
     });
     setLocalStatuses(prev => ({ ...prev, [selectedCase.id]: newStatus }));
     setIsCallModalOpen(false);
@@ -271,7 +269,16 @@ export function CasesTable({
                                             </div>
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                            <p className="max-w-xs text-xs">Error: {c.lastSyncError || "Acceso denegado o conexión fallida."}</p>
+                                            <div className="space-y-1 text-xs max-w-xs p-1">
+                                                <p className="font-bold text-red-500 uppercase text-[10px]">Detalle del Error (REQ006)</p>
+                                                <p className="italic text-muted-foreground leading-relaxed">"{c.lastSyncError || "Acceso denegado o fallo de conexión persistente."}"</p>
+                                                <div className="pt-2 border-t mt-1 flex flex-col gap-1">
+                                                    <p className="flex justify-between"><strong>Intentos:</strong> <span>{c.syncAttempts || 0}</span></p>
+                                                    {c.lastSyncAt && (
+                                                        <p className="flex justify-between gap-4"><strong>Último fallo:</strong> <span>{format(typeof c.lastSyncAt === 'string' ? parseISO(c.lastSyncAt) : (c.lastSyncAt?.toDate ? c.lastSyncAt.toDate() : new Date()), "dd/MM/yy HH:mm", { locale: es })}</span></p>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>

@@ -14,18 +14,10 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
  * Realiza un setDoc capturando errores para trazabilidad REQ-006.
+ * El helper emite el error para que la UI o los administradores puedan diagnosticar fallos.
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
   setDoc(docRef, data, options).catch(error => {
-    // Trazabilidad visual de error REQ-006
-    updateDoc(docRef, {
-      syncStatus: 'error',
-      syncError: true,
-      syncAttempts: (data.syncAttempts || 0) + 1,
-      lastSyncError: error.message || "Error desconocido",
-      lastSyncAt: new Date().toISOString()
-    }).catch(() => {}); // Ignorar fallo en la escritura del log de error
-
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({
@@ -34,7 +26,7 @@ export function setDocumentNonBlocking(docRef: DocumentReference, data: any, opt
         requestResourceData: data,
       })
     );
-    console.error("Firestore Set Error:", error);
+    console.error("Firestore Set Error (REQ-006):", error);
   });
 }
 
@@ -60,15 +52,6 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
  */
 export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
   updateDoc(docRef, data).catch(error => {
-      // Trazabilidad visual de error REQ-006
-      updateDoc(docRef, {
-        syncStatus: 'error',
-        syncError: true,
-        syncAttempts: (data.syncAttempts || 0) + 1,
-        lastSyncError: error.message || "Error desconocido",
-        lastSyncAt: new Date().toISOString()
-      }).catch(() => {});
-
       errorEmitter.emit(
         'permission-error',
         new FirestorePermissionError({
