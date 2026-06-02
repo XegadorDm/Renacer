@@ -6,6 +6,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, getDocs, doc, collectionGroup, query } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Database, Download, Loader2, ShieldCheck, CheckCircle2, History, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isCoreAdmin } from '@/lib/core-admins';
