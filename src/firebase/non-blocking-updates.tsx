@@ -18,6 +18,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
  */
 export function setDocumentNonBlocking(docRef: DocumentReference, data: any, options: SetOptions) {
   setDoc(docRef, data, options).catch(error => {
+    // Emitimos el error para que el listener central o los componentes capturen el fallo
     errorEmitter.emit(
       'permission-error',
       new FirestorePermissionError({

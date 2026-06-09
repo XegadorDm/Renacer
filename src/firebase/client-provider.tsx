@@ -33,8 +33,8 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
       }
       
       if (!firestoreInstance) {
-        // REQ: Recuperar persistencia offline para trabajo en campo (Cauca)
-        // Se usa la configuración más estable para evitar errores de aserción interna.
+        // REQ: Persistencia offline para trabajo en campo (Cauca)
+        // Se utiliza persistentLocalCache para que los datos sobrevivan a recargas del navegador.
         firestoreInstance = initializeFirestore(appInstance, {
           localCache: persistentLocalCache({
             tabManager: persistentMultipleTabManager()

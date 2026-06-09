@@ -29,7 +29,7 @@ export interface Case {
     createdAt: any; 
     members: { [uid: string]: 'owner' | 'editor' | 'viewer' };
     
-    // Capa de Recuperación de Sincronización
+    // Capa de Recuperación de Sincronización (REQ-006)
     syncStatus?: SyncStatus;
     syncAttempts?: number;
     lastSyncError?: string;
