@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CloudUpload, AlertCircle, CheckCircle2, RefreshCw, Wifi, WifiOff, Loader2, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 type WithId<T> = T & { id: string };
 
