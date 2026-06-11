@@ -24,7 +24,7 @@ import { Logo } from "@/components/icons/logo";
 import { doc, setDoc } from "firebase/firestore";
 import type { UserProfile } from "@/lib/case-schema";
 import { isCoreAdmin } from "@/lib/core-admins";
-import { SyncStatusPanel } from '@/components/dashboard/sync-status-panel';
+import { SyncStatusPanel } from "@/components/dashboard/sync-status-panel";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -74,7 +74,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 <p className="text-sm font-medium text-muted-foreground">Cargando plataforma...</p>
             </div>
         </div>
-    )
+    );
   }
   
   const handleLogout = async () => {
@@ -82,14 +82,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         await auth.signOut();
         router.push('/');
     }
-  }
+  };
 
   const getInitials = () => {
     if (userProfile?.firstName && userProfile?.lastName) {
       return `${userProfile.firstName[0]}${userProfile.lastName[0]}`.toUpperCase();
     }
     return user?.email?.[0].toUpperCase() || 'U';
-  }
+  };
 
   const iconClasses = "h-5 w-5 text-black shrink-0";
   const isAdmin = userProfile?.role === 'admin' || isCoreAdmin(user?.email);
