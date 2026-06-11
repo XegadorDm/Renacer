@@ -1,4 +1,9 @@
 'use client';
+/**
+ * @fileOverview Panel de control de sincronización en tiempo real.
+ * Permite monitorear y recuperar registros en zonas con baja conectividad.
+ */
+
 import { useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
@@ -16,6 +21,9 @@ import { cn } from '@/lib/utils';
 
 type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
 
+/**
+ * Fila individual para un caso en la cola de sincronización.
+ */
 function SyncCaseRow({ c, onRetry, isRetrying }: { c: WithId<Case>; onRetry: (c: WithId<Case>) => void; isRetrying: boolean; }) {
   return (
     <div className="flex items-start justify-between gap-3 rounded-lg border p-3 bg-card hover:border-primary/20 transition-colors shadow-sm">
@@ -65,18 +73,23 @@ function SyncCaseRow({ c, onRetry, isRetrying }: { c: WithId<Case>; onRetry: (c:
   );
 }
 
+/**
+ * Componente principal del Panel de Sincronización.
+ */
 export function SyncStatusPanel() {
   const firestore = useFirestore();
   const { isOnline, isSyncing, lastSyncAt, syncAll, retryCase } = useSyncEngine();
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
 
-  const pendingQuery = useMemoFirebase(() => {
+  // Consulta global para detectar cambios pendientes en tiempo real
+  const casesRefQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'cases');
   }, [firestore]);
 
-  const { data: allCases } = useCollection<Case>(pendingQuery);
+  const { data: allCases } = useCollection<Case>(casesRefQuery);
 
+  // Filtrado reactivo basado en el estado interno de Firestore (_hasPendingWrites)
   const pendingCases = allCases?.filter(c => 
     c._hasPendingWrites === true || c.syncStatus === 'pending'
   ) || [];
@@ -149,7 +162,7 @@ export function SyncStatusPanel() {
             </div>
             <div className="rounded-xl border bg-red-50/30 p-4 text-center border-red-200">
               <p className="text-3xl font-black text-red-600">{errorCount}</p>
-              <p className="text-[9px] text-red-700 font-bold uppercase tracking-widest">Errores</p>
+              <p className="text-[9px] text-red-700 font-bold uppercase tracking-widest">Fallas Sync</p>
             </div>
           </div>
 
@@ -193,8 +206,8 @@ export function SyncStatusPanel() {
                 </div>
               ) : (
                 <div className="space-y-3 pb-4">
-                  {pendingCases.map(c => (
-                    <SyncCaseRow key={c.id} c={c as WithId<Case>} onRetry={handleRetry} isRetrying={retryingIds.has(c.id)} />
+                  {(pendingCases as WithId<Case>[])?.map(c => (
+                    <SyncCaseRow key={c.id} c={c} onRetry={handleRetry} isRetrying={retryingIds.has(c.id)} />
                   ))}
                 </div>
               )}
@@ -208,8 +221,8 @@ export function SyncStatusPanel() {
                 </div>
               ) : (
                 <div className="space-y-3 pb-4">
-                  {errorCases.map(c => (
-                    <SyncCaseRow key={c.id} c={c as WithId<Case>} onRetry={handleRetry} isRetrying={retryingIds.has(c.id)} />
+                  {(errorCases as WithId<Case>[])?.map(c => (
+                    <SyncCaseRow key={c.id} c={c} onRetry={handleRetry} isRetrying={retryingIds.has(c.id)} />
                   ))}
                 </div>
               )}

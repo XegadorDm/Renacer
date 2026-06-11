@@ -1,4 +1,9 @@
-'use client';
+'use server';
+/**
+ * @fileOverview Motor de sincronización de bajo nivel para Firestore.
+ * Gestiona transiciones de estado y persistencia de auditoría de red.
+ */
+
 import {
   Firestore, doc, setDoc, updateDoc, collection,
   query, where, getDocs, serverTimestamp,
@@ -15,39 +20,53 @@ export interface SyncResult {
   syncedAt?: Date;
 }
 
+/**
+ * Actualiza los campos de auditoría de sincronización en un documento.
+ */
 async function updateSyncFields(
   firestore: Firestore, caseId: string, state: SyncState,
   extra?: { error?: string; attempts?: number }
 ): Promise<void> {
   const docRef = doc(firestore, 'cases', caseId);
-  const update: Record<string, any> = { syncStatus: state, lastSyncAt: serverTimestamp() };
+  const update: Record<string, any> = { 
+    syncStatus: state, 
+    lastSyncAt: serverTimestamp() 
+  };
+  
   if (state === 'error' && extra?.error) { 
     update.lastSyncError = extra.error; 
     update.syncError = true; 
   }
+  
   if (state === 'synced') { 
     update.syncError = false; 
     update.lastSyncError = null; 
   }
+  
   if (extra?.attempts !== undefined) { 
     update.syncAttempts = extra.attempts; 
   }
+  
   await updateDoc(docRef, update);
 }
 
+/**
+ * Sincroniza un caso individual con Firestore.
+ */
 export async function syncCase(
   firestore: Firestore, caseId: string, data: Partial<Case>, currentAttempts = 0
 ): Promise<SyncResult> {
   const attempts = currentAttempts + 1;
+  
   try { 
     await updateSyncFields(firestore, caseId, 'syncing', { attempts }); 
   } catch (e) {
-    // Ignorar error de actualización de estado temporal
+    // Ignorar fallos en la actualización de estado de "sincronizando"
   }
   
   try {
     const docRef = doc(firestore, 'cases', caseId);
-    // Realizar la escritura principal
+    // Realizar la escritura principal con metadatos de éxito
     await setDoc(docRef, { 
       ...data, 
       syncStatus: 'synced', 
@@ -63,18 +82,23 @@ export async function syncCase(
     try { 
       await updateSyncFields(firestore, caseId, 'error', { error: errorMsg, attempts }); 
     } catch (e) {
-      console.error("No se pudo actualizar el estado de error en Firestore:", e);
+      console.error('No se pudo actualizar el estado de error en Firestore:', e);
     }
     return { caseId, success: false, error: errorMsg, attempts };
   }
 }
 
+/**
+ * Intenta re-sincronizar un caso que falló previamente.
+ */
 export async function retrySyncCase(
   firestore: Firestore,
   caseItem: Partial<Case> & { id: string; syncAttempts?: number }
 ): Promise<SyncResult> {
   const { id, syncAttempts = 0, ...data } = caseItem;
-  if (syncAttempts >= 5) { // Aumentado a 5 reintentos según política de flexibilidad
+  
+  // Política de reintentos (límite de 5 según requerimientos de zona rural)
+  if (syncAttempts >= 5) {
     return { 
       caseId: id, 
       success: false, 
@@ -82,11 +106,15 @@ export async function retrySyncCase(
       attempts: syncAttempts 
     };
   }
-  // Pequeña espera artificial para asegurar que la UI respire
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  
+  // Pausa artificial para evitar saturación de red en reintentos
+  await new Promise(resolve => setTimeout(resolve, 2000));
   return syncCase(firestore, id, data, syncAttempts);
 }
 
+/**
+ * Busca y sincroniza todos los registros pendientes o con error.
+ */
 export async function syncPendingCases(firestore: Firestore): Promise<{ synced: number; failed: number; results: SyncResult[] }> {
   const results: SyncResult[] = [];
   try {

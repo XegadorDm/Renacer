@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileOverview Hook reactivo para gestionar el estado de sincronización y red.
+ */
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -31,6 +35,9 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
   const [lastResults, setLastResults] = useState<SyncResult[]>([]);
   const syncInProgress = useRef(false);
 
+  /**
+   * Dispara la sincronización automática de la cola.
+   */
   const triggerAutoSync = useCallback(async () => {
     if (!firestore || syncInProgress.current || !navigator.onLine) return;
     
@@ -63,12 +70,15 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
     }
   }, [firestore, toast]);
 
+  /**
+   * Listeners de estado de conexión.
+   */
   useEffect(() => {
     const onOnline = () => { 
       setIsOnline(true); 
       toast({ 
         title: '🟢 Conexión restaurada', 
-        description: 'Iniciando sincronización automática de registros pendientes.' 
+        description: 'Sincronizando registros pendientes con el servidor...' 
       }); 
       triggerAutoSync(); 
     };
@@ -77,7 +87,7 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
       setIsOnline(false); 
       toast({ 
         title: '🔴 Modo sin conexión', 
-        description: 'La plataforma guardará tus cambios localmente hasta recuperar señal.', 
+        description: 'Los cambios se guardarán localmente hasta recuperar señal.', 
         variant: 'destructive' 
       }); 
     };
@@ -91,6 +101,9 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
     };
   }, [triggerAutoSync, toast]);
 
+  /**
+   * Guarda un caso gestionando el estado de red.
+   */
   const saveCase = useCallback(async (caseId: string, data: Partial<Case>): Promise<SyncResult> => {
     if (!firestore) return { caseId, success: false, error: 'Servicio de base de datos no disponible', attempts: 0 };
     
@@ -117,11 +130,14 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
     return result;
   }, [firestore, toast]);
 
+  /**
+   * Reintenta manualmente la sincronización de un caso fallido.
+   */
   const retryCase = useCallback(async (caseItem: Partial<Case> & { id: string; syncAttempts?: number }): Promise<SyncResult> => {
     if (!firestore) return { caseId: caseItem.id, success: false, error: 'Servicio no disponible', attempts: 0 };
     
     toast({ 
-      title: '🔄 Procesando reintento...', 
+      title: '🔄 Reintentando...', 
       description: `Sincronizando caso ${(caseItem as any).caseNumber || caseItem.id}` 
     });
     
