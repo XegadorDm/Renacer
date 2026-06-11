@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 import type { Case } from '@/lib/case-schema';
 import { useSyncEngine } from '@/hooks/use-sync-engine';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
-type WithId<T> = T & { id: string };
+type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
 
 function SyncCaseRow({ c, onRetry, isRetrying }: { c: WithId<Case>; onRetry: (c: WithId<Case>) => void; isRetrying: boolean; }) {
   return (
@@ -50,7 +50,7 @@ function SyncCaseRow({ c, onRetry, isRetrying }: { c: WithId<Case>; onRetry: (c:
           )}
         </div>
       </div>
-      {(c.syncStatus === 'error' || c.syncError) && (
+      {(c.syncStatus === 'error' || (c as any).syncError) && (
         <Button 
           size="sm" 
           variant="outline" 
@@ -70,21 +70,23 @@ export function SyncStatusPanel() {
   const { isOnline, isSyncing, lastSyncAt, syncAll, retryCase } = useSyncEngine();
   const [retryingIds, setRetryingIds] = useState<Set<string>>(new Set());
 
-  const pendingQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'cases'), where('syncStatus', '==', 'pending')) : null, 
-    [firestore]
-  );
-  
-  const errorQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'cases'), where('syncStatus', '==', 'error')) : null, 
-    [firestore]
-  );
+  const pendingQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'cases');
+  }, [firestore]);
 
-  const { data: pendingCases } = useCollection<Case>(pendingQuery);
-  const { data: errorCases } = useCollection<Case>(errorQuery);
+  const { data: allCases } = useCollection<Case>(pendingQuery);
 
-  const pendingCount = pendingCases?.length || 0;
-  const errorCount = errorCases?.length || 0;
+  const pendingCases = allCases?.filter(c => 
+    c._hasPendingWrites === true || c.syncStatus === 'pending'
+  ) || [];
+
+  const errorCases = allCases?.filter(c => 
+    c.syncStatus === 'error' || (c as any).syncError === true
+  ) || [];
+
+  const pendingCount = pendingCases.length;
+  const errorCount = errorCases.length;
   const totalSyncIssues = pendingCount + errorCount;
 
   const handleRetry = async (c: WithId<Case>) => {
@@ -191,8 +193,8 @@ export function SyncStatusPanel() {
                 </div>
               ) : (
                 <div className="space-y-3 pb-4">
-                  {(pendingCases as WithId<Case>[])?.map(c => (
-                    <SyncCaseRow key={c.id} c={c} onRetry={handleRetry} isRetrying={retryingIds.has(c.id)} />
+                  {pendingCases.map(c => (
+                    <SyncCaseRow key={c.id} c={c as WithId<Case>} onRetry={handleRetry} isRetrying={retryingIds.has(c.id)} />
                   ))}
                 </div>
               )}
@@ -206,8 +208,8 @@ export function SyncStatusPanel() {
                 </div>
               ) : (
                 <div className="space-y-3 pb-4">
-                  {(errorCases as WithId<Case>[])?.map(c => (
-                    <SyncCaseRow key={c.id} c={c} onRetry={handleRetry} isRetrying={retryingIds.has(c.id)} />
+                  {errorCases.map(c => (
+                    <SyncCaseRow key={c.id} c={c as WithId<Case>} onRetry={handleRetry} isRetrying={retryingIds.has(c.id)} />
                   ))}
                 </div>
               )}
