@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CaseStatusIndicator } from "./case-status-indicator";
-import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { MoreHorizontal, Edit, Trash2, Eye, Phone, User, Loader2, CloudUpload, CheckCircle2, AlertCircle, RefreshCw } from "lucide-center";
 import { Button } from "../ui/button";
 import { useFirestore, useCollection, useUser, deleteDocumentNonBlocking, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import { collection, doc, Timestamp, serverTimestamp } from "firebase/firestore";
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
+import { useSyncEngine } from '@/hooks/use-sync-engine';
 
 type WithId<T> = T & { id: string; _hasPendingWrites?: boolean };
 
@@ -81,6 +82,7 @@ export function CasesTable({
   const { user: authUser, isUserLoading } = useUser();
   const { toast } = useToast();
   const router = useRouter();
+  const { retryCase } = useSyncEngine();
 
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [caseToDelete, setCaseToDelete] = useState<WithId<Case> | null>(null);
@@ -98,13 +100,11 @@ export function CasesTable({
     
     let filtered = [...cases] as WithId<Case>[];
 
-    // Filtrado por municipio
     if (location && location !== 'all') {
         const normalizedLocation = normalize(decodeURIComponent(location));
         filtered = filtered.filter(c => normalize(c.municipality || "") === normalizedLocation);
     }
 
-    // Filtrado por fecha (en cliente para no ocultar documentos sin serverTimestamp)
     let finalStartDate = startDate;
     if (!finalStartDate && period && period !== 'all') {
         const now = new Date();
@@ -117,7 +117,7 @@ export function CasesTable({
 
     if (finalStartDate || endDate) {
         filtered = filtered.filter(c => {
-            if (!c.createdAt) return true; // Mostrar nuevos sin fecha (offline)
+            if (!c.createdAt) return true;
             const date = c.createdAt instanceof Timestamp ? c.createdAt.toDate() : 
                          (typeof c.createdAt === 'string' ? parseISO(c.createdAt) : 
                          (c.createdAt?.toDate ? c.createdAt.toDate() : new Date()));
@@ -128,7 +128,6 @@ export function CasesTable({
         });
     }
 
-    // Búsqueda por nombre o número de caso
     const searchTerm = query.toLowerCase();
     if (searchTerm) {
         filtered = filtered.filter(c => 
@@ -137,18 +136,15 @@ export function CasesTable({
         );
     }
 
-    // Búsqueda por cédula
     if (docQuery) {
         const normalizedSearch = docQuery.replace(/\D/g, '');
         filtered = filtered.filter(c => (c.documentId || "").replace(/\D/g, '').includes(normalizedSearch));
     }
 
-    // Filtro de pendientes sync (REQ-006)
     if (offlineOnly) {
-      filtered = filtered.filter(c => c._hasPendingWrites === true || c.syncStatus === 'error');
+      filtered = filtered.filter(c => c.syncStatus === 'pending' || c.syncStatus === 'error' || c._hasPendingWrites === true);
     }
 
-    // Ordenamiento por fecha descendente
     filtered.sort((a, b) => {
         const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : Date.now());
         const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : Date.now());
@@ -158,36 +154,9 @@ export function CasesTable({
     return filtered;
   }, [cases, query, docQuery, location, offlineOnly, startDate, endDate, period]);
 
-  const selectedCase = useMemo(() => {
-    if (!selectedCaseId || !cases) return null;
-    return (cases as WithId<Case>[]).find(c => c.id === selectedCaseId);
-  }, [selectedCaseId, cases]);
-
-  /**
-   * handleRetrySync (REQ-006)
-   * Función para recuperación manual de fallos de sincronización.
-   */
-  const handleRetrySync = (c: WithId<Case>) => {
-    if (!firestore || !authUser) return;
-    
-    toast({ title: "Reintentando sincronización...", description: `Enviando caso ${c.caseNumber}.` });
-    
-    const docRef = doc(firestore, 'cases', c.id);
-    
-    // Limpiamos los campos de error para forzar una nueva escritura limpia
-    const { id, _hasPendingWrites, syncError, syncStatus, syncAttempts, lastSyncError, lastSyncAt, ...cleanData } = c as any;
-    
-    const retryData = {
-      ...cleanData,
-      syncStatus: 'pending',
-      syncError: false,
-      syncAttempts: (syncAttempts || 0) + 1,
-      updatedAt: serverTimestamp()
-    };
-    
-    setDocumentNonBlocking(docRef, retryData, { merge: true });
-    
-    toast({ title: "Sincronización reenviada", description: "El proceso se ha encolado nuevamente." });
+  const handleRetrySync = async (c: WithId<Case>) => {
+    const { id, _hasPendingWrites, ...caseData } = c as any;
+    await retryCase({ id, ...caseData });
   };
 
   const confirmDelete = () => {
@@ -195,34 +164,10 @@ export function CasesTable({
     deleteDocumentNonBlocking(doc(firestore, 'cases', caseToDelete.id));
     const normalized = caseToDelete.documentId.replace(/\D/g, '');
     if (normalized) deleteDocumentNonBlocking(doc(firestore, 'publicCaseStatus', normalized));
-    toast({ title: "Caso Eliminado", description: "El registro ha sido borrado." });
+    toast({ title: "Caso Eliminado", description: "El registro ha sido borrado satisfactoriamente." });
     setIsDeleteAlertOpen(false);
   };
   
-  const handleRegisterNovedad = (contacted: boolean) => {
-    if (!selectedCase || !firestore || !authUser) return;
-    const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
-    updateDocumentNonBlocking(doc(firestore, 'cases', selectedCase.id), { status: newStatus });
-    addDocumentNonBlocking(collection(firestore, 'cases', selectedCase.id, 'novedades'), {
-        mensaje: contacted ? "Llamada efectiva" : "Intento sin éxito",
-        tipo: 'llamada',
-        createdAt: new Date().toISOString(),
-        createdBy: authUser.uid
-    });
-    addDocumentNonBlocking(collection(firestore, 'notifications'), {
-        message: `Caso ${selectedCase.caseNumber} -> ${newStatus}`,
-        caseId: selectedCase.id,
-        caseNumber: selectedCase.caseNumber,
-        type: "status_change",
-        createdAt: serverTimestamp(),
-        createdBy: authUser.uid,
-        read: false,
-        userId: selectedCase.userId || authUser.uid || null
-    });
-    setLocalStatuses(prev => ({ ...prev, [selectedCase.id]: newStatus }));
-    setIsCallModalOpen(false);
-  };
-
   if (isLoading) {
     return (
         <div className="border rounded-lg p-6 space-y-4 flex flex-col items-center justify-center min-h-[300px]">
@@ -259,14 +204,13 @@ export function CasesTable({
                     <TableCell className="font-bold uppercase text-xs">{c.firstName} {c.lastName}</TableCell>
                     <TableCell>
                         <div className="flex flex-col gap-1">
-                            {/* Visualización de Estados de Sincronización (REQ-006) */}
                             {c.syncStatus === 'error' || c.syncError ? (
                                 <TooltipProvider>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
                                             <div className="flex flex-col gap-1">
                                                 <Badge variant="destructive" className="bg-red-600 text-white text-[9px] py-0 h-5 w-fit">
-                                                    <AlertCircle className="mr-1 h-3 w-3" /> ERROR_SYNC ({c.syncAttempts || 0})
+                                                    <AlertCircle className="mr-1 h-3 w-3" /> FALLA SYNC ({c.syncAttempts || 0})
                                                 </Badge>
                                                 <Button 
                                                     size="sm" 
@@ -278,17 +222,17 @@ export function CasesTable({
                                                 </Button>
                                             </div>
                                         </TooltipTrigger>
-                                        <TooltipContent>
-                                            <div className="space-y-1 text-xs max-w-xs p-1">
-                                                <p className="font-bold text-red-500 uppercase text-[10px]">Detalle del Error</p>
-                                                <p className="italic text-muted-foreground leading-relaxed">"{c.lastSyncError || "Acceso denegado o fallo de conexión persistente."}"</p>
+                                        <TooltipContent className="bg-destructive text-destructive-foreground">
+                                            <div className="space-y-1 text-[10px] max-w-xs p-1">
+                                                <p className="font-bold uppercase tracking-widest">Detalle del Error</p>
+                                                <p className="italic leading-relaxed">{c.lastSyncError || "Acceso denegado o fallo de conexión persistente."}</p>
                                             </div>
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
-                            ) : c._hasPendingWrites ? (
+                            ) : c.syncStatus === 'pending' || c._hasPendingWrites ? (
                                 <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200 text-[9px] py-0 h-5 w-fit">
-                                    <CloudUpload className="mr-1 h-3 w-3" /> PENDIENTE SYNC
+                                    <CloudUpload className="mr-1 h-3 w-3" /> PENDIENTE
                                 </Badge>
                             ) : (
                                 <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 text-[9px] py-0 h-5 w-fit">
@@ -298,7 +242,7 @@ export function CasesTable({
                         </div>
                     </TableCell>
                     <TableCell className="text-[10px] font-mono">
-                        {c.createdAt ? format(c.createdAt instanceof Timestamp ? c.createdAt.toDate() : parseISO(c.createdAt as string), "dd/MM/yy HH:mm", { locale: es }) : 'Pendiente...'}
+                        {c.createdAt ? format(c.createdAt instanceof Timestamp ? c.createdAt.toDate() : parseISO(c.createdAt as string), "dd/MM/yy HH:mm", { locale: es }) : '...'}
                     </TableCell>
                     <TableCell className="flex justify-center py-4">
                       <CaseStatusIndicator status={localStatuses[c.id] || c.status} />
@@ -309,23 +253,39 @@ export function CasesTable({
                           <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => router.push(`/dashboard/cases/${c.id}`)}><Eye className="mr-2 h-4 w-4 text-primary" /> Ver Detalles</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/cases/${c.id}`)}><Eye className="mr-2 h-4 w-4 text-primary" /> Ver Ficha</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/cases/${c.id}/edit`)}><Edit className="mr-2 h-4 w-4 text-primary" /> Editar</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive" onClick={(e) => { e.stopPropagation(); setCaseToDelete(c); setIsDeleteAlertOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive font-bold" onClick={(e) => { e.stopPropagation(); setCaseToDelete(c); setIsDeleteAlertOpen(true); }}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
-                <TableRow><TableCell colSpan={7} className="text-center h-48 text-muted-foreground">No se encontraron registros.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center h-48 text-muted-foreground italic">No se encontraron registros que coincidan con los filtros.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </div>
       </div>
-      {/* ... Diálogos de llamada y eliminación permanecen igual ... */}
+
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold">¿Eliminar registro permanentemente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se borrarán todos los datos asociados a este caso.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl font-bold">CANCELAR</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-xl font-bold">
+              SÍ, ELIMINAR CASO
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

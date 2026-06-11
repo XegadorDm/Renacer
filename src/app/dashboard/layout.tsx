@@ -24,6 +24,7 @@ import { Logo } from "@/components/icons/logo";
 import { doc, setDoc } from "firebase/firestore";
 import type { UserProfile } from "@/lib/case-schema";
 import { isCoreAdmin } from "@/lib/core-admins";
+import { SyncStatusPanel } from '@/components/dashboard/sync-status-panel';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -142,7 +143,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="Copias de Seguridad">
                         <Link href="/dashboard/backups"><Database className={iconClasses}/><span>Backups</span></Link>
-                    </SidebarMenuButton>
+                    </SidebarMenuItem>
                   </SidebarMenuItem>
                 </>
               )}
@@ -162,6 +163,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 py-2">
             <SidebarTrigger />
             <div className="flex-1" />
+            <SyncStatusPanel />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="icon" className="overflow-hidden rounded-full h-9 w-9">
