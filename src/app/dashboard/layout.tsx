@@ -125,10 +125,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip="Buzón">
-                    <Link href="/dashboard/messages" className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                            <Mail className={iconClasses}/><span>Buzón</span>
-                        </div>
+                    <Link href="/dashboard/messages" className="flex items-center gap-2">
+                        <Mail className={iconClasses}/><span>Buzón</span>
                     </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -143,7 +141,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip="Copias de Seguridad">
                         <Link href="/dashboard/backups"><Database className={iconClasses}/><span>Backups</span></Link>
-                    </SidebarMenuItem>
+                    </SidebarMenuButton>
                   </SidebarMenuItem>
                 </>
               )}
