@@ -132,7 +132,10 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             status,
             createdAt: isEditMode ? caseData.createdAt : serverTimestamp(),
             userId: user.uid,
-            members: { [user.uid]: 'owner' }
+            members: { [user.uid]: 'owner' },
+            // REQ-006: Iniciar como pendiente para el motor de sincronización
+            syncStatus: 'pending',
+            syncAttempts: 0
         };
         
         setDocumentNonBlocking(caseDocRef, fullData, { merge: true });
@@ -159,14 +162,12 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
               : `Datos de ${values.firstName} guardados localmente. Se sincronizarán automáticamente al recuperar la conexión.`,
         });
         
-        // REQ: Si está offline, NO hacemos navegación automática para evitar ERR_FAILED
         if (isOnline) {
             const targetUrl = isEditMode 
               ? `/dashboard/cases/${caseData.id}` 
               : `/dashboard/cases?location=${encodeURIComponent(values.municipality)}`;
             router.push(targetUrl);
         } else {
-            // Permanecemos en la vista para evitar el error de red de Next.js
             setSaveSuccess(true);
             setIsSubmitting(false);
         }
