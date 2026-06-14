@@ -109,20 +109,20 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
     if (!firestore) return { caseId, success: false, error: 'Servicio no disponible', attempts: 0 };
 
     if (!navigator.onLine) {
-      // Offline: guardar directo en Firestore local cache sin pasar por syncCase
+      // Offline: usar setDocumentNonBlocking para no bloquear la UI
       try {
+        const { setDocumentNonBlocking } = await import('@/firebase');
         const docRef = doc(firestore, 'cases', caseId);
-        await setDoc(docRef, { 
-          ...data, 
+        setDocumentNonBlocking(docRef, {
+          ...data,
           syncStatus: 'pending',
           syncError: false,
           syncAttempts: 0,
+          lastSyncError: null,
+          lastSyncAt: null,
         }, { merge: true });
+        // No usamos await — Firestore lo guarda en caché local inmediatamente
         setPendingCount(p => p + 1);
-        toast({ 
-          title: '📥 Caso Guardado Localmente', 
-          description: 'Se sincronizará al recuperar conexión.' 
-        });
         return { caseId, success: true, attempts: 0 };
       } catch (err: any) {
         return { caseId, success: false, error: err.message, attempts: 0 };
