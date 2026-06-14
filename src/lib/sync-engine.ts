@@ -47,7 +47,9 @@ async function updateSyncFields(
     update.syncAttempts = extra.attempts; 
   }
   
-  await updateDoc(docRef, update);
+  // Usar setDoc con merge:true en lugar de updateDoc
+  // para que funcione tanto en documentos nuevos como existentes
+  await setDoc(docRef, update, { merge: true });
 }
 
 /**
