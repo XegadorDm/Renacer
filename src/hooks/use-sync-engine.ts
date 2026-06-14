@@ -8,6 +8,7 @@ import { useFirestore } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { syncCase, retrySyncCase, syncPendingCases, type SyncResult } from '@/lib/sync-engine';
 import type { Case } from '@/lib/case-schema';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export interface SyncEngineState {
   isOnline: boolean;
@@ -105,29 +106,58 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
    * Guarda un caso gestionando el estado de red.
    */
   const saveCase = useCallback(async (caseId: string, data: Partial<Case>): Promise<SyncResult> => {
-    if (!firestore) return { caseId, success: false, error: 'Servicio de base de datos no disponible', attempts: 0 };
-    
+    if (!firestore) return { caseId, success: false, error: 'Servicio no disponible', attempts: 0 };
+
     if (!navigator.onLine) {
-      setPendingCount(p => p + 1);
-      toast({ 
-        title: '📥 Registro local exitoso', 
-        description: 'El caso se sincronizará automáticamente cuando vuelvas a tener internet.' 
-      });
-      return { caseId, success: true, attempts: 0 };
+      // Offline: guardar directo en Firestore local cache sin pasar por syncCase
+      try {
+        const docRef = doc(firestore, 'cases', caseId);
+        await setDoc(docRef, { 
+          ...data, 
+          syncStatus: 'pending',
+          syncError: false,
+          syncAttempts: 0,
+        }, { merge: true });
+        setPendingCount(p => p + 1);
+        toast({ 
+          title: '📥 Caso Guardado Localmente', 
+          description: 'Se sincronizará al recuperar conexión.' 
+        });
+        return { caseId, success: true, attempts: 0 };
+      } catch (err: any) {
+        return { caseId, success: false, error: err.message, attempts: 0 };
+      }
     }
 
-    const result = await syncCase(firestore, caseId, data);
-    if (result.success) {
-      setLastSyncAt(result.syncedAt || new Date());
-    } else {
+    // Online: guardar directo con setDoc, sin pasar por updateSyncFields intermedio
+    try {
+      const docRef = doc(firestore, 'cases', caseId);
+      await setDoc(docRef, {
+        ...data,
+        syncStatus: 'synced',
+        syncError: false,
+        lastSyncError: null,
+        syncAttempts: 1,
+        lastSyncAt: serverTimestamp(),
+      }, { merge: true });
+      setLastSyncAt(new Date());
+      return { caseId, success: true, attempts: 1, syncedAt: new Date() };
+    } catch (err: any) {
+      const errorMsg = err?.message || 'Error desconocido';
+      try {
+        const docRef = doc(firestore, 'cases', caseId);
+        await setDoc(docRef, {
+          syncStatus: 'error',
+          syncError: true,
+          lastSyncError: errorMsg,
+          syncAttempts: 1,
+          lastSyncAt: serverTimestamp(),
+        }, { merge: true });
+      } catch {}
       setErrorCount(p => p + 1);
-      toast({ 
-        title: '❌ Fallo de sincronización', 
-        description: result.error, 
-        variant: 'destructive' 
-      });
+      toast({ title: '❌ Error al guardar', description: errorMsg, variant: 'destructive' });
+      return { caseId, success: false, error: errorMsg, attempts: 1 };
     }
-    return result;
   }, [firestore, toast]);
 
   /**
