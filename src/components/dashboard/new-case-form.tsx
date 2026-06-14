@@ -18,7 +18,8 @@ import { es } from 'date-fns/locale';
 import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { useSyncEngine } from '@/hooks/use-sync-engine';
+import { collection, addDoc, doc } from 'firebase/firestore';
 import type { Case } from '@/lib/case-schema';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -64,6 +65,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
+  const { saveCase, isOnline } = useSyncEngine();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   
@@ -104,7 +106,6 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     }
   }, [caseData, form]);
 
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!firestore || !user) {
         toast({
@@ -113,61 +114,87 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             description: "No estás autenticado o el servicio no está disponible.",
         });
         return;
-    };
+    }
 
     setIsSubmitting(true);
-    
+
     try {
         const normalizedCedula = values.documentId.replace(/\D/g, '');
         const caseId = isEditMode ? caseData.id : `CAS-${Date.now()}`;
         const caseNumber = isEditMode ? caseData.caseNumber : `CAS-${Date.now()}`;
         const status = isEditMode ? caseData.status : "Sin novedad";
 
-        const caseDocRef = doc(firestore, 'cases', caseId);
         const fullData = {
             ...values,
             birthDate: values.birthDate.toISOString(),
             id: caseId,
             caseNumber,
             status,
-            createdAt: isEditMode ? caseData.createdAt : serverTimestamp(),
+            createdAt: isEditMode ? caseData.createdAt : new Date().toISOString(),
             userId: user.uid,
             members: { [user.uid]: 'owner' },
-            // REQ-006: Iniciar como pendiente para el motor de sincronización
-            syncStatus: 'pending',
-            syncAttempts: 0
+            // REQ-006: Estado inicial explícito desde el origen
+            syncStatus: 'pending' as const,
+            syncAttempts: 0,
+            syncError: false,
+            lastSyncError: null,
+            lastSyncAt: null,
         };
-        
-        setDocumentNonBlocking(caseDocRef, fullData, { merge: true });
 
+        // REQ-006: Usar el motor propio de sincronización en lugar de setDocumentNonBlocking
+        const result = await saveCase(caseId, fullData as any);
+
+        // REQ-006: Bitácora histórica persistente en subcolección syncLogs
+        try {
+            const syncLogsRef = collection(firestore, 'cases', caseId, 'syncLogs');
+            await addDoc(syncLogsRef, {
+                timestamp: new Date().toISOString(),
+                operation: isEditMode ? 'update' : 'create',
+                result: result.success ? 'success' : 'error',
+                error: result.error || null,
+                attempt: result.attempts,
+                online: isOnline,
+                userId: user.uid,
+            });
+        } catch (logError) {
+            // El log no debe bloquear el flujo principal
+            console.warn('No se pudo registrar en syncLogs:', logError);
+        }
+
+        // REQ-006: Actualizar publicCaseStatus también con el motor (no bloqueante)
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalizedCedula);
-        const publicData = {
+        setDocumentNonBlocking(publicDocRef, {
             documentId: normalizedCedula,
             caseNumber,
             firstName: values.firstName,
             lastName: values.lastName,
             status,
             municipality: values.municipality,
-            createdAt: isEditMode ? caseData.createdAt : serverTimestamp(),
-            updatedAt: serverTimestamp()
-        };
-        setDocumentNonBlocking(publicDocRef, publicData, { merge: true });
+            createdAt: isEditMode ? caseData.createdAt : new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        }, { merge: true });
 
-        const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+        if (!isOnline) {
+            setSaveSuccess(true);
+            setIsSubmitting(false);
+            return;
+        }
 
-        toast({
-            title: isEditMode ? "Caso Actualizado" : "Caso Guardado",
-            description: isOnline 
-              ? `Se han guardado y sincronizado los datos para ${values.firstName}.` 
-              : `Datos de ${values.firstName} guardados localmente. Se sincronizarán automáticamente al recuperar la conexión.`,
-        });
-        
-        if (isOnline) {
-            const targetUrl = isEditMode 
-              ? `/dashboard/cases/${caseData.id}` 
-              : `/dashboard/cases?location=${encodeURIComponent(values.municipality)}`;
+        if (result.success) {
+            toast({
+                title: isEditMode ? "✅ Caso Actualizado" : "✅ Caso Registrado",
+                description: `Datos de ${values.firstName} sincronizados correctamente con el servidor.`,
+            });
+            const targetUrl = isEditMode
+                ? `/dashboard/cases/${caseData.id}`
+                : `/dashboard/cases?location=${encodeURIComponent(values.municipality)}`;
             router.push(targetUrl);
         } else {
+            toast({
+                variant: "destructive",
+                title: "⚠️ Guardado con error de sync",
+                description: result.error || "El caso se guardó localmente pero falló la sincronización.",
+            });
             setSaveSuccess(true);
             setIsSubmitting(false);
         }
@@ -176,7 +203,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
         toast({
             variant: "destructive",
             title: "Error al guardar",
-            description: "No se pudo procesar la solicitud."
+            description: "No se pudo procesar la solicitud.",
         });
         setIsSubmitting(false);
     }
