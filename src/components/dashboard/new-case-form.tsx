@@ -19,7 +19,7 @@ import { Checkbox } from '../ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, setDocumentNonBlocking, useUser } from '@/firebase';
 import { useSyncEngine } from '@/hooks/use-sync-engine';
-import { collection, addDoc, doc } from 'firebase/firestore';
+import { doc, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import type { Case } from '@/lib/case-schema';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -133,7 +133,6 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             createdAt: isEditMode ? caseData.createdAt : new Date().toISOString(),
             userId: user.uid,
             members: { [user.uid]: 'owner' },
-            // REQ-006: Estado inicial explícito desde el origen
             syncStatus: 'pending' as const,
             syncAttempts: 0,
             syncError: false,
@@ -141,27 +140,49 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             lastSyncAt: null,
         };
 
-        // REQ-006: Usar el motor propio de sincronización en lugar de setDocumentNonBlocking
+        const currentlyOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
+        if (!currentlyOnline) {
+            // OFFLINE: guardar sin bloquear y redirigir inmediatamente
+            const caseDocRef = doc(firestore, 'cases', caseId);
+            setDocumentNonBlocking(caseDocRef, fullData, { merge: true });
+
+            const publicDocRef = doc(firestore, 'publicCaseStatus', normalizedCedula);
+            setDocumentNonBlocking(publicDocRef, {
+                documentId: normalizedCedula,
+                caseNumber,
+                firstName: values.firstName,
+                lastName: values.lastName,
+                status,
+                municipality: values.municipality,
+                createdAt: isEditMode ? caseData.createdAt : new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            }, { merge: true });
+
+            setIsSubmitting(false);
+            setSaveSuccess(true);
+            return;
+        }
+
+        // ONLINE: usar el motor de sincronización
         const result = await saveCase(caseId, fullData as any);
 
-        // REQ-006: Bitácora histórica persistente en subcolección syncLogs
+        // Bitácora histórica en syncLogs
         try {
             const syncLogsRef = collection(firestore, 'cases', caseId, 'syncLogs');
-            await addDoc(syncLogsRef, {
+            addDoc(syncLogsRef, {
                 timestamp: new Date().toISOString(),
                 operation: isEditMode ? 'update' : 'create',
                 result: result.success ? 'success' : 'error',
                 error: result.error || null,
                 attempt: result.attempts,
-                online: isOnline,
+                online: true,
                 userId: user.uid,
             });
         } catch (logError) {
-            // El log no debe bloquear el flujo principal
-            console.warn('No se pudo registrar en syncLogs:', logError);
+            console.warn('syncLogs error:', logError);
         }
 
-        // REQ-006: Actualizar publicCaseStatus también con el motor (no bloqueante)
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalizedCedula);
         setDocumentNonBlocking(publicDocRef, {
             documentId: normalizedCedula,
@@ -174,16 +195,10 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             updatedAt: new Date().toISOString(),
         }, { merge: true });
 
-        if (!isOnline) {
-            setSaveSuccess(true);
-            setIsSubmitting(false);
-            return;
-        }
-
         if (result.success) {
             toast({
                 title: isEditMode ? "✅ Caso Actualizado" : "✅ Caso Registrado",
-                description: `Datos de ${values.firstName} sincronizados correctamente con el servidor.`,
+                description: `Datos de ${values.firstName} sincronizados correctamente.`,
             });
             const targetUrl = isEditMode
                 ? `/dashboard/cases/${caseData.id}`
@@ -193,7 +208,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
             toast({
                 variant: "destructive",
                 title: "⚠️ Guardado con error de sync",
-                description: result.error || "El caso se guardó localmente pero falló la sincronización.",
+                description: result.error || "El caso se guardó pero falló la sincronización.",
             });
             setSaveSuccess(true);
             setIsSubmitting(false);
