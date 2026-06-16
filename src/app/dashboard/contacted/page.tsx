@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, doc, serverTimestamp, addDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -166,13 +166,17 @@ export default function ContactedUsersPage() {
     return (cases || []).filter(c => c.status === 'NO CONTACTADO');
   }, [cases]);
 
-  const handleRegisterNovedad = (contacted: boolean) => {
+  const handleRegisterNovedad = async (contacted: boolean) => {
     if (!selectedCase || !firestore || !authUser) return;
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
     
     const caseRef = doc(firestore, 'cases', selectedCase.id);
-    updateDocumentNonBlocking(caseRef, { status: newStatus });
+    updateDocumentNonBlocking(caseRef, { 
+      status: newStatus,
+      syncStatus: 'pending',
+      lastSyncAt: null,
+    });
 
     const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
     addDocumentNonBlocking(novedadesRef, {
@@ -182,7 +186,23 @@ export default function ContactedUsersPage() {
         createdBy: authUser.uid
     });
 
-    // REQ-011: Agregar notificación automática
+    // Historial técnico separado del historial de negocio (REQ-006)
+    try {
+      const syncLogsRef = collection(firestore, 'cases', selectedCase.id, 'syncLogs');
+      await addDoc(syncLogsRef, {
+        timestamp: new Date().toISOString(),
+        operation: 'status_update',
+        result: navigator.onLine ? 'success' : 'pending',
+        error: null,
+        attempt: 1,
+        online: navigator.onLine,
+        userId: authUser.uid,
+        detail: `Estado cambiado a ${newStatus}`,
+      });
+    } catch (logError) {
+      console.warn('syncLog contacted error:', logError);
+    }
+
     const notificationsRef = collection(firestore, 'notifications');
     addDocumentNonBlocking(notificationsRef, {
         message: `El caso ${selectedCase.caseNumber} cambió de estado a ${newStatus}`,
@@ -205,8 +225,10 @@ export default function ContactedUsersPage() {
     }
 
     toast({
-        title: contacted ? "Contacto Exitoso" : "Intento Fallido",
-        description: `La trazabilidad del caso ha sido actualizada.`,
+        title: contacted ? "✅ Contacto Exitoso" : "📵 Intento Fallido",
+        description: navigator.onLine 
+          ? 'Trazabilidad actualizada y sincronizada.' 
+          : 'Guardado localmente. Se sincronizará al recuperar conexión.',
     });
     setIsCallOpen(false);
   };
