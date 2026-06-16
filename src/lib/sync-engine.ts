@@ -53,6 +53,35 @@ async function updateSyncFields(
 }
 
 /**
+ * Escribe una entrada en la bitácora histórica de sincronización.
+ */
+async function writeSyncLog(
+  firestore: Firestore,
+  caseId: string,
+  entry: {
+    operation: string;
+    result: 'success' | 'error' | 'pending' | 'syncing';
+    error?: string | null;
+    attempt: number;
+    online: boolean;
+  }
+): Promise<void> {
+  try {
+    const logsRef = collection(firestore, 'cases', caseId, 'syncLogs');
+    await setDoc(doc(logsRef), {
+      timestamp: new Date().toISOString(),
+      operation: entry.operation,
+      result: entry.result,
+      error: entry.error || null,
+      attempt: entry.attempt,
+      online: entry.online,
+    }, { merge: false });
+  } catch (e) {
+    console.warn('syncLog write failed:', e);
+  }
+}
+
+/**
  * Sincroniza un caso individual con Firestore.
  */
 export async function syncCase(
@@ -61,10 +90,14 @@ export async function syncCase(
   const attempts = currentAttempts + 1;
   
   try { 
-    await updateSyncFields(firestore, caseId, 'syncing', { attempts }); 
-  } catch (e) {
-    // Ignorar fallos en la actualización de estado de "sincronizando"
-  }
+    await updateSyncFields(firestore, caseId, 'syncing', { attempts });
+    await writeSyncLog(firestore, caseId, {
+      operation: 'sync_start',
+      result: 'syncing',
+      attempt: attempts,
+      online: true,
+    });
+  } catch (e) {}
   
   try {
     const docRef = doc(firestore, 'cases', caseId);
@@ -77,15 +110,27 @@ export async function syncCase(
       syncAttempts: attempts, 
       lastSyncAt: serverTimestamp() 
     }, { merge: true });
+
+    await writeSyncLog(firestore, caseId, {
+      operation: 'sync_complete',
+      result: 'success',
+      attempt: attempts,
+      online: true,
+    });
     
     return { caseId, success: true, attempts, syncedAt: new Date() };
   } catch (err: any) {
     const errorMsg = err?.message || 'Error desconocido';
     try { 
-      await updateSyncFields(firestore, caseId, 'error', { error: errorMsg, attempts }); 
-    } catch (e) {
-      console.error('No se pudo actualizar el estado de error en Firestore:', e);
-    }
+      await updateSyncFields(firestore, caseId, 'error', { error: errorMsg, attempts });
+      await writeSyncLog(firestore, caseId, {
+        operation: 'sync_failed',
+        result: 'error',
+        error: errorMsg,
+        attempt: attempts,
+        online: true,
+      });
+    } catch (e) {}
     return { caseId, success: false, error: errorMsg, attempts };
   }
 }
@@ -101,6 +146,13 @@ export async function retrySyncCase(
   
   // Política de reintentos (límite de 5 según requerimientos de zona rural)
   if (syncAttempts >= 5) {
+    await writeSyncLog(firestore, id, {
+      operation: 'retry_blocked',
+      result: 'error',
+      error: 'Máximo de reintentos alcanzado.',
+      attempt: syncAttempts,
+      online: true,
+    }).catch(() => {});
     return { 
       caseId: id, 
       success: false, 
@@ -109,6 +161,13 @@ export async function retrySyncCase(
     };
   }
   
+  await writeSyncLog(firestore, id, {
+    operation: 'retry_attempt',
+    result: 'syncing',
+    attempt: syncAttempts + 1,
+    online: true,
+  }).catch(() => {});
+
   // Pausa artificial para evitar saturación de red en reintentos
   await new Promise(resolve => setTimeout(resolve, 2000));
   return syncCase(firestore, id, data, syncAttempts);
