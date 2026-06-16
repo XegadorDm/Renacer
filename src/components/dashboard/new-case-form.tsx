@@ -159,6 +159,22 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
                 updatedAt: new Date().toISOString(),
             }, { merge: true });
 
+            // Bitácora histórica del guardado offline
+            try {
+              const syncLogsRef = collection(firestore, 'cases', caseId, 'syncLogs');
+              addDoc(syncLogsRef, {
+                timestamp: new Date().toISOString(),
+                operation: isEditMode ? 'update_offline' : 'create_offline',
+                result: 'pending',
+                error: null,
+                attempt: 0,
+                online: false,
+                userId: user.uid,
+              });
+            } catch (logError) {
+              console.warn('syncLog offline error:', logError);
+            }
+
             setIsSubmitting(false);
             setSaveSuccess(true);
             return;
