@@ -39,8 +39,9 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
   /**
    * Dispara la sincronización automática de la cola.
    */
-  const triggerAutoSync = useCallback(async () => {
-    if (!firestore || syncInProgress.current || !navigator.onLine) return;
+  const triggerAutoSync = useCallback(async (source: 'auto' | 'manual' = 'auto') => {
+    if (!firestore || syncInProgress.current) return;
+    if (!navigator.onLine) return;
     
     syncInProgress.current = true;
     setIsSyncing(true);
@@ -48,7 +49,6 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
     try {
       const { collection, getDocs, query, where, doc, setDoc, serverTimestamp } = await import('firebase/firestore');
       
-      // Buscar tanto por syncStatus pending/error como por _hasPendingWrites
       const casesRef = collection(firestore, 'cases');
       const q = query(casesRef, where('syncStatus', 'in', ['pending', 'error']));
       const snapshot = await getDocs(q);
@@ -57,8 +57,8 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
       let failed = 0;
       
       for (const docSnap of snapshot.docs) {
+        const data = docSnap.data();
         try {
-          const data = docSnap.data();
           const docRef = doc(firestore, 'cases', docSnap.id);
           await setDoc(docRef, {
             ...data,
@@ -69,12 +69,12 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
             lastSyncAt: serverTimestamp(),
           }, { merge: true });
           
-          // Registrar en syncLogs
           try {
             const logsRef = collection(firestore, 'cases', docSnap.id, 'syncLogs');
             await setDoc(doc(logsRef), {
               timestamp: new Date().toISOString(),
-              operation: 'auto_sync',
+              operation: source === 'auto' ? 'auto_sync' : 'manual_sync',
+              syncType: source,
               result: 'success',
               error: null,
               attempt: (data.syncAttempts || 0) + 1,
@@ -85,6 +85,27 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
           synced++;
         } catch (err: any) {
           failed++;
+          try {
+            const docRef = doc(firestore, 'cases', docSnap.id);
+            await setDoc(docRef, {
+              syncStatus: 'error',
+              syncError: true,
+              lastSyncError: err.message || 'Error de sincronización',
+              syncAttempts: (data.syncAttempts || 0) + 1,
+              lastSyncAt: serverTimestamp(),
+            }, { merge: true });
+
+            const logsRef = collection(firestore, 'cases', docSnap.id, 'syncLogs');
+            await setDoc(doc(logsRef), {
+              timestamp: new Date().toISOString(),
+              operation: source === 'auto' ? 'auto_sync' : 'manual_sync',
+              syncType: source,
+              result: 'error',
+              error: err.message || 'Error de sincronización',
+              attempt: (data.syncAttempts || 0) + 1,
+              online: true,
+            }, { merge: false });
+          } catch {}
         }
       }
       
@@ -92,9 +113,11 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
       setPendingCount(0);
       setErrorCount(failed);
       
-      if (synced > 0) {
+      if (synced > 0 || failed > 0) {
         toast({ 
-          title: `✅ ${synced} caso(s) sincronizado(s)`, 
+          title: source === 'auto' 
+            ? `🔄 Sincronización automática: ${synced} caso(s)` 
+            : `✅ Sincronización manual: ${synced} caso(s)`, 
           description: failed > 0 ? `${failed} con error persistente.` : 'Todos los datos están en la nube.' 
         });
       }
@@ -114,7 +137,7 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
         title: '🟢 Conexión restaurada', 
         description: 'Sincronizando registros pendientes con el servidor...' 
       }); 
-      triggerAutoSync(); 
+      triggerAutoSync('auto'); 
     };
     
     const onOffline = () => { 
@@ -240,6 +263,6 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
     lastResults, 
     saveCase, 
     retryCase, 
-    syncAll: triggerAutoSync 
+    syncAll: () => triggerAutoSync('manual')
   };
 }
