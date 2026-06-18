@@ -40,6 +40,11 @@ function SyncCaseRow({ c, onRetry, isRetrying }: { c: WithId<Case>; onRetry: (c:
             <p className="text-[10px] text-muted-foreground flex items-center gap-1">
               <Clock className="h-2.5 w-2.5" />
               Último: {c.lastSyncAt?.toDate ? format(c.lastSyncAt.toDate(), 'dd/MM/yy HH:mm', { locale: es }) : 'N/A'}
+              {(c as any).lastSyncType && (
+                <Badge variant="outline" className="ml-1 text-[8px] h-3.5 px-1">
+                  {(c as any).lastSyncType === 'auto' ? 'AUTO' : 'MANUAL'}
+                </Badge>
+              )}
             </p>
           )}
           {c.lastSyncError && (
@@ -131,7 +136,7 @@ export function SyncStatusPanel() {
           {totalSyncIssues > 0 && (
             <span className={cn(
               "absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-black text-white shadow-sm",
-              errorCount > 0 ? "bg-red-600" : "bg-orange-500"
+              errorCount > 0 ? "bg-red-600" : "bg-orange-50"
             )}>
               {totalSyncIssues}
             </span>
