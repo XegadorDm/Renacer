@@ -120,8 +120,8 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
 
     try {
         const normalizedCedula = values.documentId.replace(/\D/g, '');
-        const caseId = isEditMode ? caseData.id : `CAS-${Date.now()}`;
-        const caseNumber = isEditMode ? caseData.caseNumber : `CAS-${Date.now()}`;
+        const caseId = isEditMode ? caseData.id : `CAS-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+        const caseNumber = isEditMode ? caseData.caseNumber : `CAS-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
         const status = isEditMode ? caseData.status : "Sin novedad";
 
         const fullData = {
