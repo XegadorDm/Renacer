@@ -38,38 +38,48 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
 
   /**
    * Dispara la sincronización automática de la cola.
+   * Filtra en el cliente para mayor fiabilidad con la caché offline.
    */
   const triggerAutoSync = useCallback(async (source: 'auto' | 'manual' = 'auto') => {
-    if (!firestore || syncInProgress.current) return;
+    if (!firestore) return;
     if (!navigator.onLine) return;
+    if (syncInProgress.current) {
+      console.log('[SyncEngine] Sincronización ya en progreso, ignorando llamada duplicada.');
+      return;
+    }
     
     syncInProgress.current = true;
     setIsSyncing(true);
     
+    // Timeout de seguridad: libera el candado a los 30 segundos máximo
+    const safetyTimeout = setTimeout(() => {
+      syncInProgress.current = false;
+      setIsSyncing(false);
+      console.warn('[SyncEngine] Timeout de seguridad activado, liberando candado.');
+    }, 30000);
+    
     try {
-      const { collection, getDocs, query, where, doc, setDoc, serverTimestamp, getDocFromServer } = await import('firebase/firestore');
+      const { collection, getDocs, doc, setDoc, serverTimestamp } = await import('firebase/firestore');
       
+      // Leer TODA la colección y filtrar en cliente (más confiable que where() con caché offline)
       const casesRef = collection(firestore, 'cases');
+      const snapshot = await getDocs(casesRef);
       
-      // Separar en dos queries para evitar problemas con el operador 'in'
-      const pendingQuery = query(casesRef, where('syncStatus', '==', 'pending'));
-      const errorQuery = query(casesRef, where('syncStatus', '==', 'error'));
+      const allDocs = snapshot.docs.filter(d => {
+        const data = d.data();
+        return data.syncStatus === 'pending' || data.syncStatus === 'error';
+      });
       
-      const [pendingSnap, errorSnap] = await Promise.all([
-        getDocs(pendingQuery),
-        getDocs(errorQuery)
-      ]);
-      
-      const allDocs = [...pendingSnap.docs, ...errorSnap.docs];
-      console.log(`[SyncEngine] Documentos encontrados para sincronizar: ${allDocs.length}`);
+      console.log(`[SyncEngine] Total docs en colección: ${snapshot.docs.length}`);
+      console.log(`[SyncEngine] Documentos pendientes/error encontrados: ${allDocs.length}`);
+      allDocs.forEach(d => console.log(`[SyncEngine] -> ${d.id}: ${d.data().syncStatus}`));
       
       let synced = 0;
       let failed = 0;
       
-      // Procesar secuencialmente para evitar condiciones de carrera en Firestore
       for (const docSnap of allDocs) {
         const data = docSnap.data();
-        console.log(`[SyncEngine] Procesando caso ${docSnap.id} - estado actual: ${data.syncStatus}`);
+        console.log(`[SyncEngine] Sincronizando ${docSnap.id}...`);
         
         try {
           const docRef = doc(firestore, 'cases', docSnap.id);
@@ -80,10 +90,10 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
             lastSyncError: null,
             syncAttempts: (data.syncAttempts || 0) + 1,
             lastSyncAt: serverTimestamp(),
-            lastSyncType: source, // Para visualización en panel
+            lastSyncType: source,
           }, { merge: true });
           
-          console.log(`[SyncEngine] Caso ${docSnap.id} sincronizado correctamente`);
+          console.log(`[SyncEngine] ✅ ${docSnap.id} sincronizado`);
           
           try {
             const logsRef = collection(firestore, 'cases', docSnap.id, 'syncLogs');
@@ -97,12 +107,12 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
               online: true,
             }, { merge: false });
           } catch (logErr) {
-            console.warn(`[SyncEngine] Error al guardar syncLog de ${docSnap.id}:`, logErr);
+            console.warn(`[SyncEngine] syncLog falló para ${docSnap.id}:`, logErr);
           }
           
           synced++;
         } catch (err: any) {
-          console.error(`[SyncEngine] Error al sincronizar ${docSnap.id}:`, err);
+          console.error(`[SyncEngine] ❌ Error sincronizando ${docSnap.id}:`, err);
           failed++;
           try {
             const docRef = doc(firestore, 'cases', docSnap.id);
@@ -114,22 +124,11 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
               lastSyncAt: serverTimestamp(),
               lastSyncType: source,
             }, { merge: true });
-
-            const logsRef = collection(firestore, 'cases', docSnap.id, 'syncLogs');
-            await setDoc(doc(logsRef), {
-              timestamp: new Date().toISOString(),
-              operation: source === 'auto' ? 'auto_sync' : 'manual_sync',
-              syncType: source,
-              result: 'error',
-              error: err.message || 'Error de sincronización',
-              attempt: (data.syncAttempts || 0) + 1,
-              online: true,
-            }, { merge: false });
           } catch {}
         }
       }
       
-      console.log(`[SyncEngine] Sincronización completa: ${synced} exitosos, ${failed} fallidos`);
+      console.log(`[SyncEngine] FIN — exitosos: ${synced}, fallidos: ${failed}`);
       
       setLastSyncAt(new Date());
       setPendingCount(0);
@@ -143,7 +142,10 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
           description: failed > 0 ? `${failed} con error persistente.` : 'Todos los datos están en la nube.' 
         });
       }
+    } catch (outerErr) {
+      console.error('[SyncEngine] Error general en triggerAutoSync:', outerErr);
     } finally {
+      clearTimeout(safetyTimeout);
       syncInProgress.current = false;
       setIsSyncing(false);
     }
