@@ -183,6 +183,20 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
   }, [triggerAutoSync, toast]);
 
   /**
+   * Polling de respaldo: revisa cada 5 segundos si hay conexión 
+   * y pendientes, por si el evento 'online' del navegador no se disparó.
+   */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (navigator.onLine && !syncInProgress.current) {
+        triggerAutoSync('auto');
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [triggerAutoSync]);
+
+  /**
    * Guarda un caso gestionando el estado de red.
    */
   const saveCase = useCallback(async (caseId: string, data: Partial<Case>): Promise<SyncResult> => {
