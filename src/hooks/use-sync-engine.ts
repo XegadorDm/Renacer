@@ -80,6 +80,7 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
             lastSyncError: null,
             syncAttempts: (data.syncAttempts || 0) + 1,
             lastSyncAt: serverTimestamp(),
+            lastSyncType: source, // Para visualización en panel
           }, { merge: true });
           
           console.log(`[SyncEngine] Caso ${docSnap.id} sincronizado correctamente`);
@@ -111,7 +112,19 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
               lastSyncError: err.message || 'Error de sincronización',
               syncAttempts: (data.syncAttempts || 0) + 1,
               lastSyncAt: serverTimestamp(),
+              lastSyncType: source,
             }, { merge: true });
+
+            const logsRef = collection(firestore, 'cases', docSnap.id, 'syncLogs');
+            await setDoc(doc(logsRef), {
+              timestamp: new Date().toISOString(),
+              operation: source === 'auto' ? 'auto_sync' : 'manual_sync',
+              syncType: source,
+              result: 'error',
+              error: err.message || 'Error de sincronización',
+              attempt: (data.syncAttempts || 0) + 1,
+              online: true,
+            }, { merge: false });
           } catch {}
         }
       }
@@ -204,6 +217,7 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
         lastSyncError: null,
         syncAttempts: 1,
         lastSyncAt: serverTimestamp(),
+        lastSyncType: 'manual',
       }, { merge: true });
       setLastSyncAt(new Date());
       return { caseId, success: true, attempts: 1, syncedAt: new Date() };
@@ -217,6 +231,7 @@ export function useSyncEngine(): SyncEngineState & SyncEngineActions {
           lastSyncError: errorMsg,
           syncAttempts: 1,
           lastSyncAt: serverTimestamp(),
+          lastSyncType: 'manual',
         }, { merge: true });
       } catch {}
       setErrorCount(p => p + 1);
