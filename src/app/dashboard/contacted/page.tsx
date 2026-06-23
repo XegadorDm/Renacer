@@ -170,14 +170,37 @@ export default function ContactedUsersPage() {
     if (!selectedCase || !firestore || !authUser) return;
 
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
-    
+    const isOnlineNow = navigator.onLine;
+
+    // Helper interno para registrar cada operación derivada en syncLogs
+    const logDerivedOp = async (operation: string, result: 'success' | 'error' | 'pending', detail: string, error?: string) => {
+      try {
+        const syncLogsRef = collection(firestore, 'cases', selectedCase.id, 'syncLogs');
+        await addDoc(syncLogsRef, {
+          timestamp: new Date().toISOString(),
+          operation,
+          result,
+          error: error || null,
+          attempt: 1,
+          online: isOnlineNow,
+          userId: authUser.uid,
+          detail,
+        });
+      } catch (e) {
+        console.warn(`syncLog falló para ${operation}:`, e);
+      }
+    };
+
+    // 1. Actualizar estado del caso (documento principal)
     const caseRef = doc(firestore, 'cases', selectedCase.id);
     updateDocumentNonBlocking(caseRef, { 
       status: newStatus,
       syncStatus: 'pending',
       lastSyncAt: null,
     });
+    await logDerivedOp('case_status_update', isOnlineNow ? 'success' : 'pending', `Estado del caso cambiado a ${newStatus}`);
 
+    // 2. Registrar novedad de gestión
     const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
     addDocumentNonBlocking(novedadesRef, {
         mensaje: contacted ? "Llamada efectiva realizada (reintento)" : "Intento de llamada sin éxito (reintento)",
@@ -185,24 +208,9 @@ export default function ContactedUsersPage() {
         createdAt: new Date().toISOString(),
         createdBy: authUser.uid
     });
+    await logDerivedOp('novedad_create', isOnlineNow ? 'success' : 'pending', 'Novedad de gestión registrada');
 
-    // Historial técnico separado del historial de negocio (REQ-006)
-    try {
-      const syncLogsRef = collection(firestore, 'cases', selectedCase.id, 'syncLogs');
-      await addDoc(syncLogsRef, {
-        timestamp: new Date().toISOString(),
-        operation: 'status_update',
-        result: navigator.onLine ? 'success' : 'pending',
-        error: null,
-        attempt: 1,
-        online: navigator.onLine,
-        userId: authUser.uid,
-        detail: `Estado cambiado a ${newStatus}`,
-      });
-    } catch (logError) {
-      console.warn('syncLog contacted error:', logError);
-    }
-
+    // 3. Notificación automática
     const notificationsRef = collection(firestore, 'notifications');
     addDocumentNonBlocking(notificationsRef, {
         message: `El caso ${selectedCase.caseNumber} cambió de estado a ${newStatus}`,
@@ -214,7 +222,9 @@ export default function ContactedUsersPage() {
         read: false,
         userId: selectedCase.userId || authUser.uid || null
     });
+    await logDerivedOp('notification_create', isOnlineNow ? 'success' : 'pending', 'Notificación de cambio de estado generada');
 
+    // 4. Actualizar publicCaseStatus
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
@@ -222,13 +232,14 @@ export default function ContactedUsersPage() {
             status: newStatus,
             updatedAt: serverTimestamp()
         }, { merge: true });
+        await logDerivedOp('public_status_update', isOnlineNow ? 'success' : 'pending', 'Estado público del caso actualizado');
     }
 
     toast({
         title: contacted ? "✅ Contacto Exitoso" : "📵 Intento Fallido",
-        description: navigator.onLine 
-          ? 'Trazabilidad actualizada y sincronizada.' 
-          : 'Guardado localmente. Se sincronizará al recuperar conexión.',
+        description: isOnlineNow 
+          ? 'Las 4 operaciones del flujo quedaron registradas en la bitácora técnica.' 
+          : 'Guardado localmente. Las operaciones derivadas se sincronizarán al recuperar conexión.',
     });
     setIsCallOpen(false);
   };
