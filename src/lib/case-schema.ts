@@ -76,3 +76,16 @@ export interface Novedad {
     createdAt: any;
     createdBy: string;
 }
+
+export interface SyncLogEntry {
+    id: string;
+    timestamp: string;
+    operation: string;
+    result: 'success' | 'error' | 'pending' | 'syncing';
+    error?: string | null;
+    attempt: number;
+    online: boolean;
+    userId: string;
+    detail?: string;
+    syncType?: 'auto' | 'manual';
+}

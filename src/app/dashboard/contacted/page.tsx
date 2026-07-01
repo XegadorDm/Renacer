@@ -11,62 +11,111 @@ import { PhoneCall, IdCard, MapPin, Eye, PhoneOff, CheckCircle2, History, PhoneF
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { Case, Novedad } from '@/lib/case-schema';
+import type { Case, Novedad, SyncLogEntry } from '@/lib/case-schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 function HistoryModal({ caseId, open, onOpenChange }: { caseId: string, open: boolean, onOpenChange: (open: boolean) => void }) {
   const firestore = useFirestore();
   const { isUserLoading } = useUser();
+
   const novedadesQuery = useMemoFirebase(() => {
     if (!firestore || !caseId || isUserLoading) return null;
     return query(collection(firestore, 'cases', caseId, 'novedades'), orderBy('createdAt', 'desc'));
   }, [firestore, caseId, isUserLoading]);
 
+  const syncLogsQuery = useMemoFirebase(() => {
+    if (!firestore || !caseId || isUserLoading) return null;
+    return query(collection(firestore, 'cases', caseId, 'syncLogs'), orderBy('timestamp', 'desc'));
+  }, [firestore, caseId, isUserLoading]);
+
   const { data: novedades, isLoading } = useCollection<Novedad>(novedadesQuery);
+  const { data: syncLogs, isLoading: isSyncLoading } = useCollection<SyncLogEntry>(syncLogsQuery);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-2xl">
+      <DialogContent className="max-w-lg rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <History className="h-5 w-5 text-primary" />
-            Historial de Gestión
+            Historial del Caso
           </DialogTitle>
-          <DialogDescription>Registro de todos los intentos y novedades del caso.</DialogDescription>
+          <DialogDescription>Gestión operativa y trazabilidad técnica de sincronización.</DialogDescription>
         </DialogHeader>
-        <ScrollArea className="h-[400px] pr-4">
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
-            </div>
-          ) : novedades && novedades.length > 0 ? (
-            <div className="space-y-4">
-              {novedades.map((nov, idx) => (
-                <div key={idx} className="p-3 bg-muted/30 rounded-lg border text-xs relative">
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant="outline" className="text-[9px] uppercase font-bold">
-                      {nov.tipo === 'llamada' ? 'Llamada' : 'Nota'}
-                    </Badge>
-                    <span className="text-[9px] text-muted-foreground font-mono">
-                      {nov.createdAt ? format(new Date(nov.createdAt), "dd/MM/yy HH:mm", { locale: es }) : 'Sin fecha'}
-                    </span>
-                  </div>
-                  <p className="font-medium text-foreground/80 italic">"{nov.mensaje}"</p>
-                  <div className="mt-2 pt-2 border-t flex items-center gap-1 text-[9px] text-muted-foreground">
-                    <User className="h-3 w-3" />
-                    <span>Asesor: {nov.createdBy.substring(0, 8)}</span>
-                  </div>
+        <Tabs defaultValue="management" className="w-full">
+          <TabsList className="mb-4 grid w-full grid-cols-2">
+            <TabsTrigger value="management">📋 Gestión</TabsTrigger>
+            <TabsTrigger value="sync">🔄 Sincronización</TabsTrigger>
+          </TabsList>
+          <TabsContent value="management">
+            <ScrollArea className="h-[350px] pr-4">
+              {isLoading ? (
+                <div className="space-y-4">{[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}</div>
+              ) : novedades && novedades.length > 0 ? (
+                <div className="space-y-4">
+                  {novedades.map((nov, idx) => (
+                    <div key={idx} className="p-3 bg-muted/30 rounded-lg border text-xs">
+                      <div className="flex justify-between items-start mb-2">
+                        <Badge variant="outline" className="text-[9px] uppercase font-bold">
+                          {nov.tipo === 'llamada' ? 'Llamada' : 'Nota'}
+                        </Badge>
+                        <span className="text-[9px] text-muted-foreground font-mono">
+                          {nov.createdAt ? format(new Date(nov.createdAt), "dd/MM/yy HH:mm", { locale: es }) : 'Sin fecha'}
+                        </span>
+                      </div>
+                      <p className="font-medium text-foreground/80 italic">"{nov.mensaje}"</p>
+                      <div className="mt-2 pt-2 border-t flex items-center gap-1 text-[9px] text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        <span>Asesor: {nov.createdBy?.substring(0, 8)}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground italic text-sm">
-              No hay novedades registradas.
-            </div>
-          )}
-        </ScrollArea>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground italic text-sm">
+                  No hay novedades registradas.
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+          <TabsContent value="sync">
+            <ScrollArea className="h-[350px] pr-4">
+              {isSyncLoading ? (
+                <div className="space-y-4">{[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
+              ) : syncLogs && syncLogs.length > 0 ? (
+                <div className="space-y-3">
+                  {syncLogs.map((log, idx) => (
+                    <div key={idx} className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1">
+                      <div className="flex justify-between items-center">
+                        <Badge variant={log.result === 'success' ? 'default' : log.result === 'error' ? 'destructive' : 'secondary'}
+                          className="text-[9px] uppercase font-bold">
+                          {log.result}
+                        </Badge>
+                        <span className="text-[9px] font-mono text-muted-foreground">
+                          {log.timestamp ? format(new Date(log.timestamp), "dd/MM/yy HH:mm:ss", { locale: es }) : 'Sin fecha'}
+                        </span>
+                      </div>
+                      <p className="font-mono text-[10px] text-primary font-bold">{log.operation}</p>
+                      {log.detail && <p className="text-muted-foreground">{log.detail}</p>}
+                      {log.error && <p className="text-red-500 text-[9px]">⚠ {log.error}</p>}
+                      <div className="flex gap-3 text-[9px] text-muted-foreground pt-1 border-t">
+                        <span>Intento: {log.attempt}</span>
+                        <span>{log.online ? '🟢 Online' : '🔴 Offline'}</span>
+                        {log.syncType && <span>Tipo: {log.syncType}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground italic text-sm">
+                  No hay eventos técnicos de sincronización.
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
@@ -262,12 +311,27 @@ export default function ContactedUsersPage() {
 
   return (
     <div className="space-y-6 py-4 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold text-primary font-headline flex items-center gap-2">
-          <PhoneCall className="h-8 w-8" />
-          Seguimiento de Contacto
-        </h1>
-        <p className="text-muted-foreground text-sm">Gestiona y reintenta la comunicación con los beneficiarios registrados.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-bold text-primary font-headline flex items-center gap-2">
+            <PhoneCall className="h-8 w-8" />
+            Seguimiento de Contacto
+          </h1>
+          <p className="text-muted-foreground text-sm">Gestiona y reintenta la comunicación con los beneficiarios registrados.</p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <Button 
+            disabled
+            className="opacity-60 cursor-not-allowed bg-green-600 hover:bg-green-600 text-white font-bold"
+            title="Selecciona un caso y usa el botón REINTENTAR para gestionar llamadas"
+          >
+            <PhoneCall className="mr-2 h-4 w-4" />
+            LLAMAR AL USUARIO
+          </Button>
+          <p className="text-[10px] text-muted-foreground italic">
+            * Usa el botón REINTENTAR en cada tarjeta para gestionar llamadas
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
