@@ -11,7 +11,7 @@ import { PhoneCall, IdCard, MapPin, Eye, PhoneOff, CheckCircle2, History, PhoneF
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import type { Case, Novedad, UserProfile } from '@/lib/case-schema';
+import type { Case, Novedad } from '@/lib/case-schema';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
