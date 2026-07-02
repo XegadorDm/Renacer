@@ -450,7 +450,7 @@ export default function ContactedUsersPage() {
                         <p className="text-[10px] text-accent uppercase font-black tracking-widest text-center">Números Autorizados</p>
                         <div className="grid gap-3">
                             <div className="flex flex-col items-center justify-center bg-background p-4 rounded-lg border shadow-sm">
-                                <span className="text-3xl font-mono font-black tracking-[0.2em] text-primary">{selectedCase.phone1}</span>
+                                <span className="text-2xl sm:text-3xl font-mono font-black tracking-[0.2em] text-primary">{selectedCase.phone1}</span>
                                 <Badge variant="outline" className="mt-2 text-[9px] uppercase font-bold">Línea Principal</Badge>
                             </div>
                             {selectedCase.phone2 && (

@@ -303,7 +303,7 @@ export default function CasesPage() {
                         <p className="text-[10px] text-accent uppercase font-black tracking-widest text-center">Números Autorizados</p>
                         <div className="grid gap-3">
                             <div className="flex flex-col items-center justify-center bg-background p-4 rounded-lg border shadow-sm">
-                                <span className="text-3xl font-mono font-black tracking-[0.2em] text-primary">{selectedCase.phone1}</span>
+                                <span className="text-2xl sm:text-3xl font-mono font-black tracking-[0.2em] text-primary">{selectedCase.phone1}</span>
                                 <Badge variant="outline" className="mt-2 text-[9px] uppercase font-bold">Línea Principal</Badge>
                             </div>
                             {selectedCase.phone2 && (
@@ -316,7 +316,7 @@ export default function CasesPage() {
                     </div>
                 </div>
 
-                <DialogFooter className="flex flex-col gap-2 p-4 sm:p-6 bg-muted/20 border-t">
+                <DialogFooter className="flex flex-col sm:flex-row gap-2 p-4 sm:p-6 bg-muted/20 border-t">
                     <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="w-full sm:flex-1 font-bold">
                         CANCELAR
                     </Button>
