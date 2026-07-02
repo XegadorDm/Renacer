@@ -279,7 +279,7 @@ export default function CasesPage() {
 
         {selectedCase && (
           <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
-            <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+            <DialogContent className="max-w-md w-[92vw] rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
                 <DialogHeader className="p-6 bg-primary text-primary-foreground">
                     <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
                         <Phone className="h-7 w-7 animate-bounce" />
@@ -316,7 +316,7 @@ export default function CasesPage() {
                     </div>
                 </div>
 
-                <DialogFooter className="flex flex-col sm:flex-row gap-2 p-6 bg-muted/20 border-t">
+                <DialogFooter className="flex flex-col gap-2 p-4 sm:p-6 bg-muted/20 border-t">
                     <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="w-full sm:flex-1 font-bold">
                         CANCELAR
                     </Button>
