@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -26,6 +25,10 @@ const formSchema = z.object({
   gender: z.string({ required_error: 'Selecciona un género.' }),
   role: z.string({ required_error: 'Selecciona un rol.' }),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres.'),
+  confirmPassword: z.string().min(1, 'Debes confirmar la contraseña.'),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Las contraseñas no coinciden.',
+  path: ['confirmPassword'],
 });
 
 export function RegisterForm() {
@@ -34,6 +37,7 @@ export function RegisterForm() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -44,6 +48,7 @@ export function RegisterForm() {
       documentNumber: '',
       email: '',
       password: '',
+      confirmPassword: '',
     },
   });
 
@@ -63,7 +68,7 @@ export function RegisterForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const user = userCredential.user;
 
-      const { password, ...userData } = values;
+      const { password, confirmPassword, ...userData } = values;
       
       const userDocRef = doc(firestore, 'users', user.uid);
       
@@ -174,6 +179,27 @@ export function RegisterForm() {
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
+                  </Button>
+                </div>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField control={form.control} name="confirmPassword" render={({ field }) => (
+            <FormItem>
+              <FormLabel>Confirmar Contraseña</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <Eye className="h-4 w-4 text-muted-foreground" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />}
                   </Button>
                 </div>
               </FormControl>
