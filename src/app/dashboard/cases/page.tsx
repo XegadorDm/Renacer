@@ -5,21 +5,24 @@ import { useDebouncedCallback } from "use-debounce";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX, Loader2, CloudOff } from "lucide-react";
+import { PlusCircle, Search, ArrowLeft, Phone, Calendar as CalendarIcon, FileSearch, FilterX, Loader2, CloudOff, User, CheckCircle2, XCircle } from "lucide-react";
 import { CasesTable } from "@/components/dashboard/cases-table";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import type { Case } from "@/lib/case-schema";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { collection } from "firebase/firestore";
+import { collection, doc, serverTimestamp, addDoc } from "firebase/firestore";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CasesPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   
   const queryParam = searchParams.get('query') || '';
   const docQuery = searchParams.get('doc') || '';
@@ -71,6 +74,66 @@ export default function CasesPage() {
 
   const handleSearch = useDebouncedCallback((term: string) => updateFilters('query', term), 300);
   const handleDocSearch = useDebouncedCallback((term: string) => updateFilters('doc', term), 300);
+
+  const handleRegisterNovedad = async (contacted: boolean) => {
+    if (!selectedCase || !firestore || !user) return;
+
+    const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
+    const isOnlineNow = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
+    const logDerivedOp = async (operation: string, result: 'success' | 'error' | 'pending', detail: string) => {
+      try {
+        const syncLogsRef = collection(firestore, 'cases', selectedCase.id, 'syncLogs');
+        await addDoc(syncLogsRef, {
+          timestamp: new Date().toISOString(),
+          operation,
+          result,
+          error: null,
+          attempt: 1,
+          online: isOnlineNow,
+          userId: user.uid,
+          detail,
+        });
+      } catch (e) {
+        console.warn(`syncLog falló para ${operation}:`, e);
+      }
+    };
+
+    const caseRef = doc(firestore, 'cases', selectedCase.id);
+    updateDocumentNonBlocking(caseRef, {
+      status: newStatus,
+      syncStatus: 'pending',
+      lastSyncAt: null,
+    });
+    await logDerivedOp('case_status_update', isOnlineNow ? 'success' : 'pending', `Estado del caso cambiado a ${newStatus}`);
+
+    const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
+    addDocumentNonBlocking(novedadesRef, {
+        mensaje: contacted ? "Llamada efectiva realizada" : "Intento de llamada sin éxito",
+        tipo: 'llamada',
+        createdAt: new Date().toISOString(),
+        createdBy: user.uid
+    });
+    await logDerivedOp('novedad_create', isOnlineNow ? 'success' : 'pending', 'Novedad de gestión registrada');
+
+    const normalized = selectedCase.documentId.replace(/\D/g, '');
+    if (normalized) {
+        const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
+        setDocumentNonBlocking(publicDocRef, {
+            status: newStatus,
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+        await logDerivedOp('public_status_update', isOnlineNow ? 'success' : 'pending', 'Estado público del caso actualizado');
+    }
+
+    toast({
+        title: contacted ? "✅ Contacto Exitoso" : "📵 Intento Fallido",
+        description: isOnlineNow
+          ? 'La gestión quedó registrada correctamente.'
+          : 'Guardado localmente. Se sincronizará al recuperar conexión.',
+    });
+    setIsCallModalOpen(false);
+  };
 
   if (!user) return null;
 
@@ -213,6 +276,60 @@ export default function CasesPage() {
                 </Suspense>
             </CardContent>
         </Card>
+
+        {selectedCase && (
+          <Dialog open={isCallModalOpen} onOpenChange={setIsCallModalOpen}>
+            <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+                <DialogHeader className="p-6 bg-primary text-primary-foreground">
+                    <DialogTitle className="flex items-center gap-3 text-2xl font-bold">
+                        <Phone className="h-7 w-7 animate-bounce" />
+                        Llamar al Usuario
+                    </DialogTitle>
+                </DialogHeader>
+
+                <div className="p-6 space-y-6">
+                    <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-xl border border-primary/10">
+                        <div className="bg-primary/10 p-3 rounded-full border border-primary/20">
+                            <User className="h-10 w-10 text-primary" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Beneficiario</p>
+                            <p className="text-xl font-bold text-foreground leading-tight">{selectedCase.firstName} {selectedCase.lastName}</p>
+                            <p className="text-xs text-muted-foreground">C.C. {selectedCase.documentId} - {selectedCase.municipality}</p>
+                        </div>
+                    </div>
+
+                    <div className="p-5 bg-accent/5 border border-accent/20 rounded-xl space-y-4">
+                        <p className="text-[10px] text-accent uppercase font-black tracking-widest text-center">Números Autorizados</p>
+                        <div className="grid gap-3">
+                            <div className="flex flex-col items-center justify-center bg-background p-4 rounded-lg border shadow-sm">
+                                <span className="text-3xl font-mono font-black tracking-[0.2em] text-primary">{selectedCase.phone1}</span>
+                                <Badge variant="outline" className="mt-2 text-[9px] uppercase font-bold">Línea Principal</Badge>
+                            </div>
+                            {selectedCase.phone2 && (
+                                <div className="flex flex-col items-center justify-center bg-background p-3 rounded-lg border border-dashed shadow-sm">
+                                    <span className="text-xl font-mono font-bold tracking-widest text-muted-foreground">{selectedCase.phone2}</span>
+                                    <Badge variant="outline" className="mt-2 text-[8px] uppercase">Línea Alternativa</Badge>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <DialogFooter className="flex flex-col sm:flex-row gap-2 p-6 bg-muted/20 border-t">
+                    <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="w-full sm:flex-1 font-bold">
+                        CANCELAR
+                    </Button>
+                    <Button variant="destructive" onClick={() => handleRegisterNovedad(false)} className="w-full sm:flex-1 font-bold">
+                        <XCircle className="mr-2 h-4 w-4" /> NO CONTACTADO
+                    </Button>
+                    <Button variant="default" onClick={() => handleRegisterNovedad(true)} className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 font-bold">
+                        <CheckCircle2 className="mr-2 h-4 w-4" /> CONTACTADO
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
     </div>
   );
 }
