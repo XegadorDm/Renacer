@@ -24,6 +24,16 @@ import type { Case } from '@/lib/case-schema';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
+function calculateAge(birthDate: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return Math.max(0, age);
+}
+
 const formSchema = z.object({
   firstName: z.string()
     .min(1, 'El nombre es requerido.')
@@ -94,6 +104,16 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
       testimony: '',
     },
   });
+
+  const birthDateValue = form.watch('birthDate');
+
+  useEffect(() => {
+    if (birthDateValue instanceof Date && !isNaN(birthDateValue.getTime())) {
+      const calculatedAge = calculateAge(birthDateValue);
+      form.setValue('age', calculatedAge, { shouldValidate: true });
+      form.setValue('isElderly', calculatedAge >= 60, { shouldValidate: true });
+    }
+  }, [birthDateValue, form]);
 
   useEffect(() => {
     if (caseData) {
@@ -280,7 +300,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
     { name: 'phone2', label: 'Celular 2 (Opcional)', component: Input, type: 'tel' },
     { name: 'displacementType', label: 'Tipo de desplazamiento', component: Select, options: ['Individual', 'Familiar', 'Masivo'] },
     { name: 'disability', label: 'Discapacidad', component: Select, options: ['Física', 'Visual', 'Auditiva', 'Intelectual', 'Psicosocial', 'Múltiple', 'Ninguna'] },
-    { name: 'age', label: 'Edad', component: Input, type: 'number' },
+    { name: 'age', label: 'Edad (automática)', component: Input, type: 'number', props: { disabled: true, className: 'bg-muted/30 font-bold text-primary' } },
     { name: 'isElderly', label: 'Adulto mayor', component: 'checkbox', description: 'Marcar si la persona es adulto mayor.' },
     { name: 'householdMembers', label: 'Personas en caracterización', component: Input, type: 'number' },
   ]
