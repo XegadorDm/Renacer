@@ -463,7 +463,7 @@ export default function ContactedUsersPage() {
                     </div>
                 </div>
 
-                <DialogFooter className="flex flex-col gap-2 p-4 bg-muted/20 border-t">
+                <div className="flex flex-col gap-2 p-4 bg-muted/20 border-t w-full">
                     <Button variant="default" onClick={() => handleRegisterNovedad(true)} className="w-full bg-green-600 hover:bg-green-700 font-bold text-sm">
                         <CheckCircle2 className="mr-2 h-4 w-4 shrink-0" /> CONTACTADO
                     </Button>
@@ -473,7 +473,7 @@ export default function ContactedUsersPage() {
                     <Button variant="outline" onClick={() => setIsCallOpen(false)} className="w-full font-bold text-sm">
                         CANCELAR
                     </Button>
-                </DialogFooter>
+                </div>
             </DialogContent>
           </Dialog>
         </>
