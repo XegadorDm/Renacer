@@ -3,7 +3,7 @@
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -72,6 +72,8 @@ type NewCaseFormProps = {
 
 export function NewCaseForm({ caseData }: NewCaseFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultMunicipality = searchParams.get('location') || '';
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
@@ -92,7 +94,7 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
       maritalStatus: '',
       gender: '',
       address: '',
-      municipality: '',
+      municipality: defaultMunicipality,
       department: 'Cauca',
       phone1: '',
       phone2: '',
@@ -125,6 +127,12 @@ export function NewCaseForm({ caseData }: NewCaseFormProps) {
       });
     }
   }, [caseData, form]);
+
+  useEffect(() => {
+    if (!isEditMode && defaultMunicipality) {
+      form.setValue('municipality', defaultMunicipality, { shouldValidate: true });
+    }
+  }, [defaultMunicipality, isEditMode, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!firestore || !user) {

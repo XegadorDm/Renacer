@@ -189,7 +189,7 @@ export default function CasesPage() {
                     </div>
                     <div className="lg:col-span-2"></div>
                     <Button asChild style={{ backgroundColor: 'hsl(var(--accent))', color: 'hsl(var(--accent-foreground))' }} className="h-10">
-                        <Link href="/dashboard/cases/new">
+                        <Link href={`/dashboard/cases/new${location ? `?location=${encodeURIComponent(location)}` : ''}`}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Nuevo Registro
                         </Link>
