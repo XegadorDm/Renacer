@@ -13,7 +13,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNo
 import type { Case } from "@/lib/case-schema";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { collection, doc, serverTimestamp, addDoc } from "firebase/firestore";
+import { collection, doc, serverTimestamp, addDoc, updateDoc, setDoc } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -81,14 +81,14 @@ export default function CasesPage() {
     const newStatus = contacted ? "CONTACTADO" : "NO CONTACTADO";
     const isOnlineNow = typeof navigator !== 'undefined' ? navigator.onLine : true;
 
-    const logDerivedOp = async (operation: string, result: 'success' | 'error' | 'pending', detail: string) => {
+    const logDerivedOp = async (operation: string, result: 'success' | 'error' | 'pending', detail: string, error?: string) => {
       try {
         const syncLogsRef = collection(firestore, 'cases', selectedCase.id, 'syncLogs');
         await addDoc(syncLogsRef, {
           timestamp: new Date().toISOString(),
           operation,
           result,
-          error: null,
+          error: error || null,
           attempt: 1,
           online: isOnlineNow,
           userId: user.uid,
@@ -99,38 +99,126 @@ export default function CasesPage() {
       }
     };
 
-    const caseRef = doc(firestore, 'cases', selectedCase.id);
-    updateDocumentNonBlocking(caseRef, {
-      status: newStatus,
-      syncStatus: 'pending',
-      lastSyncAt: null,
-    });
-    await logDerivedOp('case_status_update', isOnlineNow ? 'success' : 'pending', `Estado del caso cambiado a ${newStatus}`);
+    // OFFLINE: se guarda como pendiente, sin fingir que ya sincronizó
+    if (!isOnlineNow) {
+      const caseRef = doc(firestore, 'cases', selectedCase.id);
+      updateDocumentNonBlocking(caseRef, { status: newStatus, syncStatus: 'pending', lastSyncAt: null });
 
-    const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
-    addDocumentNonBlocking(novedadesRef, {
+      const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
+      addDocumentNonBlocking(novedadesRef, {
         mensaje: contacted ? "Llamada efectiva realizada" : "Intento de llamada sin éxito",
         tipo: 'llamada',
         createdAt: new Date().toISOString(),
         createdBy: user.uid
-    });
-    await logDerivedOp('novedad_create', isOnlineNow ? 'success' : 'pending', 'Novedad de gestión registrada');
+      });
+
+      const notificationsRef = collection(firestore, 'notifications');
+      addDocumentNonBlocking(notificationsRef, {
+        message: `El caso ${selectedCase.caseNumber} cambió de estado a ${newStatus}`,
+        caseId: selectedCase.id,
+        caseNumber: selectedCase.caseNumber,
+        type: "status_change",
+        createdAt: serverTimestamp(),
+        createdBy: user.uid || 'system',
+        read: false,
+        userId: selectedCase.userId || user.uid || null
+      });
+
+      const normalized = selectedCase.documentId.replace(/\D/g, '');
+      if (normalized) {
+        const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
+        setDocumentNonBlocking(publicDocRef, { status: newStatus, updatedAt: new Date().toISOString() }, { merge: true });
+      }
+
+      await logDerivedOp('flow_offline_pending', 'pending', `Flujo completo (caso, novedad, notificación, estado público) pendiente de sincronización, estado destino: ${newStatus}`);
+
+      toast({
+        title: contacted ? "📵 Guardado localmente (Contactado)" : "📵 Guardado localmente (No contactado)",
+        description: "Sin conexión: el flujo completo quedará marcado como PENDIENTE hasta sincronizar.",
+      });
+      setIsCallModalOpen(false);
+      return;
+    }
+
+    // ONLINE: se espera (await) cada escritura derivada para saber si realmente se confirmó
+    const results: boolean[] = [];
+
+    try {
+      const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
+      await addDoc(novedadesRef, {
+        mensaje: contacted ? "Llamada efectiva realizada" : "Intento de llamada sin éxito",
+        tipo: 'llamada',
+        createdAt: new Date().toISOString(),
+        createdBy: user.uid
+      });
+      results.push(true);
+      await logDerivedOp('novedad_create', 'success', 'Novedad de gestión registrada');
+    } catch (e: any) {
+      results.push(false);
+      await logDerivedOp('novedad_create', 'error', 'Novedad de gestión registrada', e.message);
+    }
+
+    try {
+      const notificationsRef = collection(firestore, 'notifications');
+      await addDoc(notificationsRef, {
+        message: `El caso ${selectedCase.caseNumber} cambió de estado a ${newStatus}`,
+        caseId: selectedCase.id,
+        caseNumber: selectedCase.caseNumber,
+        type: "status_change",
+        createdAt: serverTimestamp(),
+        createdBy: user.uid || 'system',
+        read: false,
+        userId: selectedCase.userId || user.uid || null
+      });
+      results.push(true);
+      await logDerivedOp('notification_create', 'success', 'Notificación de cambio de estado generada');
+    } catch (e: any) {
+      results.push(false);
+      await logDerivedOp('notification_create', 'error', 'Notificación de cambio de estado generada', e.message);
+    }
 
     const normalized = selectedCase.documentId.replace(/\D/g, '');
     if (normalized) {
+      try {
         const publicDocRef = doc(firestore, 'publicCaseStatus', normalized);
-        setDocumentNonBlocking(publicDocRef, {
-            status: newStatus,
-            updatedAt: serverTimestamp()
+        await setDoc(publicDocRef, {
+          documentId: normalized,
+          caseNumber: selectedCase.caseNumber,
+          firstName: selectedCase.firstName,
+          lastName: selectedCase.lastName,
+          status: newStatus,
+          municipality: selectedCase.municipality,
+          updatedAt: new Date().toISOString(),
         }, { merge: true });
-        await logDerivedOp('public_status_update', isOnlineNow ? 'success' : 'pending', 'Estado público del caso actualizado');
+        results.push(true);
+        await logDerivedOp('public_status_update', 'success', 'Estado público del caso actualizado');
+      } catch (e: any) {
+        results.push(false);
+        await logDerivedOp('public_status_update', 'error', 'Estado público del caso actualizado', e.message);
+      }
+    }
+
+    const allSucceeded = results.every(Boolean);
+
+    try {
+      const caseRef = doc(firestore, 'cases', selectedCase.id);
+      await updateDoc(caseRef, {
+        status: newStatus,
+        syncStatus: allSucceeded ? 'synced' : 'error',
+        syncError: !allSucceeded,
+        lastSyncError: allSucceeded ? null : 'Una o más operaciones derivadas del flujo (novedad, notificación o estado público) no se confirmaron.',
+        lastSyncAt: serverTimestamp(),
+      });
+      await logDerivedOp('case_status_update', allSucceeded ? 'success' : 'error', `Estado del caso cambiado a ${newStatus}`, allSucceeded ? undefined : 'Escrituras derivadas incompletas');
+    } catch (e: any) {
+      await logDerivedOp('case_status_update', 'error', `Estado del caso cambiado a ${newStatus}`, e.message);
     }
 
     toast({
-        title: contacted ? "✅ Contacto Exitoso" : "📵 Intento Fallido",
-        description: isOnlineNow
-          ? 'La gestión quedó registrada correctamente.'
-          : 'Guardado localmente. Se sincronizará al recuperar conexión.',
+      title: allSucceeded ? "✅ Contacto registrado y sincronizado" : "⚠️ Guardado con fallas parciales",
+      description: allSucceeded
+        ? 'Las 4 operaciones del flujo quedaron confirmadas en el servidor.'
+        : 'El caso cambió de estado, pero alguna operación derivada falló. Revisa la pestaña Sincronización del historial.',
     });
     setIsCallModalOpen(false);
   };
