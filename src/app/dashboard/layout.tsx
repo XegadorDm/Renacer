@@ -1,6 +1,6 @@
 'use client';
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import {
@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Home, LogOut, Settings, Users, Loader2, Mail, PhoneCall, UserCog, Database } from "lucide-react";
 import { Logo } from "@/components/icons/logo";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import type { UserProfile } from "@/lib/case-schema";
 import { isCoreAdmin } from "@/lib/core-admins";
 import { SyncStatusPanel } from "@/components/dashboard/sync-status-panel";
@@ -39,20 +39,30 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
+  const autoCreateAttempted = useRef(false);
+
   useEffect(() => {
-    if (user && firestore && !isProfileLoading && !userProfile) {
+    if (!user || !firestore || isProfileLoading || userProfile || autoCreateAttempted.current) {
+      return;
+    }
+    autoCreateAttempted.current = true;
+
+    const userRef = doc(firestore, 'users', user.uid);
+
+    getDoc(userRef).then((snap) => {
+      if (snap.exists()) return; // Ya existe en el servidor: nunca tocar su status.
+
       const isCore = isCoreAdmin(user.email);
-      const userRef = doc(firestore, 'users', user.uid);
       setDoc(userRef, {
         id: user.uid,
         email: user.email,
         firstName: user.displayName?.split(' ')[0] || 'Usuario',
         lastName: user.displayName?.split(' ')[1] || 'Renacer',
         role: isCore ? 'admin' : 'case-worker',
-        status: isCore ? 'approved' : 'pending', 
+        status: isCore ? 'approved' : 'pending',
         createdAt: new Date().toISOString()
       }, { merge: true }).catch(err => console.error("Error auto-creating user:", err));
-    }
+    }).catch(err => console.error("Error checking user existence:", err));
   }, [user, userProfile, isProfileLoading, firestore]);
 
   useEffect(() => {
