@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 function HistoryModal({ caseId, open, onOpenChange }: { caseId: string, open: boolean, onOpenChange: (open: boolean) => void }) {
   const firestore = useFirestore();
@@ -199,6 +200,7 @@ export default function ContactedUsersPage() {
   const [selectedCase, setSelectedCase] = useState<(Case & { id: string }) | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isCallOpen, setIsCallOpen] = useState(false);
+  const [quickCallId, setQuickCallId] = useState<string>('');
 
   const casesQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || isUserLoading) return null;
@@ -206,6 +208,19 @@ export default function ContactedUsersPage() {
   }, [firestore, authUser, isUserLoading]);
 
   const { data: cases, isLoading: isCasesLoading } = useCollection<Case>(casesQuery);
+
+  const allCasesSorted = useMemo(() => {
+    return [...(cases || [])].sort((a, b) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
+    );
+  }, [cases]);
+
+  const handleQuickCall = () => {
+    const found = (cases || []).find(c => c.id === quickCallId);
+    if (!found) return;
+    setSelectedCase(found as Case & { id: string });
+    setIsCallOpen(true);
+  };
 
   const contactedCases = useMemo(() => {
     return (cases || []).filter(c => c.status === 'CONTACTADO');
@@ -252,7 +267,7 @@ export default function ContactedUsersPage() {
     // 2. Registrar novedad de gestión
     const novedadesRef = collection(firestore, 'cases', selectedCase.id, 'novedades');
     addDocumentNonBlocking(novedadesRef, {
-        mensaje: contacted ? "Llamada efectiva realizada (reintento)" : "Intento de llamada sin éxito (reintento)",
+        mensaje: contacted ? "Llamada efectiva realizada" : "Intento de llamada sin éxito",
         tipo: 'llamada',
         createdAt: new Date().toISOString(),
         createdBy: authUser.uid
@@ -320,16 +335,30 @@ export default function ContactedUsersPage() {
           <p className="text-muted-foreground text-sm">Gestiona y reintenta la comunicación con los beneficiarios registrados.</p>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <Button 
-            disabled
-            className="opacity-60 cursor-not-allowed bg-green-600 hover:bg-green-600 text-white font-bold"
-            title="Selecciona un caso y usa el botón REINTENTAR para gestionar llamadas"
-          >
-            <PhoneCall className="mr-2 h-4 w-4" />
-            LLAMAR AL USUARIO
-          </Button>
+          <div className="flex items-center gap-2">
+            <Select value={quickCallId} onValueChange={setQuickCallId}>
+              <SelectTrigger className="w-[220px] h-9 text-xs">
+                <SelectValue placeholder="Selecciona un beneficiario..." />
+              </SelectTrigger>
+              <SelectContent>
+                {allCasesSorted.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.firstName} {c.lastName} — C.C. {c.documentId}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={handleQuickCall}
+              disabled={!quickCallId}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <PhoneCall className="mr-2 h-4 w-4" />
+              LLAMAR AL USUARIO
+            </Button>
+          </div>
           <p className="text-[10px] text-muted-foreground italic">
-            * Usa el botón REINTENTAR en cada tarjeta para gestionar llamadas
+            * Selecciona un beneficiario o usa REINTENTAR en cada tarjeta
           </p>
         </div>
       </div>
