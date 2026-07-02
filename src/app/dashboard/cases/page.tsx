@@ -316,15 +316,17 @@ export default function CasesPage() {
                     </div>
                 </div>
 
-                <DialogFooter className="flex flex-col sm:flex-row gap-2 p-4 sm:p-6 bg-muted/20 border-t">
-                    <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="w-full sm:flex-1 font-bold">
+                <DialogFooter className="flex flex-col gap-2 p-4 bg-muted/20 border-t">
+                    <div className="grid grid-cols-2 gap-2 w-full">
+                        <Button variant="destructive" onClick={() => handleRegisterNovedad(false)} className="font-bold text-xs sm:text-sm px-2">
+                            <XCircle className="mr-1.5 h-4 w-4 shrink-0" /> NO CONTACTADO
+                        </Button>
+                        <Button variant="default" onClick={() => handleRegisterNovedad(true)} className="bg-green-600 hover:bg-green-700 font-bold text-xs sm:text-sm px-2">
+                            <CheckCircle2 className="mr-1.5 h-4 w-4 shrink-0" /> CONTACTADO
+                        </Button>
+                    </div>
+                    <Button variant="outline" onClick={() => setIsCallModalOpen(false)} className="w-full font-bold">
                         CANCELAR
-                    </Button>
-                    <Button variant="destructive" onClick={() => handleRegisterNovedad(false)} className="w-full sm:flex-1 font-bold">
-                        <XCircle className="mr-2 h-4 w-4" /> NO CONTACTADO
-                    </Button>
-                    <Button variant="default" onClick={() => handleRegisterNovedad(true)} className="w-full sm:flex-1 bg-green-600 hover:bg-green-700 font-bold">
-                        <CheckCircle2 className="mr-2 h-4 w-4" /> CONTACTADO
                     </Button>
                 </DialogFooter>
             </DialogContent>
